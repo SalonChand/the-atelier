@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Contact Us | THE ATELIER</title>
+<meta name="description" content="Get in touch with The Atelier — client services, press enquiries, and personal styling appointments."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300;1,6..72,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; --error: #8b1a1a; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); }
+  nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; background: rgba(244,241,236,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(200,184,154,0.25); }
+  .nav-logo { text-decoration: none; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; }
+  .nav-logo-text { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .nav-links { display: flex; gap: 2.5rem; }
+  .nav-links a { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6b6258; text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--ink); }
+  .cart-badge { position: absolute; top: -8px; right: -10px; background: var(--accent); color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: none; align-items: center; justify-content: center; }
+  @media (max-width: 640px) { .nav-links { display: none; } nav { padding: 1.2rem 1.5rem; } }
+
+  .page-hero { padding: 10rem 3rem 5rem; border-bottom: 1px solid rgba(200,184,154,0.3); }
+  .breadcrumb { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-bottom: 1.5rem; }
+  .breadcrumb a { color: inherit; text-decoration: none; }
+  h1 { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(3rem, 6vw, 5rem); line-height: 1; margin-bottom: 1.5rem; }
+  .hero-sub { font-size: 0.75rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 2; max-width: 480px; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 5rem 3rem; display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: start; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; gap: 3rem; padding: 3rem 1.5rem; } .page-hero { padding: 8rem 1.5rem 3rem; } }
+
+  .section-label { font-size: 0.55rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--warm); margin-bottom: 1rem; }
+  .section-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: 2.2rem; margin-bottom: 1.5rem; }
+
+  /* Contact channels */
+  .channel { padding: 1.75rem 0; border-bottom: 1px solid rgba(200,184,154,0.25); }
+  .channel:last-child { border-bottom: none; }
+  .channel-label { font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: #8a7f73; margin-bottom: 0.4rem; }
+  .channel-value { font-size: 0.9rem; color: var(--ink); margin-bottom: 0.3rem; }
+  .channel-note { font-size: 0.68rem; color: #8a7f73; line-height: 1.7; }
+
+  /* Form */
+  .form-group { margin-bottom: 1.5rem; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-bottom: 0.5rem; }
+  input, select, textarea {
+    width: 100%; padding: 0.8rem 0; background: transparent;
+    border: none; border-bottom: 1px solid rgba(200,184,154,0.5);
+    font-family: 'Jost'; font-size: 0.85rem; color: var(--ink); outline: none;
+    transition: border-color 0.2s; resize: none;
+  }
+  input::placeholder, textarea::placeholder { color: #bbb0a5; }
+  input:focus, select:focus, textarea:focus { border-color: var(--ink); }
+  select { appearance: none; cursor: pointer; }
+  .submit-btn { width: 100%; padding: 1.2rem; background: var(--ink); color: var(--cream); border: none; font-family: 'Jost'; font-size: 0.65rem; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; transition: background 0.3s; margin-top: 0.5rem; }
+  .submit-btn:hover { background: var(--accent); }
+  .success-msg { display: none; padding: 1.25rem; background: rgba(58,107,60,0.08); border-left: 3px solid #3a6b3c; font-size: 0.78rem; color: #2e5e30; line-height: 1.7; margin-top: 1rem; }
+
+  footer { background: var(--cream); border-top: 1px solid rgba(200,184,154,0.4); padding: 4rem 3rem 2rem; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+  @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer-brand { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.8rem; margin-bottom: 1rem; }
+  .footer-tagline { font-size: 0.65rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 1.8; max-width: 240px; }
+  .footer-col h4 { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.2rem; }
+  .footer-col a { display: block; font-size: 0.75rem; color: #8a7f73; text-decoration: none; margin-bottom: 0.6rem; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--ink); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(200,184,154,0.3); padding-top: 1.5rem; flex-wrap: wrap; gap: 0.5rem; }
+  .footer-bottom p { font-size: 0.6rem; color: #a89e94; letter-spacing: 0.1em; }
+  .footer-bottom a { font-size: 0.6rem; color: #8a7f73; text-decoration: none; letter-spacing: 0.1em; }
+</style>
+</head>
+<body>
+<!-- ANNOUNCEMENT BANNER -->
+<style>
+  #site-announcement {
+    display: none;
+    position: relative;
+    width: 100%;
+    z-index: 200;
+    text-align: center;
+    padding: 0.65rem 3rem;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  #site-announcement a.ann-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-left: 1rem;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  #site-announcement a.ann-link:hover { opacity: 1; }
+  #ann-dismiss {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    font-size: 0.9rem; opacity: 0.5; color: inherit;
+    transition: opacity 0.2s; line-height: 1;
+  }
+  #ann-dismiss:hover { opacity: 1; }
+  body.has-announcement nav { top: 0; }
+</style>
+<div id="site-announcement">
+  <span id="ann-text"></span>
+  <a id="ann-cta" class="ann-link" href="#" style="display:none;"></a>
+  <button id="ann-dismiss" title="Dismiss">✕</button>
+</div>
+<script>
+  (function() {
+    try {
+      var DISMISSED_KEY = 'atelier_ann_dismissed';
+      var dismissed = JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]');
+      var anns = JSON.parse(localStorage.getItem('atelier_announcements') || '[]');
+      var active = anns.find(function(a) {
+        return a.status === 'active' && dismissed.indexOf(a.createdAt) === -1;
+      });
+      if (!active) return;
+
+      var STYLES = {
+        dark:   { bg: '#0e0e0d', color: '#f4f1ec' },
+        gold:   { bg: '#c8b89a', color: '#0e0e0d' },
+        accent: { bg: '#8b5e3c', color: '#f4f1ec' },
+        green:  { bg: '#2e7d32', color: '#ffffff' },
+        urgent: { bg: '#8b1a1a', color: '#ffffff' }
+      };
+      var s = STYLES[active.style] || STYLES.dark;
+      var bar = document.getElementById('site-announcement');
+      bar.style.background = s.bg;
+      bar.style.color = s.color;
+      bar.style.display = 'block';
+      document.getElementById('ann-text').textContent = active.message;
+
+      if (active.link && active.linkText) {
+        var cta = document.getElementById('ann-cta');
+        cta.href = active.link;
+        cta.textContent = active.linkText;
+        cta.style.display = 'inline';
+      }
+
+      var dismissBtn = document.getElementById('ann-dismiss');
+      if (active.dismissible === 'no') {
+        dismissBtn.style.display = 'none';
+      } else {
+        dismissBtn.addEventListener('click', function() {
+          dismissed.push(active.createdAt);
+          localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+          bar.style.display = 'none';
+          document.body.classList.remove('has-announcement');
+          // Restore nav position
+          var nav = document.querySelector('nav');
+          if (nav) nav.style.top = '';
+        });
+      }
+
+      // Push nav down by announcement height
+      document.body.classList.add('has-announcement');
+      var nav = document.querySelector('nav');
+      if (nav) {
+        var h = bar.offsetHeight;
+        nav.style.top = h + 'px';
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<style>
+  #admin-preview-bar {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #141210; color: #c8b89a;
+    padding: 0.5rem 2rem;
+    font-family: 'Jost', sans-serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    display: none; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+  }
+  #admin-preview-bar a { color: #c8b89a; text-decoration: none; transition: color 0.2s; }
+  #admin-preview-bar a:hover { color: #fff; }
+  body.admin-viewing { padding-top: 36px; }
+  body.admin-viewing nav { top: 36px; }
+</style>
+<div id="admin-preview-bar">
+  <span>⚙ Admin Preview Mode</span>
+  <a href="analyticsDashboard.html">← Back to Dashboard</a>
+</div>
+<script>
+  (function() {
+    if (localStorage.getItem("atelier_admin") === "1") {
+      var bar = document.getElementById("admin-preview-bar");
+      bar.style.display = "flex";
+      document.body.classList.add("admin-viewing");
+    }
+  })();
+</script>
+
+<nav>
+  <div class="nav-links">
+    <a href="collection.html">Shop</a>
+    <a href="collection.html">Collections</a>
+    <a href="aboutUs.html">About</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:52px;width:auto;object-fit:contain;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div style="display:flex;gap:1.5rem;align-items:center;">
+    <a href="shoppingCart.html" style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink);text-decoration:none;position:relative;">
+      Bag <span class="cart-badge" id="cart-count">0</span>
+    </a>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="breadcrumb"><a href="index.html">Home</a> &nbsp;/&nbsp; <span>Contact Us</span></div>
+  <h1>We Are<br/>Listening</h1>
+  <p class="hero-sub">Whether it's a question about fit, an order enquiry, or something else entirely — our team responds within one business day.</p>
+</div>
+
+<main>
+
+  <!-- LEFT: Channels -->
+  <div>
+    <p class="section-label">Reach Us</p>
+    <h2 class="section-title">Contact Channels</h2>
+
+    <div class="channel">
+      <p class="channel-label">Client Services</p>
+      <p class="channel-value"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="640c0108080b24100c01051001080d01164a070b09">[email&#160;protected]</a></p>
+      <p class="channel-note">Orders, sizing, returns, and general enquiries. We respond within 24 hours on business days.</p>
+    </div>
+
+    <div class="channel">
+      <p class="channel-label">Care &amp; Repairs</p>
+      <p class="channel-value"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0162607364417569646075646d6864732f626e6c">[email&#160;protected]</a></p>
+      <p class="channel-note">Garment care questions and lifetime repair requests. Please include your order number and a brief description.</p>
+    </div>
+
+    <div class="channel">
+      <p class="channel-label">Press &amp; Partnerships</p>
+      <p class="channel-value"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bbcbc9dec8c8fbcfd3dedacfded7d2dec995d8d4d6">[email&#160;protected]</a></p>
+      <p class="channel-note">Media enquiries, editorial requests, and collaboration proposals. We read every message carefully.</p>
+    </div>
+
+    <div class="channel">
+      <p class="channel-label">Atelier Locations</p>
+      <p class="channel-value">Paris · New York · Tokyo</p>
+      <p class="channel-note">Personal styling appointments are available by invitation at all three locations. Contact us to arrange a visit.</p>
+    </div>
+
+    <div class="channel">
+      <p class="channel-label">Business Hours</p>
+      <p class="channel-value" style="font-size:0.8rem;">Monday – Friday, 9:00 – 18:00 CET</p>
+      <p class="channel-note">We are closed on weekends and public holidays in France. Messages received outside these hours will be answered the next business day.</p>
+    </div>
+  </div>
+
+  <!-- RIGHT: Form -->
+  <div>
+    <p class="section-label">Write to Us</p>
+    <h2 class="section-title">Send a Message</h2>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="cf-fname">First Name</label>
+        <input type="text" id="cf-fname" placeholder="Alexandra"/>
+      </div>
+      <div class="form-group">
+        <label for="cf-lname">Last Name</label>
+        <input type="text" id="cf-lname" placeholder="Beaumont"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="cf-email">Email Address</label>
+      <input type="email" id="cf-email" placeholder="your@email.com"/>
+    </div>
+    <div class="form-group">
+      <label for="cf-subject">Subject</label>
+      <select id="cf-subject">
+        <option value="">Select a topic…</option>
+        <option>Order Enquiry</option>
+        <option>Returns &amp; Exchanges</option>
+        <option>Sizing Assistance</option>
+        <option>Garment Care &amp; Repair</option>
+        <option>Press &amp; Partnerships</option>
+        <option>Styling Appointment</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="cf-order">Order Number (if applicable)</label>
+      <input type="text" id="cf-order" placeholder="ATL-2025-XXXX"/>
+    </div>
+    <div class="form-group">
+      <label for="cf-message">Your Message</label>
+      <textarea id="cf-message" rows="6" placeholder="Please describe how we can help you…"></textarea>
+    </div>
+    <button class="submit-btn" id="cf-submit">Send Message</button>
+    <div class="success-msg" id="cf-success">
+      Thank you for your message. A member of our team will respond to <span id="cf-email-confirm"></span> within one business day.
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">The Atelier</div>
+      <p class="footer-tagline">Luxury ready-to-wear, crafted for those who understand that clothing is never just clothing.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <a href="collection.html">New Arrivals</a>
+      <a href="collection.html">Collections</a>
+      <a href="collection.html">Outerwear</a>
+      <a href="collection.html">Dresses</a>
+    </div>
+    <div class="footer-col">
+      <h4>House</h4>
+      <a href="aboutUs.html">Our Story</a>
+      <a href="aboutUs.html">Craftsmanship</a>
+      <a href="sustainability.html">Sustainability</a>
+      <a href="press.html">Press</a>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <a href="sizingGuide.html">Sizing Guide</a>
+      <a href="shippingReturns.html">Shipping &amp; Returns</a>
+      <a href="careInstructions.html">Care Instructions</a>
+      <a href="contactUs.html">Contact Us</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 The Atelier. All rights reserved.</p>
+    <p>Privacy Policy · Terms of Service</p>
+    <a id="staff-portal-link" href="adminLogin.html" style="font-size:0.6rem;color:#8a7f73;text-decoration:none;letter-spacing:0.1em;">Staff Portal</a>
+  </div>
+</footer>
+
+<script>
+  // Cart badge
+  (function() {
+    var cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+    var count = cart.reduce(function(s, i) { return s + i.quantity; }, 0);
+    var badge = document.getElementById('cart-count');
+    if (count > 0) { badge.style.display = 'flex'; badge.textContent = count; }
+  })();
+
+  document.getElementById('cf-submit').addEventListener('click', function() {
+    var fname = document.getElementById('cf-fname').value.trim();
+    var lname = document.getElementById('cf-lname').value.trim();
+    var email = document.getElementById('cf-email').value.trim();
+    var subject = document.getElementById('cf-subject').value;
+    var orderNum = document.getElementById('cf-order').value.trim();
+    var msg = document.getElementById('cf-message').value.trim();
+
+    if (!fname || !email || !msg) {
+      alert('Please fill in your name, email, and message.');
+      return;
+    }
+
+    var btn = document.getElementById('cf-submit');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    setTimeout(function() {
+      // Save inquiry to localStorage for admin dashboard
+      var inquiries = JSON.parse(localStorage.getItem('atelier_inquiries') || '[]');
+      inquiries.unshift({
+        id: 'INQ-' + Date.now(),
+        name: fname + (lname ? ' ' + lname : ''),
+        email: email,
+        subject: subject || 'General',
+        orderRef: orderNum || '',
+        message: msg,
+        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        status: 'unread'
+      });
+      localStorage.setItem('atelier_inquiries', JSON.stringify(inquiries));
+
+      // Show success message
+      document.getElementById('cf-email-confirm').textContent = email;
+      document.getElementById('cf-success').style.display = 'block';
+      btn.style.display = 'none';
+    }, 1000);
+  });
+</script>
+
+<script>
+  // Hide Staff Portal link if logged in as admin
+  (function() {
+    var link = document.getElementById("staff-portal-link");
+    if (link && localStorage.getItem("atelier_admin") === "1") {
+      link.style.display = "none";
+    }
+  })();
+
+  // Secret shortcut: Ctrl+Shift+A = go to admin login (works even if link is hidden)
+  document.addEventListener("keydown", function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === "A") {
+      window.location.href = "adminLogin.html";
+    }
+  });
+</script>
+</body>
+</html>

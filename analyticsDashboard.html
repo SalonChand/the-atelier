@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard | THE ATELIER Admin</title>
+<meta name="description" content="The Atelier administration dashboard — manage orders, products, inventory, customers, and analytics."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; --sidebar: #141210; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: 'Jost', sans-serif; background: #f0ece6; color: var(--ink); margin: 0; min-height: 100vh; }
+  @media (max-width: 900px) { .sidebar { transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } }
+  .sidebar { background: var(--sidebar); display: flex; flex-direction: column; padding: 2rem 0; position: fixed; left: 0; top: 0; bottom: 0; width: 240px; z-index: 10; transition: transform 0.3s ease; }
+  .sidebar-logo { padding: 1rem 1.5rem 2rem; border-bottom: 1px solid rgba(200,184,154,0.1); }
+  .sidebar-logo span { display: block; font-family: 'Jost'; font-style: normal; font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: #5a5249; margin-top: 0.3rem; }
+  .sidebar-nav { flex: 1; padding: 1.5rem 0; overflow-y: auto; }
+  .nav-section { padding: 0 1.5rem; margin-bottom: 2rem; }
+  .nav-section-title { font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: #4a453f; margin-bottom: 0.75rem; }
+  .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1rem; margin-bottom: 0.25rem; border-radius: 2px; font-size: 0.72rem; letter-spacing: 0.05em; color: #8a7f73; cursor: pointer; transition: all 0.2s; border: none; background: none; width: 100%; text-align: left; font-family: 'Jost'; }
+  .nav-item:hover { background: rgba(200,184,154,0.08); color: var(--cream); }
+  .nav-item.active { background: rgba(200,184,154,0.12); color: var(--cream); }
+  .nav-item .icon { width: 16px; text-align: center; font-size: 0.85rem; flex-shrink: 0; }
+  .sidebar-footer { padding: 1.5rem; border-top: 1px solid rgba(200,184,154,0.1); }
+  .sidebar-footer a { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #4a453f; text-decoration: none; display: block; transition: color 0.2s; margin-bottom: 0.5rem; }
+  .sidebar-footer a:hover { color: var(--warm); }
+  .dashboard-main { margin-left: 240px; padding: 2.5rem 3rem; min-height: 100vh; }
+  @media (max-width: 900px) { .dashboard-main { margin-left: 0; padding: 2rem 1.5rem; } }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; }
+  .page-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: 2rem; }
+  .topbar-right { display: flex; align-items: center; gap: 1rem; font-size: 0.65rem; color: #8a7f73; }
+  .date-badge { padding: 0.4rem 1rem; background: white; border: 1px solid rgba(200,184,154,0.3); font-size: 0.6rem; letter-spacing: 0.1em; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2.5rem; }
+  @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  .kpi-card { background: white; padding: 1.5rem 1.75rem; border: 1px solid rgba(200,184,154,0.2); }
+  .kpi-label { font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-bottom: 0.6rem; }
+  .kpi-value { font-family: 'Newsreader', serif; font-style: italic; font-size: 2rem; font-weight: 300; line-height: 1; margin-bottom: 0.4rem; }
+  .kpi-change { font-size: 0.6rem; }
+  .kpi-change.up { color: #3a6b3c; }
+  .kpi-change.down { color: #8b1a1a; }
+  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2.5rem; }
+  @media (max-width: 1100px) { .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card { background: white; padding: 2rem; border: 1px solid rgba(200,184,154,0.2); }
+  .chart-title { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6b6258; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+  canvas { max-height: 260px; }
+  .table-card { background: white; border: 1px solid rgba(200,184,154,0.2); margin-bottom: 2.5rem; }
+  .table-header { padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(200,184,154,0.2); flex-wrap: wrap; gap: 0.75rem; }
+  .table-title { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; }
+  .table-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  .table-search { padding: 0.5rem 1rem; border: 1px solid rgba(200,184,154,0.4); background: transparent; font-family: 'Jost'; font-size: 0.7rem; outline: none; width: 200px; }
+  .table-search:focus { border-color: var(--ink); }
+  .btn-primary { padding: 0.5rem 1.25rem; background: var(--ink); color: var(--cream); border: none; font-family: 'Jost'; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+  .btn-primary:hover { background: var(--accent); }
+  .btn-secondary { padding: 0.5rem 1.25rem; background: transparent; color: var(--ink); border: 1px solid rgba(14,14,13,0.25); font-family: 'Jost'; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  .btn-secondary:hover { border-color: var(--ink); }
+  .btn-danger { padding: 0.5rem 1.25rem; background: transparent; color: #8b1a1a; border: 1px solid rgba(139,26,26,0.3); font-family: 'Jost'; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; }
+  .table-scroll { overflow-x: auto; }
+  thead th { padding: 0.75rem 1.5rem; text-align: left; font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: #8a7f73; border-bottom: 1px solid rgba(200,184,154,0.2); font-weight: 400; cursor: pointer; user-select: none; }
+  thead th:hover { color: var(--ink); }
+  tbody td { padding: 0.9rem 1.5rem; font-size: 0.75rem; border-bottom: 1px solid rgba(200,184,154,0.12); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(200,184,154,0.05); }
+  .status-badge { padding: 0.25rem 0.75rem; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 2px; white-space: nowrap; }
+  .status-completed,.status-active,.status-in-stock,.status-approved { background: #e8f5e9; color: #2e7d32; }
+  .status-processing,.status-pending { background: #fff3e0; color: #e65100; }
+  .status-shipped { background: #e3f2fd; color: #1565c0; }
+  .status-cancelled,.status-inactive,.status-out-of-stock,.status-rejected,.status-payment-rejected { background: #fce4ec; color: #b71c1c; }
+  .status-low-stock { background: #fff8e1; color: #f57f17; }
+  .status-awaiting-verification { background: #fce4ec; color: #8b5e3c; background: linear-gradient(135deg, #fff8e1, #fff3e0); border: 1px solid rgba(230,81,0,0.2); animation: pulse-verify 2s ease infinite; }
+  @keyframes pulse-verify { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+  .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 1100px) { .bottom-grid { grid-template-columns: 1fr; } }
+  .top-product-item { display: grid; grid-template-columns: 2rem 1fr auto auto; gap: 1rem; align-items: center; padding: 0.9rem 0; border-bottom: 1px solid rgba(200,184,154,0.15); }
+  .top-product-item:last-child { border-bottom: none; }
+  .tp-rank { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.5rem; color: var(--warm); text-align: center; }
+  .tp-name p { font-size: 0.8rem; margin-bottom: 0.15rem; }
+  .tp-name span { font-size: 0.6rem; color: #8a7f73; }
+  .tp-bar-wrap { width: 60px; height: 4px; background: rgba(200,184,154,0.3); border-radius: 2px; }
+  .tp-bar { height: 100%; background: var(--accent); border-radius: 2px; }
+  .activity-item { display: grid; grid-template-columns: 8px 1fr auto; gap: 0.75rem; align-items: start; padding: 0.85rem 0; border-bottom: 1px solid rgba(200,184,154,0.15); }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; }
+  .dot-order { background: #3a6b3c; } .dot-ship { background: #1565c0; } .dot-review { background: var(--accent); } .dot-return { background: #8b1a1a; }
+  .activity-text p { font-size: 0.75rem; margin-bottom: 0.2rem; line-height: 1.4; }
+  .activity-text span { font-size: 0.6rem; color: #8a7f73; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(14,14,13,0.6); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; padding: 2.5rem; width: 90%; max-width: 540px; max-height: 90vh; overflow-y: auto; position: relative; }
+  .modal-title { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.6rem; margin-bottom: 2rem; }
+  .modal-close { position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #8a7f73; }
+  .form-group { margin-bottom: 1.25rem; }
+  .form-group label { display: block; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-bottom: 0.4rem; }
+  .form-group input,.form-group select,.form-group textarea { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid rgba(200,184,154,0.5); background: transparent; font-family: 'Jost'; font-size: 0.8rem; outline: none; transition: border-color 0.2s; color: var(--ink); }
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus { border-color: var(--ink); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(200,184,154,0.3); }
+  .mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .mini-stat { background: white; padding: 1.25rem; border: 1px solid rgba(200,184,154,0.2); text-align: center; }
+  .mini-stat-val { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.6rem; }
+  .mini-stat-label { font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-top: 0.25rem; }
+  .stars { color: var(--accent); letter-spacing: 2px; font-size: 0.85rem; }
+  .filter-select { padding: 0.5rem 0.75rem; border: 1px solid rgba(200,184,154,0.4); background: white; font-family: 'Jost'; font-size: 0.7rem; outline: none; cursor: pointer; color: var(--ink); }
+  .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--ink); color: var(--cream); padding: 1rem 1.5rem; font-size: 0.7rem; letter-spacing: 0.1em; z-index: 2000; transform: translateY(200%); transition: transform 0.3s; border-left: 3px solid var(--accent); max-width: 320px; }
+  .toast.show { transform: translateY(0); }
+  .toast-inq { border-left-color: #e65100; }
+  .toast-actions { display: flex; gap: 0.75rem; margin-top: 0.6rem; }
+  .toast-btn { font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; background: none; border: 1px solid rgba(244,241,236,0.3); color: var(--cream); padding: 0.3rem 0.75rem; cursor: pointer; font-family: 'Jost'; transition: background 0.2s; }
+  .toast-btn:hover { background: rgba(244,241,236,0.1); }
+  @keyframes pulse-badge { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+  .badge-pulse { animation: pulse-badge 1.2s ease infinite; }
+  .stock-bar-wrap { width: 80px; height: 6px; background: rgba(200,184,154,0.3); border-radius: 3px; display: inline-block; vertical-align: middle; margin-right: 0.5rem; }
+  .stock-bar { height: 100%; border-radius: 3px; }
+  .stock-high { background: #4caf50; } .stock-mid { background: #ff9800; } .stock-low { background: #f44336; }
+  .promo-type { padding: 0.2rem 0.6rem; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 2px; background: rgba(139,94,60,0.1); color: var(--accent); }
+  .pagination { display: flex; align-items: center; gap: 0.5rem; padding: 1rem 1.5rem; border-top: 1px solid rgba(200,184,154,0.2); justify-content: flex-end; }
+  .page-btn { padding: 0.4rem 0.75rem; border: 1px solid rgba(200,184,154,0.4); background: white; font-family: 'Jost'; font-size: 0.65rem; cursor: pointer; transition: all 0.2s; }
+  .page-btn:hover,.page-btn.active { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+  .page-info { font-size: 0.65rem; color: #8a7f73; margin-right: auto; }
+
+  /* MOBILE SIDEBAR TOGGLE */
+  .mobile-toggle {
+    display: none; position: fixed; top: 1rem; left: 1rem; z-index: 20;
+    background: var(--sidebar); color: var(--cream); border: none;
+    width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer;
+    align-items: center; justify-content: center; border-radius: 2px;
+  }
+  @media (max-width: 900px) { .mobile-toggle { display: flex; } .dashboard-main { padding-top: 4rem; } }
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 9;
+  }
+  .sidebar-overlay.open { display: block; }
+</style>
+</head>
+<body>
+<button class="mobile-toggle" id="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('open');">☰</button>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open');this.classList.remove('open');"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="logo.png" alt="The Atelier" style="height:48px;width:auto;object-fit:contain;margin-bottom:0.5rem;display:block;"/><span>Admin Portal</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <p class="nav-section-title">Overview</p>
+      <button class="nav-item active" onclick="showPanel('dashboard',this)"><span class="icon">◈</span> Dashboard</button>
+      <button class="nav-item" onclick="showPanel('analytics',this)"><span class="icon">◻</span> Analytics</button>
+    </div>
+    <div class="nav-section">
+      <p class="nav-section-title">Commerce</p>
+      <button class="nav-item" onclick="showPanel('orders',this)"><span class="icon">◫</span> Orders</button>
+      <button class="nav-item" onclick="showPanel('products',this)"><span class="icon">◧</span> Products</button>
+      <button class="nav-item" onclick="showPanel('inventory',this)"><span class="icon">◨</span> Inventory</button>
+      <button class="nav-item" onclick="showPanel('customers',this)"><span class="icon">◩</span> Customers</button>
+    </div>
+    <div class="nav-section">
+      <p class="nav-section-title">Payments</p>
+      <button class="nav-item" onclick="showPanel('paymentsettings',this)"><span class="icon">💳</span> Payment Settings</button>
+    </div>
+    <div class="nav-section">
+      <p class="nav-section-title">Content</p>
+      <button class="nav-item" onclick="showPanel('collections',this)"><span class="icon">◪</span> Collections</button>
+      <button class="nav-item" onclick="showPanel('promotions',this)"><span class="icon">◦</span> Promotions</button>
+      <button class="nav-item" onclick="showPanel('reviews',this)"><span class="icon">○</span> Reviews</button>
+      <button class="nav-item" onclick="showPanel('inquiries',this)" id="nav-inquiries" style="position:relative;"><span class="icon">✉</span> Inquiries <span id="inq-badge" style="margin-left:auto;background:#e65100;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
+      <button class="nav-item" onclick="showPanel('announcements',this)"><span class="icon">📢</span> Announcements</button>    </div>
+    <div class="nav-section">
+      <p class="nav-section-title">Access</p>
+      <button class="nav-item" onclick="showPanel('administrators',this)"><span class="icon">◱</span> Administrators</button>
+    </div>
+    <div class="nav-section">
+      <p class="nav-section-title">Custom Studio</p>
+      <button class="nav-item" onclick="showPanel('customorders',this)" id="nav-customorders" style="position:relative;"><span class="icon">✦</span> Custom Orders <span id="custom-badge" style="margin-left:auto;background:#8b5e3c;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="index.html" target="_blank" style="margin-bottom:0.75rem;">← View Store</a>
+    <a href="adminLogin.html" onclick="localStorage.removeItem('atelier_admin');localStorage.removeItem('atelier_current_user');localStorage.removeItem('atelier_current_role')">Sign Out</a>
+  </div>
+</aside>
+
+<main class="dashboard-main">
+
+<!-- DASHBOARD -->
+<div class="panel active" id="panel-dashboard">
+  <div class="topbar"><h1 class="page-title">Dashboard</h1><div class="topbar-right"><span class="date-badge" id="current-date"></span><span>Admin</span></div></div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><p class="kpi-label">Revenue (Month)</p><p class="kpi-value">NRs. 0</p><p class="kpi-change up">↑ 0% vs prior</p></div>
+    <div class="kpi-card"><p class="kpi-label">Orders (Month)</p><p class="kpi-value">0</p><p class="kpi-change up">↑ 0% vs prior</p></div>
+    <div class="kpi-card"><p class="kpi-label">Avg. Order Value</p><p class="kpi-value">NRs. 0</p><p class="kpi-change up">↑ 0% vs prior</p></div>
+    <div class="kpi-card"><p class="kpi-label">Return Rate</p><p class="kpi-value">0%</p><p class="kpi-change down">↑ 0% vs prior</p></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title"><span>Revenue Over Time</span><span style="font-family:'Newsreader',serif;font-style:italic;font-size:1.1rem;color:var(--ink);">Monthly Trend</span></div><canvas id="revenue-chart"></canvas></div>
+    <div class="chart-card"><div class="chart-title"><span>Sales by Category</span></div><canvas id="category-chart"></canvas></div>
+  </div>
+  <div class="bottom-grid">
+    <div class="chart-card"><div class="chart-title"><span>Top Products</span></div><div id="top-products-list"></div></div>
+    <div class="chart-card"><div class="chart-title"><span>Recent Activity</span></div><div id="activity-list"></div></div>
+  </div>
+</div>
+
+<!-- ANALYTICS -->
+<div class="panel" id="panel-analytics">
+  <div class="topbar"><h1 class="page-title">Analytics</h1><div class="topbar-right"><span class="date-badge" id="analytics-date"></span></div></div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><p class="kpi-label">Page Views</p><p class="kpi-value">0</p><p class="kpi-change up">↑ 0%</p><span class="kpi-icon">👁</span></div>
+    <div class="kpi-card"><p class="kpi-label">Unique Visitors</p><p class="kpi-value">0</p><p class="kpi-change up">↑ 0%</p><span class="kpi-icon">◎</span></div>
+    <div class="kpi-card"><p class="kpi-label">Conversion Rate</p><p class="kpi-value">0%</p><p class="kpi-change down">↓ 0%</p><span class="kpi-icon">%</span></div>
+    <div class="kpi-card"><p class="kpi-label">Cart Abandonment</p><p class="kpi-value">0%</p><p class="kpi-change down">↑ 0%</p><span class="kpi-icon">⊘</span></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title"><span>Traffic Over Time</span></div><canvas id="traffic-chart"></canvas></div>
+    <div class="chart-card"><div class="chart-title"><span>Traffic Sources</span></div><canvas id="source-chart"></canvas></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:2.5rem;"><div class="chart-title"><span>Revenue by Country</span></div><canvas id="country-chart" style="max-height:200px;"></canvas></div>
+</div>
+
+<!-- ORDERS -->
+<div class="panel" id="panel-orders">
+  <div class="topbar"><h1 class="page-title">Orders</h1></div>
+  <div class="mini-stats" id="orders-mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="stat-orders-total">0</div><div class="mini-stat-label">Total This Month</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stat-orders-awaiting" style="color:#8b5e3c;">0</div><div class="mini-stat-label">Awaiting Verification</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stat-orders-pending">0</div><div class="mini-stat-label">Processing</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stat-orders-cancelled">0</div><div class="mini-stat-label">Cancelled / Rejected</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">All Orders</span>
+      <div class="table-actions">
+        <select class="filter-select" id="order-status-filter" onchange="renderOrdersTable()">
+          <option value="">All Statuses</option>
+          <option value="awaiting-verification">Awaiting Verification</option>
+          <option value="processing">Processing</option>
+          <option value="shipped">Shipped</option>
+          <option value="completed">Completed</option>
+          <option value="payment-rejected">Payment Rejected</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <input class="table-search" placeholder="Search by order, customer, product, SKU..." id="order-search" oninput="renderOrdersTable()"/>
+        <button class="btn-primary" onclick="exportCSV('orders')">Export CSV</button>
+      </div>
+    </div>
+    <!-- Product/SKU Lookup -->
+    <div style="padding:1rem 2rem;border-bottom:1px solid rgba(200,184,154,0.2);background:#faf8f5;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      <span style="font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;white-space:nowrap;">Quick Lookup</span>
+      <input id="product-lookup-input" class="table-search" style="width:260px;flex:1;max-width:320px;" placeholder="Type SKU or product name to find buyers…" oninput="productLookup()"/>
+      <button class="btn-secondary" style="font-size:0.55rem;padding:0.45rem 1rem;" onclick="document.getElementById('product-lookup-input').value='';productLookup()">Clear</button>
+    </div>
+    <div id="product-lookup-results" style="display:none;"></div>
+    <table><thead><tr><th onclick="sortTable('orders','id')">Order ↕</th><th onclick="sortTable('orders','customer')">Customer ↕</th><th>Product</th><th onclick="sortTable('orders','date')">Date ↕</th><th onclick="sortTable('orders','amount')">Amount ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="orders-tbody"></tbody></table>
+    <div class="pagination" id="orders-pagination"></div>
+  </div>
+</div>
+
+<!-- PRODUCTS -->
+<div class="panel" id="panel-products">
+  <div class="topbar"><h1 class="page-title">Products</h1></div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">All Products</span>
+      <div class="table-actions">
+        <select class="filter-select" id="product-cat-filter" onchange="renderProductsTable()">
+          <option value="">All Categories</option>
+          <option value="outerwear">Outerwear</option>
+          <option value="dresses">Dresses</option>
+          <option value="separates">Separates</option>
+        </select>
+        <input class="table-search" placeholder="Search products..." id="product-search" oninput="renderProductsTable()"/>
+        <button class="btn-primary" onclick="openProductModal()">+ Add Product</button>
+      </div>
+    </div>
+    <table><thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Color</th><th onclick="sortTable('products','price')">Price ↕</th><th onclick="sortTable('products','stock')">Stock ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="products-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- INVENTORY -->
+<div class="panel" id="panel-inventory">
+  <div class="topbar"><h1 class="page-title">Inventory</h1></div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val">0</div><div class="mini-stat-label">Total Units</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" style="color:#f57f17;">0</div><div class="mini-stat-label">Low Stock Items</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" style="color:#b71c1c;">0</div><div class="mini-stat-label">Out of Stock</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Stock Levels</span>
+      <div class="table-actions">
+        <input class="table-search" placeholder="Search inventory..." id="inv-search" oninput="renderInventoryTable()"/>
+      </div>
+    </div>
+    <table><thead><tr><th>Product</th><th>SKU</th><th>Size</th><th onclick="sortTable('inventory','stock')">Stock ↕</th><th>Level</th><th>Status</th><th>Actions</th></tr></thead><tbody id="inventory-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- CUSTOMERS -->
+<div class="panel" id="panel-customers">
+  <div class="topbar"><h1 class="page-title">Customers</h1></div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="stat-cust-total">0</div><div class="mini-stat-label">Total Customers</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stat-cust-new">0</div><div class="mini-stat-label">New This Month</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stat-cust-ltv">NRs. 0</div><div class="mini-stat-label">Avg. Lifetime Value</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">All Customers</span>
+      <div class="table-actions">
+        <input class="table-search" placeholder="Search customers..." id="customer-search" oninput="renderCustomersTable()"/>
+        <button class="btn-primary" onclick="exportCSV('customers')">Export CSV</button>
+      </div>
+    </div>
+    <table><thead><tr><th>Name</th><th>Email</th><th>Country</th><th>Products Bought</th><th onclick="sortTable('customers','orders')">Orders ↕</th><th onclick="sortTable('customers','spent')">Total Spent ↕</th><th>Joined</th><th>Action</th></tr></thead><tbody id="customers-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- COLLECTIONS -->
+<div class="panel" id="panel-collections">
+  <div class="topbar"><h1 class="page-title">Collections</h1></div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Manage Collections</span>
+      <div class="table-actions"><button class="btn-primary" onclick="openCollectionModal()">+ New Collection</button></div>
+    </div>
+    <table><thead><tr><th>Collection Name</th><th>Season</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead><tbody id="collections-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- PROMOTIONS -->
+<div class="panel" id="panel-promotions">
+  <div class="topbar"><h1 class="page-title">Promotions</h1></div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Promo Codes &amp; Discounts</span>
+      <div class="table-actions"><button class="btn-primary" onclick="openPromoModal()">+ Create Promo</button></div>
+    </div>
+    <table><thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Used</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead><tbody id="promotions-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- REVIEWS -->
+<div class="panel" id="panel-reviews">
+  <div class="topbar"><h1 class="page-title">Reviews</h1></div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val">0</div><div class="mini-stat-label">Avg. Rating</div></div>
+    <div class="mini-stat"><div class="mini-stat-val">0</div><div class="mini-stat-label">Total Reviews</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" style="color:#e65100;">0</div><div class="mini-stat-label">Pending Approval</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Customer Reviews</span>
+      <div class="table-actions">
+        <select class="filter-select" id="review-filter" onchange="renderReviewsTable()">
+          <option value="">All Reviews</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <input class="table-search" placeholder="Search reviews..." id="review-search" oninput="renderReviewsTable()"/>
+      </div>
+    </div>
+    <table><thead><tr><th>Customer</th><th>Product</th><th>Rating</th><th>Review</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="reviews-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- ADMINISTRATORS -->
+<div class="panel" id="panel-administrators">
+  <div class="topbar"><h1 class="page-title">Administrators</h1></div>
+  <div style="background:#fff3e0;border-left:3px solid #e65100;padding:0.9rem 1.25rem;margin-bottom:1.5rem;font-size:0.72rem;color:#6b3a00;letter-spacing:0.05em;line-height:1.7;" id="admin-info-bar">
+    As <strong>Superadmin</strong>, you can create new admin accounts. Share the generated credentials with the new admin — they will use them to log in.
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">System Access</span>
+      <div class="table-actions" id="admin-actions">
+        <button class="btn-primary" onclick="openAdminModal('','admin')">+ Add Admin</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Email</th><th>Role</th><th>Password</th><th>Actions</th></tr></thead>
+      <tbody id="admins-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- INQUIRIES -->
+<div class="panel" id="panel-inquiries">
+  <div class="topbar">
+    <h1 class="page-title">Inquiries</h1>
+    <div class="topbar-right">
+      <button class="btn-secondary" onclick="markAllRead()" style="font-size:0.55rem;padding:0.4rem 1rem;">Mark All Read</button>
+      <button class="btn-primary" onclick="exportInquiriesCSV()" style="font-size:0.55rem;padding:0.4rem 1rem;">Export CSV</button>
+    </div>
+  </div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="inq-stat-total">0</div><div class="mini-stat-label">Total Inquiries</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="inq-stat-unread" style="color:#e65100;">0</div><div class="mini-stat-label">Unread</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="inq-stat-today">0</div><div class="mini-stat-label">Received Today</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Customer Messages</span>
+      <div class="table-actions">
+        <select class="filter-select" id="inq-status-filter" onchange="renderInquiriesTable()">
+          <option value="">All</option>
+          <option value="unread">Unread</option>
+          <option value="read">Read</option>
+          <option value="replied">Replied</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select class="filter-select" id="inq-subject-filter" onchange="renderInquiriesTable()">
+          <option value="">All Subjects</option>
+          <option value="Order Enquiry">Order Enquiry</option>
+          <option value="Returns &amp; Exchanges">Returns &amp; Exchanges</option>
+          <option value="Sizing Assistance">Sizing Assistance</option>
+          <option value="Garment Care &amp; Repair">Garment Care &amp; Repair</option>
+          <option value="Press &amp; Partnerships">Press &amp; Partnerships</option>
+          <option value="Styling Appointment">Styling Appointment</option>
+          <option value="General">General</option>
+        </select>
+        <input class="table-search" placeholder="Search inquiries..." id="inq-search" oninput="renderInquiriesTable()"/>
+      </div>
+    </div>
+    <table>
+      <thead><tr>
+        <th></th>
+        <th onclick="sortInquiries('name')">Name ↕</th>
+        <th>Email</th>
+        <th onclick="sortInquiries('subject')">Subject ↕</th>
+        <th>Message</th>
+        <th>Order Ref</th>
+        <th onclick="sortInquiries('date')">Date &amp; Time ↕</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody id="inquiries-tbody"></tbody>
+    </table>
+    <div class="pagination" id="inq-pagination"></div>
+  </div>
+</div>
+
+<!-- ANNOUNCEMENTS PANEL -->
+<div class="panel" id="panel-announcements">
+  <div class="topbar">
+    <h1 class="page-title">Announcements</h1>
+    <div class="topbar-right">
+      <button class="btn-primary" onclick="openAnnouncementModal()">+ New Announcement</button>
+    </div>
+  </div>
+
+  <!-- Live Preview -->
+  <div id="ann-live-preview" style="margin-bottom:2rem;display:none;">
+    <p style="font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.5rem;">Live Preview on Store</p>
+    <div id="ann-preview-bar" style="padding:0.65rem 2rem;text-align:center;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;font-family:'Jost',sans-serif;"></div>
+  </div>
+
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="ann-stat-total">0</div><div class="mini-stat-label">Total</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="ann-stat-active" style="color:#3a6b3c;">0</div><div class="mini-stat-label">Active</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="ann-stat-scheduled" style="color:#e65100;">0</div><div class="mini-stat-label">Scheduled</div></div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">All Announcements</span>
+      <div class="table-actions">
+        <select class="filter-select" id="ann-filter" onchange="renderAnnouncementsTable()">
+          <option value="">All</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Message</th>
+          <th>Type</th>
+          <th>Style</th>
+          <th>Status</th>
+          <th>Dismissible</th>
+          <th>Actions</th>
+        </tr></thead>
+        <tbody id="ann-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- CUSTOM ORDERS PANEL -->
+<div class="panel" id="panel-customorders">
+  <div class="topbar">
+    <h1 class="page-title">Custom Orders</h1>
+    <div class="topbar-right">
+      <button class="btn-primary" onclick="exportCustomOrdersCSV()">Export CSV</button>
+    </div>
+  </div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="co-stat-total">0</div><div class="mini-stat-label">Total Orders</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="co-stat-pending" style="color:#e65100;">0</div><div class="mini-stat-label">Pending Review</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="co-stat-confirmed" style="color:#3a6b3c;">0</div><div class="mini-stat-label">Confirmed</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Custom Design Requests</span>
+      <div class="table-actions">
+        <select class="filter-select" id="co-status-filter" onchange="renderCustomOrdersTable()">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="in-production">In Production</option>
+          <option value="ready">Ready to Ship</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <input class="table-search" placeholder="Search by name, email, garment…" id="co-search" oninput="renderCustomOrdersTable()"/>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Order ID</th><th>Customer</th><th>Garment</th><th>Customization</th>
+          <th>Size</th><th>Qty</th><th>Total</th><th>Date</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="co-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT SETTINGS PANEL -->
+<div class="panel" id="panel-paymentsettings">
+  <div class="topbar">
+    <h1 class="page-title">Payment Settings</h1>
+    <div class="topbar-right">
+      <button class="btn-primary" onclick="savePaymentSettings()">Save All Settings</button>
+    </div>
+  </div>
+  <p style="font-size:0.72rem;color:#6b6258;line-height:1.8;margin-bottom:2rem;max-width:600px;">
+    Configure your payment methods below. Upload QR codes and enter account details that customers will see at checkout.
+    Changes take effect immediately on the store.
+  </p>
+
+  <!-- eSewa -->
+  <div class="chart-card" style="margin-bottom:1.5rem;">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(200,184,154,0.2);">
+      <div style="width:40px;height:40px;border-radius:8px;background:#60bb46;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="24" height="24" viewBox="0 0 48 48"><text x="24" y="33" text-anchor="middle" font-family="Arial Black" font-weight="900" font-size="24" fill="white">e</text></svg>
+      </div>
+      <div>
+        <p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:500;">eSewa</p>
+        <p style="font-size:0.62rem;color:#8a7f73;margin-top:0.1rem;">Digital wallet payment</p>
+      </div>
+      <label style="margin-left:auto;display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" id="esewa-enabled" checked style="width:auto;padding:0;border:none;"/>
+        <span style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#8a7f73;">Enabled</span>
+      </label>
+    </div>
+    <div style="display:grid;grid-template-columns:160px 1fr;gap:2rem;align-items:start;">
+      <!-- QR Upload -->
+      <div>
+        <p style="font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.75rem;">QR Code</p>
+        <div id="esewa-qr-preview" style="width:140px;height:140px;border:1.5px dashed rgba(200,184,154,0.5);display:flex;align-items:center;justify-content:center;background:#fafaf8;margin-bottom:0.75rem;cursor:pointer;border-radius:3px;overflow:hidden;" onclick="document.getElementById('esewa-qr-input').click()">
+          <div style="text-align:center;color:#bbb0a5;">
+            <div style="font-size:2rem;margin-bottom:0.25rem;">⊞</div>
+            <span style="font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;">Upload QR</span>
+          </div>
+        </div>
+        <input type="file" id="esewa-qr-input" accept="image/*" style="display:none;" onchange="previewQR('esewa',this)"/>
+        <button class="btn-secondary" style="padding:0.35rem 0.75rem;font-size:0.55rem;width:140px;" onclick="document.getElementById('esewa-qr-input').click()">Upload / Change</button>
+        <button class="btn-danger" style="padding:0.35rem 0.75rem;font-size:0.55rem;width:140px;margin-top:0.4rem;" onclick="clearQR('esewa')">Remove QR</button>
+      </div>
+      <!-- Details -->
+      <div>
+        <div class="form-group">
+          <label>eSewa ID / Phone Number</label>
+          <input type="text" id="esewa-id" placeholder="e.g. 9801234567"/>
+          <p style="font-size:0.6rem;color:#8a7f73;margin-top:0.3rem;">This will be shown to customers at checkout</p>
+        </div>
+        <div class="form-group">
+          <label>Account Name</label>
+          <input type="text" id="esewa-account-name" placeholder="e.g. The Atelier Nepal"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Khalti -->
+  <div class="chart-card" style="margin-bottom:1.5rem;">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(200,184,154,0.2);">
+      <div style="width:40px;height:40px;border-radius:8px;background:#5c2d91;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="24" height="24" viewBox="0 0 48 48"><text x="24" y="33" text-anchor="middle" font-family="Arial Black" font-weight="900" font-size="24" fill="white">K</text></svg>
+      </div>
+      <div>
+        <p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:500;">Khalti</p>
+        <p style="font-size:0.62rem;color:#8a7f73;margin-top:0.1rem;">Digital wallet payment</p>
+      </div>
+      <label style="margin-left:auto;display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" id="khalti-enabled" checked style="width:auto;padding:0;border:none;"/>
+        <span style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#8a7f73;">Enabled</span>
+      </label>
+    </div>
+    <div style="display:grid;grid-template-columns:160px 1fr;gap:2rem;align-items:start;">
+      <div>
+        <p style="font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.75rem;">QR Code</p>
+        <div id="khalti-qr-preview" style="width:140px;height:140px;border:1.5px dashed rgba(200,184,154,0.5);display:flex;align-items:center;justify-content:center;background:#fafaf8;margin-bottom:0.75rem;cursor:pointer;border-radius:3px;overflow:hidden;" onclick="document.getElementById('khalti-qr-input').click()">
+          <div style="text-align:center;color:#bbb0a5;">
+            <div style="font-size:2rem;margin-bottom:0.25rem;">⊞</div>
+            <span style="font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;">Upload QR</span>
+          </div>
+        </div>
+        <input type="file" id="khalti-qr-input" accept="image/*" style="display:none;" onchange="previewQR('khalti',this)"/>
+        <button class="btn-secondary" style="padding:0.35rem 0.75rem;font-size:0.55rem;width:140px;" onclick="document.getElementById('khalti-qr-input').click()">Upload / Change</button>
+        <button class="btn-danger" style="padding:0.35rem 0.75rem;font-size:0.55rem;width:140px;margin-top:0.4rem;" onclick="clearQR('khalti')">Remove QR</button>
+      </div>
+      <div>
+        <div class="form-group">
+          <label>Khalti ID / Phone Number</label>
+          <input type="text" id="khalti-id" placeholder="e.g. 9801234567"/>
+          <p style="font-size:0.6rem;color:#8a7f73;margin-top:0.3rem;">This will be shown to customers at checkout</p>
+        </div>
+        <div class="form-group">
+          <label>Account Name</label>
+          <input type="text" id="khalti-account-name" placeholder="e.g. The Atelier Nepal"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bank Transfer -->
+  <div class="chart-card" style="margin-bottom:1.5rem;">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(200,184,154,0.2);">
+      <div style="width:40px;height:40px;border-radius:8px;background:#0e0e0d;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect x="8" y="20" width="32" height="18" rx="2" stroke="white" stroke-width="2.5"/><path d="M8 26h32" stroke="white" stroke-width="2.5"/><path d="M24 10 L40 18 H8 Z" fill="white"/></svg>
+      </div>
+      <div>
+        <p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:500;">Bank Transfer</p>
+        <p style="font-size:0.62rem;color:#8a7f73;margin-top:0.1rem;">Direct bank deposit</p>
+      </div>
+      <label style="margin-left:auto;display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" id="bank-enabled" checked style="width:auto;padding:0;border:none;"/>
+        <span style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#8a7f73;">Enabled</span>
+      </label>
+    </div>
+    <div style="display:grid;grid-template-columns:160px 1fr;gap:2rem;align-items:start;">
+      <div>
+        <p style="font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.75rem;">Bank QR Code</p>
+        <div id="bank-qr-preview" style="width:140px;height:140px;border:1.5px dashed rgba(200,184,154,0.5);display:flex;align-items:center;justify-content:center;background:#fafaf8;margin-bottom:0.75rem;cursor:pointer;border-radius:3px;overflow:hidden;" onclick="document.getElementById('bank-qr-input').click()">
+          <div style="text-align:center;color:#bbb0a5;">
+            <div style="font-size:2rem;margin-bottom:0.25rem;">⊞</div>
+            <span style="font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;">Upload QR</span>
+          </div>
+        </div>
+        <input type="file" id="bank-qr-input" accept="image/*" style="display:none;" onchange="previewQR('bank',this)"/>
+        <button class="btn-secondary" style="padding:0.35rem 0.75rem;font-size:0.55rem;width:140px;" onclick="document.getElementById('bank-qr-input').click()">Upload / Change</button>
+        <button class="btn-danger" style="padding:0.35rem 0.75rem;font-size:0.55rem;width:140px;margin-top:0.4rem;" onclick="clearQR('bank')">Remove QR</button>
+      </div>
+      <div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="form-group">
+            <label>Bank Name</label>
+            <input type="text" id="bank-name" placeholder="e.g. Nepal Investment Bank"/>
+          </div>
+          <div class="form-group">
+            <label>Account Name</label>
+            <input type="text" id="bank-acct-name" placeholder="e.g. The Atelier Pvt. Ltd."/>
+          </div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="form-group">
+            <label>Account Number</label>
+            <input type="text" id="bank-acct-num" placeholder="e.g. 00101234567890"/>
+          </div>
+          <div class="form-group">
+            <label>Branch / SWIFT Code</label>
+            <input type="text" id="bank-branch" placeholder="e.g. Thamel Branch / NIBLNPKT"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:0.5rem;">
+    <button class="btn-secondary" onclick="loadPaymentSettingsForm()">Reset to Saved</button>
+    <button class="btn-primary" onclick="savePaymentSettings()">💾 Save All Settings</button>
+  </div>
+</div>
+
+</main>
+
+<!-- CUSTOM ORDER DETAIL MODAL -->
+<div class="modal-overlay" id="modal-customorder">
+  <div class="modal" style="max-width:680px;">
+    <button class="modal-close" onclick="closeModal('modal-customorder')">✕</button>
+    <h2 class="modal-title" id="co-modal-title">Custom Order</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+      <div>
+        <img id="co-modal-preview" src="" style="width:100%;border:1px solid rgba(200,184,154,0.3);margin-bottom:1rem;" alt="Design Preview"/>
+      </div>
+      <div id="co-modal-details" style="font-size:0.78rem;line-height:2;"></div>
+    </div>
+    <div class="form-group" style="margin-top:1.5rem;">
+      <label>Update Status</label>
+      <select id="co-modal-status">
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="in-production">In Production</option>
+        <option value="ready">Ready to Ship</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" onclick="deleteCustomOrder()">Delete</button>
+      <button class="btn-secondary" onclick="closeModal('modal-customorder')">Close</button>
+      <button class="btn-primary" onclick="updateCustomOrderStatus()">Save Status</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-announcement">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modal-announcement')">✕</button>
+    <h2 class="modal-title" id="modal-ann-title">New Announcement</h2>
+    <input type="hidden" id="modal-ann-idx"/>
+    <div class="form-group">
+      <label>Message *</label>
+      <textarea id="ann-msg" rows="3" placeholder="e.g. Free shipping on all orders this weekend! Use code SHIP100"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type</label>
+        <select id="ann-type">
+          <option value="offer">🎁 Offer</option>
+          <option value="discount">💸 Discount</option>
+          <option value="shipping">🚚 Shipping</option>
+          <option value="event">🎉 Event</option>
+          <option value="notice">📌 Notice</option>
+          <option value="newArrival">✨ New Arrival</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Bar Style</label>
+        <select id="ann-style">
+          <option value="dark">Dark (Black)</option>
+          <option value="gold">Gold</option>
+          <option value="accent">Accent (Brown)</option>
+          <option value="green">Success (Green)</option>
+          <option value="urgent">Urgent (Red)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Status</label>
+        <select id="ann-status">
+          <option value="active">Active (visible now)</option>
+          <option value="inactive">Inactive (hidden)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Dismissible by user?</label>
+        <select id="ann-dismissible">
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Link URL (optional)</label>
+      <input type="text" id="ann-link" placeholder="e.g. collection.html or https://..."/>
+    </div>
+    <div class="form-group">
+      <label>Link Text (optional)</label>
+      <input type="text" id="ann-link-text" placeholder="e.g. Shop Now →"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-announcement')">Cancel</button>
+      <button class="btn-primary" onclick="saveAnnouncement()">Save Announcement</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-admin">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-admin')">✕</button>
+    <h2 class="modal-title" id="modal-admin-title">Add Administrator</h2>
+    <input type="hidden" id="modal-admin-original-email"/>
+    <p id="modal-admin-subtitle" style="font-size:0.72rem;color:#6b6258;line-height:1.7;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(200,184,154,0.3);">
+      Create login credentials for the new admin. Share these with them directly — they will use this email and password to sign in.
+    </p>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="ma-email" placeholder="newadmin@gmail.com"/>
+      <p style="font-size:0.6rem;color:#8a7f73;margin-top:0.35rem;letter-spacing:0.05em;">Must end in @gmail.com</p>
+    </div>
+    <div class="form-group">
+      <label>Password <span id="ma-password-hint" style="font-size:0.55rem;color:#8a7f73;letter-spacing:0.05em;font-weight:normal;text-transform:none;">(required for new admins)</span></label>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <input type="text" id="ma-password" placeholder="Set a strong password" style="flex:1;"/>
+        <button type="button" onclick="generatePassword()" style="padding:0.65rem 0.9rem;background:var(--ink);color:var(--cream);border:none;font-family:'Jost';font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;white-space:nowrap;flex-shrink:0;">Generate</button>
+      </div>
+    </div>
+    <div class="form-group" id="ma-role-group">
+      <label>Role</label>
+      <select id="ma-role">
+        <option value="admin">Admin</option>
+        <option value="superadmin">Superadmin</option>
+      </select>
+      <p style="font-size:0.6rem;color:#8a7f73;margin-top:0.35rem;letter-spacing:0.05em;">Admins manage store data. Superadmins can also manage other administrators.</p>
+    </div>
+    <div id="ma-credentials-preview" style="display:none;margin-top:1rem;padding:1rem;background:#f0ece6;border:1px solid rgba(200,184,154,0.4);">
+      <p style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.6rem;">Credentials to share with new admin</p>
+      <p style="font-size:0.75rem;line-height:1.9;color:var(--ink);font-family:monospace;"><span id="preview-email">—</span><br/><span id="preview-password">—</span></p>
+      <button type="button" onclick="copyCredentials()" style="margin-top:0.6rem;padding:0.4rem 0.9rem;background:transparent;border:1px solid rgba(200,184,154,0.6);font-family:'Jost';font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;color:var(--ink);">Copy to Clipboard</button>
+    </div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-admin')">Cancel</button><button class="btn-primary" onclick="saveAdmin()">Save &amp; Create Admin</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-order">
+  <div class="modal" style="max-width:640px;">
+    <button class="modal-close" onclick="closeModal('modal-order')">✕</button>
+    <h2 class="modal-title">Order Details</h2>
+    <input type="hidden" id="modal-order-id"/>
+    <div class="form-group"><label>Order ID</label><input id="modal-order-display" readonly style="opacity:0.6;"/></div>
+    <div class="form-group"><label>Customer</label><input id="modal-order-customer" readonly style="opacity:0.6;"/></div>
+
+    <!-- Payment Proof Section -->
+    <div id="payment-proof-section" style="display:none;margin-bottom:1.5rem;">
+      <div style="padding:1.25rem;border:1px solid rgba(200,184,154,0.3);background:#fafaf8;">
+        <p style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.75rem;font-weight:500;">📎 Payment Proof</p>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:start;">
+          <div id="proof-image-wrap" style="max-width:220px;border:1px solid rgba(200,184,154,0.4);background:white;cursor:pointer;" onclick="openProofFullscreen()">
+            <img id="modal-proof-image" src="" alt="Payment proof" style="width:100%;display:block;"/>
+          </div>
+          <div>
+            <div style="margin-bottom:0.6rem;">
+              <span style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;">Payment Method</span>
+              <p style="font-size:0.8rem;font-weight:500;text-transform:capitalize;margin-top:0.15rem;" id="modal-pay-method">—</p>
+            </div>
+            <div style="margin-bottom:0.6rem;">
+              <span style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;">Transaction ID</span>
+              <p style="font-size:0.8rem;font-family:monospace;margin-top:0.15rem;" id="modal-pay-txn">—</p>
+            </div>
+            <div style="margin-bottom:0.6rem;">
+              <span style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;" id="modal-pay-extra-label">Mobile</span>
+              <p style="font-size:0.8rem;margin-top:0.15rem;" id="modal-pay-extra">—</p>
+            </div>
+            <p style="font-size:0.6rem;color:#8a7f73;margin-top:0.5rem;cursor:pointer;text-decoration:underline;" onclick="openProofFullscreen()">Click image to view full size ↗</p>
+          </div>
+        </div>
+        <!-- Verification action buttons (only show for awaiting-verification) -->
+        <div id="verification-actions" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid rgba(200,184,154,0.3);">
+          <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink);margin-bottom:0.75rem;font-weight:500;">⚡ Verify Payment</p>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <button class="btn-primary" style="padding:0.6rem 1.5rem;background:#2e7d32;" onclick="verifyPayment('approve')">✓ Approve Payment</button>
+            <button class="btn-danger" style="padding:0.6rem 1.5rem;border-color:#8b1a1a;" onclick="verifyPayment('reject')">✕ Reject Payment</button>
+          </div>
+          <p style="font-size:0.6rem;color:#8a7f73;margin-top:0.6rem;line-height:1.7;">Approving will move the order to <strong>Processing</strong>. Rejecting will mark it as <strong>Payment Rejected</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group"><label>Status</label>
+      <select id="modal-order-status"><option value="awaiting-verification">Awaiting Verification</option><option value="processing">Processing</option><option value="shipped">Shipped</option><option value="completed">Completed</option><option value="payment-rejected">Payment Rejected</option><option value="cancelled">Cancelled</option></select>
+    </div>
+    <div class="form-group"><label>Tracking Number</label><input id="modal-order-tracking" placeholder="e.g. 1Z999AA10123456784"/></div>
+    <div class="form-group"><label>Notes</label><textarea id="modal-order-notes" rows="3" placeholder="Internal notes…"></textarea></div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-order')">Cancel</button><button class="btn-primary" onclick="saveOrder()">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- Payment Proof Fullscreen Viewer -->
+<div id="proof-fullscreen" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.92);cursor:pointer;align-items:center;justify-content:center;" onclick="this.style.display='none'">
+  <img id="proof-fullscreen-img" src="" alt="Payment proof" style="max-width:90vw;max-height:90vh;object-fit:contain;border:2px solid rgba(255,255,255,0.15);"/>
+  <button style="position:absolute;top:1.5rem;right:1.5rem;background:none;border:none;color:white;font-size:2rem;cursor:pointer;opacity:0.7;" onclick="document.getElementById('proof-fullscreen').style.display='none'">✕</button>
+  <p style="position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.5);font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;">Click anywhere to close</p>
+</div>
+
+<div class="modal-overlay" id="modal-product">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-product')">✕</button>
+    <h2 class="modal-title" id="modal-product-title">Add Product</h2>
+    <input type="hidden" id="modal-product-idx"/>
+    <input type="hidden" id="mp-sku"/>
+    <div class="form-group"><label>Product Name</label><input id="mp-name" placeholder="e.g. Structured Blazer" oninput="updateSkuFromName()"/></div>
+    <div class="form-group"><label>Product Image</label><input type="file" id="mp-image" accept="image/*" style="padding: 0.4rem;"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Category</label><select id="mp-category" onchange="updateSkuFromName()"><option value="outerwear">Outerwear</option><option value="dresses">Dresses</option><option value="separates">Separates</option></select></div>
+      <div class="form-group"><label>Color</label><input id="mp-color" placeholder="e.g. Ivory"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Price (NRs.)</label><input id="mp-price" type="number" placeholder="980"/></div>
+      <div class="form-group"><label>Stock</label><input id="mp-stock" type="number" placeholder="24"/></div>
+    </div>
+    <div class="form-group"><label>Status</label><select id="mp-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <!-- SKU + Barcode Preview -->
+    <div id="mp-barcode-section" style="display:none;margin-top:1.25rem;padding:1.5rem;background:#f0ece6;border:1px solid rgba(200,184,154,0.4);text-align:center;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <p style="font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;">Product SKU &amp; Barcode</p>
+        <button type="button" onclick="regenerateSku()" style="padding:0.3rem 0.75rem;background:transparent;border:1px solid rgba(200,184,154,0.6);font-family:'Jost';font-size:0.5rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;color:var(--ink);">Regenerate</button>
+      </div>
+      <p id="mp-sku-display" style="font-family:monospace;font-size:0.95rem;font-weight:700;color:var(--ink);letter-spacing:0.15em;margin-bottom:1rem;"></p>
+      <div id="mp-barcode-svg" style="background:white;padding:1rem 1.5rem;display:block;border:1px solid rgba(200,184,154,0.3);border-radius:2px;margin:0 auto 1rem auto;max-width:100%;overflow:hidden;"></div>
+      <div style="display:flex;justify-content:center;gap:0.75rem;">
+        <button type="button" onclick="downloadBarcodePng()" style="padding:0.5rem 1.25rem;background:var(--ink);color:var(--cream);border:none;font-family:'Jost';font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
+          ↓ Download PNG
+        </button>
+        <button type="button" onclick="downloadBarcodeSvg()" style="padding:0.5rem 1.25rem;background:transparent;color:var(--ink);border:1px solid rgba(14,14,13,0.25);font-family:'Jost';font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;">
+          ↓ Download SVG
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-product')">Cancel</button><button class="btn-primary" onclick="saveProduct()">Save Product</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-restock">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-restock')">✕</button>
+    <h2 class="modal-title">Restock Item</h2>
+    <input type="hidden" id="modal-restock-idx"/>
+    <div class="form-group"><label>Product / SKU</label><input id="mr-product" readonly style="opacity:0.6;"/></div>
+    <div class="form-group"><label>Current Stock</label><input id="mr-current" readonly style="opacity:0.6;"/></div>
+    <div class="form-group"><label>Add Units</label><input id="mr-add" type="number" min="1" value="20"/></div>
+    <div class="form-group"><label>Supplier Note</label><textarea id="mr-note" rows="2" placeholder="Optional purchase order note…"></textarea></div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-restock')">Cancel</button><button class="btn-primary" onclick="saveRestock()">Confirm Restock</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-promo">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-promo')">✕</button>
+    <h2 class="modal-title" id="modal-promo-title">Create Promo Code</h2>
+    <input type="hidden" id="modal-promo-idx"/>
+    <div class="form-row">
+      <div class="form-group"><label>Code</label><input id="pp-code" placeholder="e.g. ATELIER20"/></div>
+      <div class="form-group"><label>Type</label><select id="pp-type"><option value="percent">Percentage</option><option value="fixed">Fixed Amount</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Value</label><input id="pp-value" type="number" placeholder="10"/></div>
+      <div class="form-group"><label>Max Uses</label><input id="pp-max" type="number" placeholder="100"/></div>
+    </div>
+    <div class="form-group"><label>Expiry Date</label><input id="pp-expiry" type="date"/></div>
+    <div class="form-group"><label>Status</label><select id="pp-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-promo')">Cancel</button><button class="btn-primary" onclick="savePromo()">Save Promo</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-collection">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-collection')">✕</button>
+    <h2 class="modal-title">New Collection</h2>
+    <div class="form-group"><label>Collection Name</label><input id="cl-name" placeholder="e.g. Spring / Summer 2026"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Season</label><select id="cl-season"><option>Spring / Summer 2026</option><option>Autumn / Winter 2026</option><option>Resort 2026</option><option>Pre-Fall 2026</option></select></div>
+      <div class="form-group"><label>Status</label><select id="cl-status"><option value="active">Active</option><option value="inactive">Draft</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-collection')">Cancel</button><button class="btn-primary" onclick="saveCollection()">Create Collection</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-inquiry">
+  <div class="modal" style="max-width:600px;">
+    <button class="modal-close" onclick="closeModal('modal-inquiry')">✕</button>
+    <h2 class="modal-title" id="modal-inq-title">Inquiry</h2>
+    <input type="hidden" id="modal-inq-id"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid rgba(200,184,154,0.3);">
+      <div><p style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.3rem;">From</p><p style="font-size:0.85rem;font-weight:500;" id="modal-inq-name">—</p><p style="font-size:0.72rem;color:#6b6258;" id="modal-inq-email">—</p></div>
+      <div><p style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.3rem;">Received</p><p style="font-size:0.8rem;" id="modal-inq-date">—</p><p style="font-size:0.7rem;color:#6b6258;" id="modal-inq-time">—</p></div>
+      <div><p style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.3rem;">Subject</p><p style="font-size:0.8rem;" id="modal-inq-subject">—</p></div>
+      <div><p style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.3rem;">Order Reference</p><p style="font-size:0.8rem;font-family:monospace;" id="modal-inq-order">—</p></div>
+    </div>
+    <p style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.75rem;">Message</p>
+    <p id="modal-inq-message" style="font-size:0.82rem;line-height:1.9;color:#3a3530;background:#f8f5f0;padding:1.25rem;border-radius:2px;margin-bottom:1.5rem;"></p>
+    <div class="form-group">
+      <label>Update Status</label>
+      <select id="modal-inq-status">
+        <option value="unread">Unread</option>
+        <option value="read">Read</option>
+        <option value="replied">Replied</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Admin Notes</label>
+      <textarea id="modal-inq-notes" rows="3" placeholder="Internal notes about this inquiry…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-inquiry')">Close</button>
+      <a id="modal-inq-mailto" href="#" style="padding:0.5rem 1.25rem;background:transparent;color:var(--ink);border:1px solid rgba(14,14,13,0.25);font-family:'Jost';font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:flex;align-items:center;">Reply via Email</a>
+      <button class="btn-primary" onclick="saveInquiry()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+if (!localStorage.getItem('atelier_admin')) window.location.href = 'adminLogin.html';
+
+// Ensure atelier_admins exists (may be first load or cleared)
+if (!localStorage.getItem('atelier_admins')) {
+  localStorage.setItem('atelier_admins', JSON.stringify([
+    { email: 'admin@gmail.com', password: 'atelier2025', role: 'superadmin' }
+  ]));
+}
+
+function ld(k,d){try{return JSON.parse(localStorage.getItem('atelier_admin_'+k))||d;}catch{return d;}}
+function sv(k,d){localStorage.setItem('atelier_admin_'+k,JSON.stringify(d));}
+
+// Orders & Customers are written directly by checkout.html into these keys
+// We read them with a live getter so they always reflect latest purchases
+function getOrders() { try { return JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]'); } catch { return []; } }
+function getCustomers() { try { return JSON.parse(localStorage.getItem('atelier_admin_customers') || '[]'); } catch { return []; } }
+function saveOrders(d) { localStorage.setItem('atelier_admin_orders', JSON.stringify(d)); }
+function saveCustomers(d) { localStorage.setItem('atelier_admin_customers', JSON.stringify(d)); }
+
+let ORDERS = getOrders();
+let PRODUCTS=ld('products',[]);
+let INVENTORY=ld('inventory',[]);
+let CUSTOMERS = getCustomers();
+let COLLECTIONS=ld('collections',[]);
+let PROMOTIONS=ld('promotions',[]);
+let REVIEWS=ld('reviews',[]);
+
+const sortState={};
+
+function showPanel(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  // Refresh live purchase data before rendering
+  if(name==='orders') ORDERS = getOrders();
+  if(name==='customers') CUSTOMERS = getCustomers();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm})[name]?.();
+}
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.className='toast'; // reset classes
+  el.innerHTML=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+function toastInquiry(inq) {
+  if (!inq) return;
+  const el = document.getElementById('toast');
+  el.className = 'toast toast-inq';
+  el.innerHTML = `
+    <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#ff8a50;margin-bottom:0.35rem;">New Inquiry</div>
+    <div style="font-size:0.78rem;font-weight:500;margin-bottom:0.15rem;">${inq.name}</div>
+    <div style="font-size:0.68rem;color:rgba(244,241,236,0.65);">${inq.subject || 'General'}</div>
+    <div class="toast-actions">
+      <button class="toast-btn" onclick="showPanel('inquiries', document.getElementById('nav-inquiries'));this.closest('.toast').classList.remove('show');">View Now</button>
+      <button class="toast-btn" onclick="this.closest('.toast').classList.remove('show');">Dismiss</button>
+    </div>`;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 7000);
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+// Live credential preview for new admin modal - defer to avoid timing issues
+setTimeout(function(){
+  var emailEl = document.getElementById('ma-email');
+  var passEl = document.getElementById('ma-password');
+  if(emailEl) emailEl.addEventListener('input', updateCredentialsPreview);
+  if(passEl) passEl.addEventListener('input', updateCredentialsPreview);
+}, 0);
+
+// ORDERS
+function renderOrdersTable(){
+  ORDERS = getOrders();
+  const q=(document.getElementById('order-search')?.value||'').toLowerCase();
+  const sf=document.getElementById('order-status-filter')?.value||'';
+  let list=ORDERS.filter(o=>(!sf||o.status===sf)&&(!q||[o.id,o.customer,o.product,o.sku||'',o.email||''].some(v=>String(v).toLowerCase().includes(q))));
+  if(sortState.orders){const{col,dir}=sortState.orders;list=[...list].sort((a,b)=>typeof a[col]==='string'?dir*a[col].localeCompare(b[col]):dir*(a[col]-b[col]));}
+
+  // Update mini-stats
+  const thisMonth = new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+  const monthOrders = ORDERS.filter(o => (o.date||'').includes(thisMonth.split(' ')[1]) || (o.date||'').includes(thisMonth));
+  if(document.getElementById('stat-orders-total')) document.getElementById('stat-orders-total').textContent = ORDERS.length;
+  if(document.getElementById('stat-orders-awaiting')) document.getElementById('stat-orders-awaiting').textContent = ORDERS.filter(o=>o.status==='awaiting-verification').length;
+  if(document.getElementById('stat-orders-pending')) document.getElementById('stat-orders-pending').textContent = ORDERS.filter(o=>o.status==='processing').length;
+  if(document.getElementById('stat-orders-cancelled')) document.getElementById('stat-orders-cancelled').textContent = ORDERS.filter(o=>o.status==='cancelled'||o.status==='payment-rejected').length;
+
+  document.getElementById('orders-tbody').innerHTML = list.length === 0
+    ? '<tr><td colspan="8" style="text-align:center;color:#8a7f73;padding:2.5rem;font-size:0.75rem;">No orders yet. Orders placed in the shop will appear here automatically.</td></tr>'
+    : list.map(o=>{
+      const idx=ORDERS.indexOf(o);
+      const skuBadge = o.sku ? `<span style="font-family:monospace;font-size:0.6rem;color:var(--accent);">${o.sku}</span>` : '';
+      const hasProof = o.payment && o.payment.proofImage;
+      const proofIcon = hasProof ? '<span title="Payment proof attached" style="cursor:help;">📎</span>' : '<span title="No proof" style="opacity:0.3;cursor:help;">—</span>';
+      const statusLabel = o.status === 'awaiting-verification' ? 'Awaiting Verification' : o.status === 'payment-rejected' ? 'Payment Rejected' : o.status;
+      const isUrgent = o.status === 'awaiting-verification';
+      return`<tr${isUrgent?' style="background:rgba(255,243,224,0.35);"':''}>
+        <td style="font-family:'Newsreader',serif;font-style:italic;">${o.id}</td>
+        <td><div style="font-weight:500;">${o.customer}</div><div style="font-size:0.6rem;color:#8a7f73;">${o.email||''}</div></td>
+        <td><div style="color:#6b6258;">${o.product}</div>${skuBadge}</td>
+        <td style="color:#8a7f73;">${o.date}</td>
+        <td style="font-weight:500;">NRs. ${(o.amount||0).toLocaleString()}</td>
+        <td><span class="status-badge status-${o.status}">${statusLabel}</span></td>
+        <td style="display:flex;gap:0.5rem;align-items:center;">
+          ${isUrgent?'<button class="btn-primary" style="padding:0.3rem 0.7rem;font-size:0.55rem;background:#8b5e3c;" onclick="openOrderModal('+idx+')">Verify</button>':'<button class="btn-secondary" style="padding:0.3rem 0.7rem;font-size:0.55rem;" onclick="openOrderModal('+idx+')">Edit</button>'}
+          ${proofIcon}
+        </td>
+      </tr>`;
+    }).join('');
+
+  const el=document.getElementById('orders-pagination');
+  if(el)el.innerHTML=`<span class="page-info">Showing ${list.length} of ${ORDERS.length} orders</span>`;
+}
+function openOrderModal(idx){
+  const o=ORDERS[idx];
+  document.getElementById('modal-order-id').value=idx;
+  document.getElementById('modal-order-display').value=o.id;
+  document.getElementById('modal-order-customer').value=o.customer;
+  document.getElementById('modal-order-status').value=o.status;
+  document.getElementById('modal-order-tracking').value=o.tracking||'';
+  document.getElementById('modal-order-notes').value=o.notes||'';
+
+  // Payment proof section
+  const proofSection = document.getElementById('payment-proof-section');
+  const verifyActions = document.getElementById('verification-actions');
+  if (o.payment && o.payment.proofImage) {
+    proofSection.style.display = 'block';
+    document.getElementById('modal-proof-image').src = o.payment.proofImage;
+    document.getElementById('modal-pay-method').textContent = o.payment.method || '—';
+    document.getElementById('modal-pay-txn').textContent = o.payment.txn || '—';
+    // Extra field: mobile or sender name
+    if (o.payment.method === 'bank') {
+      document.getElementById('modal-pay-extra-label').textContent = 'Account Holder';
+      document.getElementById('modal-pay-extra').textContent = o.payment.sender || '—';
+    } else {
+      document.getElementById('modal-pay-extra-label').textContent = 'Mobile Number';
+      document.getElementById('modal-pay-extra').textContent = o.payment.mobile || '—';
+    }
+    // Show verify buttons only for awaiting-verification orders
+    verifyActions.style.display = o.status === 'awaiting-verification' ? 'block' : 'none';
+  } else {
+    proofSection.style.display = 'none';
+    verifyActions.style.display = 'none';
+  }
+
+  openModal('modal-order');
+}
+
+function openProofFullscreen() {
+  const src = document.getElementById('modal-proof-image').src;
+  if (!src) return;
+  document.getElementById('proof-fullscreen-img').src = src;
+  document.getElementById('proof-fullscreen').style.display = 'flex';
+}
+
+function verifyPayment(action) {
+  const idx = parseInt(document.getElementById('modal-order-id').value);
+  if (action === 'approve') {
+    if (!confirm('Approve this payment and move order to Processing?')) return;
+    ORDERS[idx].status = 'processing';
+    ORDERS[idx].paymentVerified = true;
+    ORDERS[idx].verifiedAt = new Date().toLocaleString('en-GB');
+    ORDERS[idx].verifiedBy = localStorage.getItem('atelier_current_user') || 'admin';
+    document.getElementById('modal-order-status').value = 'processing';
+    document.getElementById('verification-actions').style.display = 'none';
+    toast('✓ Payment approved — order moved to Processing');
+  } else {
+    const reason = prompt('Reason for rejection (optional):');
+    ORDERS[idx].status = 'payment-rejected';
+    ORDERS[idx].paymentVerified = false;
+    ORDERS[idx].rejectionReason = reason || '';
+    ORDERS[idx].verifiedAt = new Date().toLocaleString('en-GB');
+    ORDERS[idx].verifiedBy = localStorage.getItem('atelier_current_user') || 'admin';
+    document.getElementById('modal-order-status').value = 'payment-rejected';
+    document.getElementById('verification-actions').style.display = 'none';
+    toast('Payment rejected');
+  }
+  saveOrders(ORDERS);
+  renderOrdersTable();
+}
+function saveOrder(){
+  const idx=parseInt(document.getElementById('modal-order-id').value);
+  ORDERS[idx].status=document.getElementById('modal-order-status').value;
+  ORDERS[idx].tracking=document.getElementById('modal-order-tracking').value;
+  ORDERS[idx].notes=document.getElementById('modal-order-notes').value;
+  saveOrders(ORDERS);closeModal('modal-order');renderOrdersTable();toast('Order updated');
+}
+
+// PRODUCTS
+function renderProductsTable(){
+  const q=(document.getElementById('product-search')?.value||'').toLowerCase();
+  const cf=document.getElementById('product-cat-filter')?.value||'';
+  let list=PRODUCTS.filter(p=>(!cf||p.category===cf)&&(!q||p.name.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)||p.color.toLowerCase().includes(q)));
+  if(sortState.products){const{col,dir}=sortState.products;list=[...list].sort((a,b)=>dir*(a[col]-b[col]));}
+  document.getElementById('products-tbody').innerHTML=list.map(p=>{
+    const idx=PRODUCTS.indexOf(p);
+    const ss=p.stock===0?'out-of-stock':p.stock<6?'low-stock':'in-stock';
+    const sl=p.stock===0?'Out of Stock':p.stock<6?'Low Stock':'In Stock';
+    const skuHtml=p.sku?`<span style="font-family:monospace;font-size:0.7rem;color:var(--accent);letter-spacing:0.06em;">${p.sku}</span>`:'<span style="color:#ccc;font-size:0.65rem;">—</span>';
+    return`<tr>
+      <td style="font-family:'Newsreader',serif;font-style:italic;">${p.name}</td>
+      <td>${skuHtml}</td>
+      <td style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#8a7f73;">${p.category}</td>
+      <td>${p.color}</td>
+      <td style="font-weight:500;">NRs. ${p.price.toLocaleString()}</td>
+      <td>${p.stock}</td>
+      <td><span class="status-badge status-${ss}">${sl}</span></td>
+      <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="openProductModal(${idx})">Edit</button>
+        ${p.sku?`<button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="printBarcode(${idx})">Barcode</button>`:''}
+        <button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="deleteProduct(${idx})">Del</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function openProductModal(idx){
+  document.getElementById('modal-product-idx').value=idx!==undefined?idx:-1;
+  document.getElementById('modal-product-title').textContent=idx!==undefined?'Edit Product':'Add Product';
+  const p=idx!==undefined?PRODUCTS[idx]:{};
+  document.getElementById('mp-name').value=p.name||'';
+  document.getElementById('mp-category').value=p.category||'outerwear';
+  document.getElementById('mp-color').value=p.color||'';
+  document.getElementById('mp-price').value=p.price||'';
+  document.getElementById('mp-stock').value=p.stock||'';
+  document.getElementById('mp-status').value=p.status||'active';
+  // SKU handling
+  if(p.sku){
+    document.getElementById('mp-sku').value=p.sku;
+    showBarcodePreview(p.sku);
+  } else {
+    // new product: generate SKU on open
+    const newSku=generateSku(document.getElementById('mp-category').value, '');
+    document.getElementById('mp-sku').value=newSku;
+    showBarcodePreview(newSku);
+  }
+  openModal('modal-product');
+}
+function saveProduct(){
+  const idx=parseInt(document.getElementById('modal-product-idx').value);
+  const fileInput=document.getElementById('mp-image');
+  const existingIdx=idx;
+  const existingSku=existingIdx>=0?PRODUCTS[existingIdx]?.sku:null;
+  const d={name:document.getElementById('mp-name').value,category:document.getElementById('mp-category').value,color:document.getElementById('mp-color').value,price:parseInt(document.getElementById('mp-price').value)||0,stock:parseInt(document.getElementById('mp-stock').value)||0,status:document.getElementById('mp-status').value,sku:existingSku||document.getElementById('mp-sku').value||generateSku(document.getElementById('mp-category').value,document.getElementById('mp-name').value)};
+  if(!d.name){toast('Product name required');return;}
+  
+  const finishSave=(imgData)=>{
+    if(imgData) d.image=imgData;
+    else if(idx>=0 && PRODUCTS[idx].image) d.image=PRODUCTS[idx].image;
+
+    // Ensure every product has a stable id for URL routing
+    if(idx>=0) {
+      d.id = PRODUCTS[idx].id || d.sku;
+    } else {
+      d.id = d.sku; // use SKU as URL id for new products
+    }
+
+    if(idx>=0)PRODUCTS[idx]=d;else PRODUCTS.unshift(d);
+    sv('products',PRODUCTS);closeModal('modal-product');renderProductsTable();toast(idx>=0?'Product updated':'Product added');
+    fileInput.value='';
+  };
+
+  if(fileInput.files && fileInput.files[0]){
+    const reader=new FileReader();
+    reader.onload=function(e){finishSave(e.target.result);};
+    reader.readAsDataURL(fileInput.files[0]);
+  } else {
+    finishSave(null);
+  }
+}
+function deleteProduct(idx){if(!confirm('Delete this product?'))return;PRODUCTS.splice(idx,1);sv('products',PRODUCTS);renderProductsTable();toast('Product deleted');}
+
+// INVENTORY
+function renderInventoryTable(){
+  const q=(document.getElementById('inv-search')?.value||'').toLowerCase();
+  let list=INVENTORY.filter(i=>!q||i.product.toLowerCase().includes(q)||i.sku.toLowerCase().includes(q));
+  if(sortState.inventory){const{col,dir}=sortState.inventory;list=[...list].sort((a,b)=>dir*(a[col]-b[col]));}
+  document.getElementById('inventory-tbody').innerHTML=list.map(item=>{
+    const idx=INVENTORY.indexOf(item);
+    const pct=Math.min(100,(item.stock/20)*100);
+    const cls=item.stock===0?'stock-low':item.stock<5?'stock-mid':'stock-high';
+    const ss=item.stock===0?'out-of-stock':item.stock<5?'low-stock':'in-stock';
+    const sl=item.stock===0?'Out of Stock':item.stock<5?'Low Stock':'In Stock';
+    return`<tr><td style="font-family:'Newsreader',serif;font-style:italic;">${item.product}</td><td style="font-size:0.65rem;color:#8a7f73;">${item.sku}</td><td>${item.size}</td><td style="font-weight:500;">${item.stock}</td><td><span class="stock-bar-wrap"><span class="stock-bar ${cls}" style="width:${pct}%"></span></span>${item.stock}/20</td><td><span class="status-badge status-${ss}">${sl}</span></td><td><button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="openRestockModal(${idx})">Restock</button></td></tr>`;
+  }).join('');
+}
+function openRestockModal(idx){
+  const item=INVENTORY[idx];
+  document.getElementById('modal-restock-idx').value=idx;
+  document.getElementById('mr-product').value=`${item.product} — ${item.sku} (${item.size})`;
+  document.getElementById('mr-current').value=item.stock+' units';
+  document.getElementById('mr-add').value=20;
+  openModal('modal-restock');
+}
+function saveRestock(){
+  const idx=parseInt(document.getElementById('modal-restock-idx').value);
+  const add=parseInt(document.getElementById('mr-add').value)||0;
+  INVENTORY[idx].stock+=add;sv('inventory',INVENTORY);closeModal('modal-restock');renderInventoryTable();toast(`Restocked +${add} units`);
+}
+
+// CUSTOMERS
+function renderCustomersTable(){
+  CUSTOMERS = getCustomers();
+  const q=(document.getElementById('customer-search')?.value||'').toLowerCase();
+  let list=CUSTOMERS.filter(c=>!q||c.name.toLowerCase().includes(q)||c.email.toLowerCase().includes(q)||(c.country||'').toLowerCase().includes(q)||(c.phone||'').includes(q));
+  if(sortState.customers){const{col,dir}=sortState.customers;list=[...list].sort((a,b)=>typeof a[col]==='string'?dir*a[col].localeCompare(b[col]):dir*(a[col]-b[col]));}
+
+  // Update mini-stats
+  const thisMonth = new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+  const newThisMonth = CUSTOMERS.filter(c=>(c.joined||'').includes(thisMonth.split(' ')[1]));
+  const avgLtv = CUSTOMERS.length ? Math.round(CUSTOMERS.reduce((s,c)=>s+(c.spent||0),0)/CUSTOMERS.length) : 0;
+  if(document.getElementById('stat-cust-total')) document.getElementById('stat-cust-total').textContent = CUSTOMERS.length;
+  if(document.getElementById('stat-cust-new')) document.getElementById('stat-cust-new').textContent = newThisMonth.length;
+  if(document.getElementById('stat-cust-ltv')) document.getElementById('stat-cust-ltv').textContent = 'NRs. ' + avgLtv.toLocaleString();
+
+  document.getElementById('customers-tbody').innerHTML = list.length === 0
+    ? '<tr><td colspan="7" style="text-align:center;color:#8a7f73;padding:2.5rem;font-size:0.75rem;">No customers yet. Customer details are saved automatically when a purchase is made in the shop.</td></tr>'
+    : list.map(c=>{
+      // Find this customer orders
+      const custOrders = getOrders().filter(o=>o.email&&c.email&&o.email.toLowerCase()===c.email.toLowerCase());
+      const products = [...new Set(custOrders.map(o=>o.product))].slice(0,2).join(', ') + (custOrders.length > 2 ? '…' : '');
+      return`<tr>
+        <td><div style="font-weight:500;">${c.name}</div><div style="font-size:0.6rem;color:#8a7f73;">${c.phone||''}</div></td>
+        <td style="color:#6b6258;">${c.email}</td>
+        <td>${c.country||'—'}</td>
+        <td style="font-family:'Newsreader',serif;font-style:italic;font-size:0.75rem;color:#6b6258;max-width:180px;">${products||'—'}</td>
+        <td>${c.orders||0}</td>
+        <td style="font-weight:500;color:var(--accent);">NRs. ${(c.spent||0).toLocaleString()}</td>
+        <td style="color:#8a7f73;">${c.joined||'—'}</td>
+        <td><button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="document.getElementById('order-search').value='${c.email}';showPanel('orders',null);renderOrdersTable();">Orders</button></td>
+      </tr>`;
+    }).join('');
+}
+
+// COLLECTIONS
+function renderCollectionsTable(){
+  document.getElementById('collections-tbody').innerHTML=COLLECTIONS.map((c,i)=>`<tr><td style="font-family:'Newsreader',serif;font-style:italic;">${c.name}</td><td style="color:#8a7f73;">${c.season}</td><td>${c.products} pieces</td><td><span class="status-badge status-${c.status}">${c.status}</span></td><td style="display:flex;gap:0.4rem;"><button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="toggleCollection(${i})">${c.status==='active'?'Deactivate':'Activate'}</button><button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="deleteCollection(${i})">Del</button></td></tr>`).join('');
+}
+function openCollectionModal(){openModal('modal-collection');document.getElementById('cl-name').value='';}
+function saveCollection(){
+  const name=document.getElementById('cl-name').value;
+  if(!name){toast('Name required');return;}
+  COLLECTIONS.unshift({name,season:document.getElementById('cl-season').value,products:0,status:document.getElementById('cl-status').value});
+  sv('collections',COLLECTIONS);closeModal('modal-collection');renderCollectionsTable();toast('Collection created');
+}
+function toggleCollection(idx){COLLECTIONS[idx].status=COLLECTIONS[idx].status==='active'?'inactive':'active';sv('collections',COLLECTIONS);renderCollectionsTable();toast('Status updated');}
+function deleteCollection(idx){if(!confirm('Delete?'))return;COLLECTIONS.splice(idx,1);sv('collections',COLLECTIONS);renderCollectionsTable();toast('Deleted');}
+
+// PROMOTIONS
+function renderPromotionsTable(){
+  document.getElementById('promotions-tbody').innerHTML=PROMOTIONS.map((p,i)=>`<tr><td style="font-family:'Newsreader',serif;font-style:italic;font-weight:500;">${p.code}</td><td><span class="promo-type">${p.type}</span></td><td>${p.type==='percent'?p.value+'%':'NRs. '+p.value}</td><td>${p.used}/${p.max}</td><td style="color:#8a7f73;">${p.expiry}</td><td><span class="status-badge status-${p.status}">${p.status}</span></td><td style="display:flex;gap:0.4rem;"><button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="openPromoModal(${i})">Edit</button><button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="deletePromo(${i})">Del</button></td></tr>`).join('');
+}
+function openPromoModal(idx){
+  document.getElementById('modal-promo-idx').value=idx!==undefined?idx:-1;
+  document.getElementById('modal-promo-title').textContent=idx!==undefined?'Edit Promo':'Create Promo Code';
+  const p=idx!==undefined?PROMOTIONS[idx]:{};
+  document.getElementById('pp-code').value=p.code||'';
+  document.getElementById('pp-type').value=p.type||'percent';
+  document.getElementById('pp-value').value=p.value||'';
+  document.getElementById('pp-max').value=p.max||'';
+  document.getElementById('pp-expiry').value=p.expiry||'';
+  document.getElementById('pp-status').value=p.status||'active';
+  openModal('modal-promo');
+}
+function savePromo(){
+  const idx=parseInt(document.getElementById('modal-promo-idx').value);
+  const code=document.getElementById('pp-code').value.toUpperCase();
+  if(!code){toast('Code required');return;}
+  const d={code,type:document.getElementById('pp-type').value,value:parseFloat(document.getElementById('pp-value').value)||0,used:idx>=0?PROMOTIONS[idx].used:0,max:parseInt(document.getElementById('pp-max').value)||100,expiry:document.getElementById('pp-expiry').value,status:document.getElementById('pp-status').value};
+  if(idx>=0)PROMOTIONS[idx]=d;else PROMOTIONS.unshift(d);
+  sv('promotions',PROMOTIONS);closeModal('modal-promo');renderPromotionsTable();toast(idx>=0?'Promo updated':'Promo created');
+}
+function deletePromo(idx){if(!confirm('Delete?'))return;PROMOTIONS.splice(idx,1);sv('promotions',PROMOTIONS);renderPromotionsTable();toast('Deleted');}
+
+// REVIEWS
+function renderReviewsTable(){
+  const q=(document.getElementById('review-search')?.value||'').toLowerCase();
+  const sf=document.getElementById('review-filter')?.value||'';
+  let list=REVIEWS.filter(r=>(!sf||r.status===sf)&&(!q||r.customer.toLowerCase().includes(q)||r.product.toLowerCase().includes(q)));
+  document.getElementById('reviews-tbody').innerHTML=list.map(r=>{
+    const idx=REVIEWS.indexOf(r);
+    const stars='★'.repeat(r.rating)+'☆'.repeat(5-r.rating);
+    const sc=r.status==='approved'?'active':r.status==='pending'?'processing':'cancelled';
+    return`<tr><td style="font-weight:500;">${r.customer}</td><td style="font-family:'Newsreader',serif;font-style:italic;">${r.product}</td><td><span class="stars">${stars}</span></td><td style="font-size:0.7rem;color:#6b6258;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.text}</td><td style="color:#8a7f73;">${r.date}</td><td><span class="status-badge status-${sc}">${r.status}</span></td><td style="display:flex;gap:0.4rem;">${r.status!=='approved'?`<button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="approveReview(${idx})">Approve</button>`:''}<button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="deleteReview(${idx})">Del</button></td></tr>`;
+  }).join('');
+}
+function approveReview(idx){REVIEWS[idx].status='approved';sv('reviews',REVIEWS);renderReviewsTable();toast('Review approved');}
+function deleteReview(idx){if(!confirm('Delete?'))return;REVIEWS.splice(idx,1);sv('reviews',REVIEWS);renderReviewsTable();toast('Deleted');}
+
+// ADMINISTRATORS
+function renderAdminsTable(){
+  const admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
+  const currentUser = localStorage.getItem('atelier_current_user');
+  const currentRole = localStorage.getItem('atelier_current_role');
+
+  // Show/hide Add button and info bar based on role
+  const actionsEl = document.getElementById('admin-actions');
+  const infoBar = document.getElementById('admin-info-bar');
+  if (currentRole !== 'superadmin') {
+    if (actionsEl) actionsEl.style.display = 'none';
+    if (infoBar) infoBar.style.display = 'none';
+  } else {
+    if (actionsEl) actionsEl.style.display = 'block';
+    if (infoBar) infoBar.style.display = 'block';
+  }
+
+  document.getElementById('admins-tbody').innerHTML = admins.map(a => {
+    let actionHtml = '';
+    if (currentRole === 'superadmin' && a.email !== currentUser) {
+      actionHtml = `<button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;margin-right:0.4rem;" onclick="openAdminModal('${a.email}', '${a.role}')">Edit</button><button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="deleteAdmin('${a.email}')">Delete</button>`;
+    } else if (a.email === currentUser) {
+      actionHtml = `<button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="openAdminModal('${a.email}', '${a.role}')">Change Password</button> <span style="font-size:0.55rem;color:#8a7f73;letter-spacing:0.08em;">(you)</span>`;
+    }
+
+    return `<tr>
+      <td style="font-weight:500;">${a.email}</td>
+      <td><span class="status-badge status-${a.role==='superadmin' ? 'active' : 'processing'}">${a.role}</span></td>
+      <td style="color:#8a7f73;letter-spacing:0.1em;">••••••••</td>
+      <td>${actionHtml}</td>
+    </tr>`;
+  }).join('');
+
+  if (admins.length === 0) {
+    document.getElementById('admins-tbody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8a7f73;padding:2rem;font-size:0.75rem;">No administrators found.</td></tr>';
+  }
+}
+
+function openAdminModal(email, role) {
+  email = email || '';
+  role = role || 'admin';
+  const isEdit = email.length > 0;
+  const currentUser = localStorage.getItem('atelier_current_user');
+  const isEditingSelf = email === currentUser;
+
+  document.getElementById('modal-admin-original-email').value = email;
+  document.getElementById('ma-email').value = email;
+  document.getElementById('ma-password').value = '';
+  document.getElementById('ma-role').value = role;
+  document.getElementById('ma-credentials-preview').style.display = 'none';
+
+  // Title and subtitle
+  if (!isEdit) {
+    document.getElementById('modal-admin-title').textContent = 'Add Administrator';
+    document.getElementById('modal-admin-subtitle').textContent = 'Create login credentials for the new admin. Share the email and password with them directly — they will use these to sign in.';
+    document.getElementById('ma-password-hint').textContent = '(required)';
+    document.getElementById('ma-email').readOnly = false;
+    document.getElementById('ma-email').style.opacity = '1';
+    document.getElementById('ma-role-group').style.display = 'block';
+    document.querySelector('#modal-admin .modal-footer .btn-primary').textContent = 'Create Admin';
+  } else if (isEditingSelf) {
+    document.getElementById('modal-admin-title').textContent = 'Change Your Password';
+    document.getElementById('modal-admin-subtitle').textContent = 'Update your own login password. Your email and role cannot be changed here.';
+    document.getElementById('ma-password-hint').textContent = '(enter new password)';
+    document.getElementById('ma-email').readOnly = true;
+    document.getElementById('ma-email').style.opacity = '0.6';
+    document.getElementById('ma-role-group').style.display = 'none';
+    document.querySelector('#modal-admin .modal-footer .btn-primary').textContent = 'Save Password';
+  } else {
+    document.getElementById('modal-admin-title').textContent = 'Edit Administrator';
+    document.getElementById('modal-admin-subtitle').textContent = 'Update this administrator details. Leave password blank to keep the existing one.';
+    document.getElementById('ma-password-hint').textContent = '(leave blank to keep existing)';
+    document.getElementById('ma-email').readOnly = false;
+    document.getElementById('ma-email').style.opacity = '1';
+    document.getElementById('ma-role-group').style.display = 'block';
+    document.querySelector('#modal-admin .modal-footer .btn-primary').textContent = 'Save Changes';
+  }
+
+  openModal('modal-admin');
+}
+
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  let pwd = '';
+  for (let i = 0; i < 12; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('ma-password').value = pwd;
+  updateCredentialsPreview();
+}
+
+function updateCredentialsPreview() {
+  const email = document.getElementById('ma-email').value.trim();
+  const password = document.getElementById('ma-password').value;
+  const originalEmail = document.getElementById('modal-admin-original-email').value;
+  // Show preview only when adding new admin and both fields are filled
+  if (!originalEmail && email && password) {
+    document.getElementById('preview-email').textContent = email;
+    document.getElementById('preview-password').textContent = password;
+    document.getElementById('ma-credentials-preview').style.display = 'block';
+  } else {
+    document.getElementById('ma-credentials-preview').style.display = 'none';
+  }
+}
+
+function copyCredentials() {
+  const email = document.getElementById('preview-email').textContent;
+  const password = document.getElementById('preview-password').textContent;
+  navigator.clipboard.writeText('Email: ' + email + '\nPassword: ' + password).then(() => toast('Credentials copied to clipboard')).catch(() => toast('Copy failed — please copy manually'));
+}
+
+function saveAdmin(){
+  const originalEmail = document.getElementById('modal-admin-original-email').value;
+  let email = document.getElementById('ma-email').value.trim();
+  const password = document.getElementById('ma-password').value;
+  const role = document.getElementById('ma-role').value;
+
+  if (!email) { toast('Email is required'); return; }
+  if (!originalEmail && !password) { toast('Password is required for new admins'); return; }
+  if (!email.toLowerCase().endsWith('@gmail.com')) { toast('Email must end in @gmail.com'); return; }
+
+  let admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
+
+  if (originalEmail) {
+    const idx = admins.findIndex(a => a.email === originalEmail);
+    if (idx !== -1) {
+      if (admins.find(a => a.email === email && a.email !== originalEmail)) {
+        toast('An admin with this email already exists'); return;
+      }
+      admins[idx].email = email;
+      if (password) admins[idx].password = password;
+      // Only update role if not editing self
+      if (email !== localStorage.getItem('atelier_current_user')) admins[idx].role = role;
+    }
+  } else {
+    if (admins.find(a => a.email === email)) { toast('An admin with this email already exists'); return; }
+    admins.push({ email, password, role });
+  }
+
+  localStorage.setItem('atelier_admins', JSON.stringify(admins));
+  closeModal('modal-admin');
+  renderAdminsTable();
+  toast(originalEmail ? 'Administrator updated successfully' : 'New admin created — share the credentials!');
+}
+
+function deleteAdmin(email) {
+  if(!confirm('Delete administrator ' + email + '? This cannot be undone.')) return;
+  let admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
+  admins = admins.filter(a => a.email !== email);
+  localStorage.setItem('atelier_admins', JSON.stringify(admins));
+  renderAdminsTable();
+  toast('Administrator deleted');
+}
+
+// ── INQUIRIES ──────────────────────────────────────────────────────────────
+
+function getInquiries() { try { return JSON.parse(localStorage.getItem('atelier_inquiries') || '[]'); } catch { return []; } }
+function saveInquiries(d) { localStorage.setItem('atelier_inquiries', JSON.stringify(d)); }
+
+let _inqSortCol = 'date';
+let _inqSortDir = -1; // newest first
+
+function sortInquiries(col) {
+  if (_inqSortCol === col) _inqSortDir *= -1;
+  else { _inqSortCol = col; _inqSortDir = 1; }
+  renderInquiriesTable();
+}
+
+function renderInquiriesTable() {
+  const inquiries = getInquiries();
+  const q = (document.getElementById('inq-search')?.value || '').toLowerCase();
+  const sf = document.getElementById('inq-status-filter')?.value || '';
+  const subf = document.getElementById('inq-subject-filter')?.value || '';
+
+  let list = inquiries.filter(i =>
+    (!sf || i.status === sf) &&
+    (!subf || (i.subject || '').includes(subf.replace(/&amp;/g,'&'))) &&
+    (!q || [i.name, i.email, i.subject, i.message, i.orderRef].some(v => (v||'').toLowerCase().includes(q)))
+  );
+
+  // Sort
+  list = [...list].sort((a, b) => {
+    const av = a[_inqSortCol] || '', bv = b[_inqSortCol] || '';
+    return _inqSortDir * (typeof av === 'string' ? av.localeCompare(bv) : av - bv);
+  });
+
+  // Stats
+  const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const unread = inquiries.filter(i => i.status === 'unread').length;
+  const todayCount = inquiries.filter(i => i.date === today).length;
+  if (document.getElementById('inq-stat-total')) document.getElementById('inq-stat-total').textContent = inquiries.length;
+  if (document.getElementById('inq-stat-unread')) document.getElementById('inq-stat-unread').textContent = unread;
+  if (document.getElementById('inq-stat-today')) document.getElementById('inq-stat-today').textContent = todayCount;
+
+  // Update nav badge
+  updateInquiryBadge();
+
+  const tbody = document.getElementById('inquiries-tbody');
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#8a7f73;padding:3rem;font-size:0.75rem;">
+      No inquiries yet. Messages submitted via the Contact Us page will appear here in real time.
+    </td></tr>`;
+    const pg = document.getElementById('inq-pagination');
+    if (pg) pg.innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = list.map((inq, i) => {
+    const realIdx = getInquiries().findIndex(x => x.id === inq.id);
+    const isUnread = inq.status === 'unread';
+    const statusClass = inq.status === 'replied' ? 'active' : inq.status === 'read' ? 'processing' : inq.status === 'closed' ? 'cancelled' : 'processing';
+    const statusLabel = inq.status === 'unread' ? 'Unread' : inq.status === 'read' ? 'Read' : inq.status === 'replied' ? 'Replied' : 'Closed';
+    const statusColor = inq.status === 'unread' ? 'status-processing' : inq.status === 'replied' ? 'status-active' : inq.status === 'closed' ? 'status-cancelled' : '';
+    const msgPreview = (inq.message || '').length > 60 ? inq.message.substring(0, 60) + '…' : inq.message;
+    const unreadDot = isUnread ? '<span style="display:inline-block;width:8px;height:8px;background:#e65100;border-radius:50%;flex-shrink:0;"></span>' : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;"></span>';
+    return `<tr style="${isUnread ? 'background:rgba(230,81,0,0.03);' : ''}">
+      <td style="text-align:center;width:24px;">${unreadDot}</td>
+      <td style="font-weight:${isUnread ? '600' : '400'};">${inq.name}</td>
+      <td style="font-size:0.68rem;color:#6b6258;">${inq.email}</td>
+      <td style="font-size:0.68rem;letter-spacing:0.05em;">${inq.subject || 'General'}</td>
+      <td style="font-size:0.68rem;color:#8a7f73;max-width:200px;">${msgPreview}</td>
+      <td style="font-family:monospace;font-size:0.65rem;color:var(--accent);">${inq.orderRef || '—'}</td>
+      <td style="font-size:0.65rem;color:#8a7f73;white-space:nowrap;">${inq.date}<br/><span style="font-size:0.6rem;">${inq.time || ''}</span></td>
+      <td><span class="status-badge ${statusColor}">${statusLabel}</span></td>
+      <td style="display:flex;gap:0.4rem;">
+        <button class="btn-primary" style="padding:0.3rem 0.7rem;font-size:0.55rem;" onclick="openInquiryModal(${realIdx})">View</button>
+        <button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="deleteInquiry('${inq.id}')">Del</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const pg = document.getElementById('inq-pagination');
+  if (pg) pg.innerHTML = `<span class="page-info">Showing ${list.length} of ${inquiries.length} inquiries</span>`;
+}
+
+function openInquiryModal(idx) {
+  const inquiries = getInquiries();
+  const inq = inquiries[idx];
+  if (!inq) return;
+
+  // Mark as read automatically when opened
+  if (inq.status === 'unread') {
+    inquiries[idx].status = 'read';
+    saveInquiries(inquiries);
+    renderInquiriesTable();
+  }
+
+  document.getElementById('modal-inq-id').value = inq.id;
+  document.getElementById('modal-inq-title').textContent = inq.subject || 'General Inquiry';
+  document.getElementById('modal-inq-name').textContent = inq.name;
+  document.getElementById('modal-inq-email').textContent = inq.email;
+  document.getElementById('modal-inq-date').textContent = inq.date;
+  document.getElementById('modal-inq-time').textContent = inq.time || '';
+  document.getElementById('modal-inq-subject').textContent = inq.subject || 'General';
+  document.getElementById('modal-inq-order').textContent = inq.orderRef || 'None';
+  document.getElementById('modal-inq-message').textContent = inq.message;
+  document.getElementById('modal-inq-status').value = inquiries[idx].status;
+  document.getElementById('modal-inq-notes').value = inq.notes || '';
+  var replyBody = 'Dear ' + inq.name.split(' ')[0] + ',\n\nThank you for reaching out to The Atelier.\n\n';
+  document.getElementById('modal-inq-mailto').href = 'mailto:' + inq.email + '?subject=Re: ' + encodeURIComponent((inq.subject || 'Your Inquiry') + ' — The Atelier') + '&body=' + encodeURIComponent(replyBody);
+  openModal('modal-inquiry');
+}
+
+function saveInquiry() {
+  const id = document.getElementById('modal-inq-id').value;
+  const inquiries = getInquiries();
+  const idx = inquiries.findIndex(i => i.id === id);
+  if (idx === -1) return;
+  inquiries[idx].status = document.getElementById('modal-inq-status').value;
+  inquiries[idx].notes = document.getElementById('modal-inq-notes').value;
+  saveInquiries(inquiries);
+  closeModal('modal-inquiry');
+  renderInquiriesTable();
+  toast('Inquiry updated');
+}
+
+function deleteInquiry(id) {
+  if (!confirm('Delete this inquiry? This cannot be undone.')) return;
+  let inquiries = getInquiries().filter(i => i.id !== id);
+  saveInquiries(inquiries);
+  renderInquiriesTable();
+  toast('Inquiry deleted');
+}
+
+function markAllRead() {
+  const inquiries = getInquiries().map(i => ({ ...i, status: i.status === 'unread' ? 'read' : i.status }));
+  saveInquiries(inquiries);
+  renderInquiriesTable();
+  toast('All inquiries marked as read');
+}
+
+function exportInquiriesCSV() {
+  const inquiries = getInquiries();
+  const h = ['ID', 'Name', 'Email', 'Subject', 'Order Ref', 'Message', 'Date', 'Time', 'Status'];
+  const rows = inquiries.map(i => [i.id, i.name, i.email, i.subject, i.orderRef || '', '"' + (i.message || '').replace(/"/g, '""') + '"', i.date, i.time || '', i.status]);
+  const csvLines2 = [h, ...rows].map(r => r.join(','));
+  const csv = csvLines2.join(String.fromCharCode(10));
+  const a = document.createElement('a');
+  a.href = 'data:text/csv,' + encodeURIComponent(csv);
+  a.download = 'inquiries_export.csv';
+  a.click();
+  toast('CSV exported');
+}
+
+function updateInquiryBadge() {
+  const unread = getInquiries().filter(i => i.status === 'unread').length;
+  const badge = document.getElementById('inq-badge');
+  if (!badge) return;
+  if (unread > 0) {
+    badge.textContent = unread;
+    badge.style.display = 'flex';
+    badge.classList.add('badge-pulse');
+  } else {
+    badge.style.display = 'none';
+    badge.classList.remove('badge-pulse');
+  }
+}
+
+// Real-time: listen for localStorage changes from other tabs (contactUs.html)
+window.addEventListener('storage', function(e) {
+  if (e.key === 'atelier_inquiries') {
+    const panel = document.getElementById('panel-inquiries');
+    if (panel && panel.classList.contains('active')) {
+      renderInquiriesTable();
+    }
+    updateInquiryBadge();
+    // Show rich notification toast if not currently on inquiries panel
+    if (!panel || !panel.classList.contains('active')) {
+      const newList = JSON.parse(e.newValue || '[]');
+      const oldList = JSON.parse(e.oldValue || '[]');
+      if (newList.length > oldList.length) {
+        const newest = newList[0];
+        toastInquiry(newest);
+      }
+    }
+  }
+});
+
+// Fallback polling every 3 seconds (catches same-tab and missed events)
+let _lastInqCount = getInquiries().length;
+let _lastInqIds = getInquiries().map(i => i.id).join(',');
+setInterval(function() {
+  const current = getInquiries();
+  const currentIds = current.map(i => i.id).join(',');
+  if (currentIds !== _lastInqIds) {
+    const panel = document.getElementById('panel-inquiries');
+    const isNewArrival = current.length > _lastInqCount;
+    _lastInqCount = current.length;
+    _lastInqIds = currentIds;
+    updateInquiryBadge();
+    if (panel && panel.classList.contains('active')) {
+      renderInquiriesTable();
+    } else if (isNewArrival) {
+      toastInquiry(current[0]);
+    }
+  }
+}, 3000);
+
+// Init badge on page load
+updateInquiryBadge();
+
+// ── PRODUCT LOOKUP (find buyers by SKU or product name) ──────────────────────
+function productLookup() {
+  const q = (document.getElementById('product-lookup-input')?.value || '').trim().toLowerCase();
+  const resultsEl = document.getElementById('product-lookup-results');
+  if(!q) { resultsEl.style.display='none'; resultsEl.innerHTML=''; return; }
+
+  // Find matching orders (by product name or SKU embedded in product string)
+  const liveOrders = getOrders();
+  const matchedOrders = liveOrders.filter(o =>
+    (o.product||'').toLowerCase().includes(q) ||
+    (o.sku||'').toLowerCase().includes(q) ||
+    (o.id||'').toLowerCase().includes(q)
+  );
+
+  // Also match product SKU from PRODUCTS list
+  const matchedProducts = PRODUCTS.filter(p =>
+    (p.name||'').toLowerCase().includes(q) ||
+    (p.sku||'').toLowerCase().includes(q)
+  );
+  const matchedProductNames = matchedProducts.map(p => p.name.toLowerCase());
+
+  // Include orders matching product name from PRODUCTS
+  const allOrders = [...new Set([
+    ...matchedOrders,
+    ...liveOrders.filter(o => matchedProductNames.some(n => (o.product||'').toLowerCase().includes(n)))
+  ])];
+
+  if(allOrders.length === 0) {
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = `
+      <div style="padding:1.5rem 2rem;font-size:0.75rem;color:#8a7f73;border-bottom:1px solid rgba(200,184,154,0.2);">
+        No orders found for <strong>"${q}"</strong>. Orders are recorded when customers checkout.
+      </div>`;
+    return;
+  }
+
+  // Group by customer
+  const byCustomer = {};
+  allOrders.forEach(o => {
+    const key = (o.customer||'Unknown').toLowerCase();
+    if(!byCustomer[key]) byCustomer[key] = { customer: o.customer, email: o.email||'—', orders: [] };
+    byCustomer[key].orders.push(o);
+  });
+
+  const rows = Object.values(byCustomer).map(c => {
+    const totalSpent = c.orders.reduce((s, o) => s + (o.amount||0), 0);
+    const productList = [...new Set(c.orders.map(o => o.product))].join(', ');
+    const latestStatus = c.orders[0]?.status || '—';
+    const statusClass = latestStatus === 'completed' ? 'active' : latestStatus === 'shipped' ? 'processing' : latestStatus === 'cancelled' ? 'cancelled' : 'processing';
+    return `<tr style="background:#fffdf9;">
+      <td style="font-weight:600;">${c.customer}</td>
+      <td style="color:#6b6258;">${c.email}</td>
+      <td style="font-family:'Newsreader',serif;font-style:italic;font-size:0.8rem;">${productList}</td>
+      <td>${c.orders.length}</td>
+      <td style="font-weight:500;color:var(--accent);">NRs. ${totalSpent.toLocaleString()}</td>
+      <td><span class="status-badge status-${statusClass}">${latestStatus}</span></td>
+      <td><button class="btn-secondary" style="padding:0.3rem 0.7rem;font-size:0.55rem;" onclick="document.getElementById('customer-search').value='${c.customer}';showPanel('customers',null);renderCustomersTable();">View</button></td>
+    </tr>`;
+  }).join('');
+
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = `
+    <div style="padding:0.75rem 2rem;background:#f5f2ee;border-bottom:1px solid rgba(200,184,154,0.2);display:flex;align-items:center;gap:0.5rem;">
+      <span style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;">Buyers of</span>
+      <span style="font-size:0.7rem;font-weight:600;color:var(--ink);">"${q}"</span>
+      <span style="font-size:0.6rem;color:#8a7f73;margin-left:auto;">${allOrders.length} order${allOrders.length!==1?'s':''} · ${Object.keys(byCustomer).length} customer${Object.keys(byCustomer).length!==1?'s':''}</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;">
+        <thead><tr>
+          <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Customer</th>
+          <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Email</th>
+          <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Product(s) Bought</th>
+          <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Orders</th>
+          <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Total Spent</th>
+          <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Status</th>
+          <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Action</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── BARCODE & SKU ──────────────────────────────────────────────────────────
+
+// Code128 B encoding table: character -> bar pattern (11 bits as string)
+const C128B = {
+  ' ':'11011001100','!':'11001101100','"':'11001100110','#':'10010011000',
+  '$':'10010001100','%':'10001001100','&':'10011001000',"'":'10011000100',
+  '(':'10001100100',')':'11001001000','*':'11001000100','+':'11000100100',
+  ',':'10110011100','-':'10011011100','.':'10011001110','/':'10111001100',
+  '0':'10011101100','1':'10011100110','2':'11001110010','3':'11001011100',
+  '4':'11001001110','5':'11011100100','6':'11001110100','7':'11101101110',
+  '8':'11101001100','9':'11100101100',':':'11100100110',';':'11101100100',
+  '<':'11100110100','=':'11100110010','>':'11011011000','?':'11011000110',
+  '@':'11000110110','A':'10100011000','B':'10001011000','C':'10001000110',
+  'D':'10110001000','E':'10001101000','F':'10001100010','G':'11010001000',
+  'H':'11000101000','I':'11000100010','J':'10110111000','K':'10110001110',
+  'L':'10001101110','M':'10111011000','N':'10111000110','O':'10001110110',
+  'P':'11101110110','Q':'11010001110','R':'11000101110','S':'11011101000',
+  'T':'11011100010','U':'11011101110','V':'11101011000','W':'11101000110',
+  'X':'11100010110','Y':'11101101000','Z':'11101100010','[':'11100011010',
+  '\\':'11101111010',']':'11001000010','^':'11110001010','_':'10100110000',
+  '`':'10100001100','a':'10010110000','b':'10010000110','c':'10000101100',
+  'd':'10000100110','e':'10110010000','f':'10110000100','g':'10011010000',
+  'h':'10011000010','i':'10000110100','j':'10000110010','k':'11000010010',
+  'l':'11001010000','m':'11110111010','n':'11000010100','o':'10001111010',
+  'p':'10100111100','q':'10010111100','r':'10010011110','s':'10111100100',
+  't':'10011110100','u':'10011110010','v':'11110100100','w':'11110010100',
+  'x':'11110010010','y':'11011011110','z':'11011110110','{':'11110110110',
+  '|':'10101111000','}':'10100011110','~':'10001111100'
+};
+const C128_START_B = '11010010000';
+const C128_STOP    = '1100011101011';
+
+function skuToBarcode128Svg(text, barW=2, barH=60, forExport=false) {
+  let vals = [];
+  vals.push(104); // START B
+  let checksum = 104;
+  for(let i=0;i<text.length;i++){
+    const v=text.charCodeAt(i)-32;
+    vals.push(v);
+    checksum += v*(i+1);
+  }
+  vals.push(checksum % 103);
+
+  let bits = C128_START_B;
+  for(let i=1;i<vals.length;i++){
+    const ch=String.fromCharCode(vals[i]+32);
+    bits += (C128B[ch]||'11011001100');
+  }
+  bits += C128_STOP;
+
+  const svgW = bits.length * barW + 20;
+  const svgH = barH + 24;
+  let bars='';
+  let x=10;
+  for(let i=0;i<bits.length;i++){
+    if(bits[i]==='1') bars+=`<rect x="${x}" y="6" width="${barW}" height="${barH}" fill="#0e0e0d"/>`;
+    x+=barW;
+  }
+  // For preview: use viewBox + 100% width so it scales to container
+  // For export: use fixed pixel dimensions
+  const sizeAttr = forExport
+    ? `width="${svgW}" height="${svgH}"`
+    : `width="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet"`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${sizeAttr} style="display:block;">
+    <rect width="${svgW}" height="${svgH}" fill="white"/>
+    ${bars}
+    <text x="${svgW/2}" y="${svgH-4}" text-anchor="middle" font-family="monospace" font-size="10" fill="#0e0e0d" letter-spacing="2">${text}</text>
+  </svg>`;
+}
+
+function generateSku(category, name) {
+  const catCode = {outerwear:'OTW', dresses:'DRS', separates:'SEP'}[category] || 'ATL';
+  const rand = Math.floor(10000 + Math.random()*90000);
+  const year = new Date().getFullYear().toString().slice(-2);
+  return `ATL-${catCode}-${year}${rand}`;
+}
+
+function updateSkuFromName() {
+  const idx = parseInt(document.getElementById('modal-product-idx').value);
+  // Only auto-generate for new products (idx === -1), keep existing SKU for edits
+  if(idx >= 0) return;
+  const cat = document.getElementById('mp-category').value;
+  const name = document.getElementById('mp-name').value;
+  if(!name.trim()) { document.getElementById('mp-barcode-section').style.display='none'; return; }
+  const sku = document.getElementById('mp-sku').value || generateSku(cat, name);
+  document.getElementById('mp-sku').value = sku;
+  showBarcodePreview(sku);
+}
+
+function regenerateSku() {
+  const idx = parseInt(document.getElementById('modal-product-idx').value);
+  if(idx >= 0) { toast('Cannot change SKU of an existing product'); return; }
+  const cat = document.getElementById('mp-category').value;
+  const name = document.getElementById('mp-name').value;
+  const sku = generateSku(cat, name);
+  document.getElementById('mp-sku').value = sku;
+  showBarcodePreview(sku);
+}
+
+function showBarcodePreview(sku) {
+  if(!sku) { document.getElementById('mp-barcode-section').style.display='none'; return; }
+  document.getElementById('mp-sku-display').textContent = sku;
+  document.getElementById('mp-barcode-svg').innerHTML = skuToBarcode128Svg(sku, 2, 60, false);
+  document.getElementById('mp-barcode-section').style.display = 'block';
+}
+
+function downloadBarcodeSvg() {
+  const sku = document.getElementById('mp-sku').value || document.getElementById('mp-sku-display').textContent;
+  if(!sku) { toast('No SKU yet'); return; }
+  const svgStr = skuToBarcode128Svg(sku, 2, 60, true);
+  const blob = new Blob([svgStr], {type:'image/svg+xml'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = sku + '_barcode.svg';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('SVG downloaded');
+}
+
+function downloadBarcodePng() {
+  const sku = document.getElementById('mp-sku').value || document.getElementById('mp-sku-display').textContent;
+  if(!sku) { toast('No SKU yet'); return; }
+  const svgStr = skuToBarcode128Svg(sku, 3, 80, true);
+  const svgBlob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width * 2;
+    canvas.height = img.height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, img.width, img.height);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = sku + '_barcode.png';
+    a.click();
+    toast('PNG downloaded');
+  };
+  img.src = url;
+}
+
+function printBarcode(idx) {
+  const p = PRODUCTS[idx];
+  if(!p || !p.sku) { toast('No SKU for this product'); return; }
+  const svg = skuToBarcode128Svg(p.sku, 3, 80, true);
+  const win = window.open('', '_blank', 'width=480,height=320');
+  win.document.write(`<!DOCTYPE html><html><head><title>Barcode — ${p.sku}</title>
+  <style>
+    body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:monospace;background:#fff;}
+    .label{font-size:11px;color:#555;margin-bottom:6px;letter-spacing:2px;text-transform:uppercase;}
+    .name{font-size:15px;font-weight:bold;margin-bottom:2px;}
+    .price{font-size:12px;color:#8b5e3c;margin-bottom:12px;}
+    @media print{button{display:none!important;}}
+  </style></head><body>
+  <p class="label">THE ATELIER</p>
+  <p class="name">${p.name}</p>
+  <p class="price">NRs. ${p.price.toLocaleString()} &nbsp;|&nbsp; ${p.color}</p>
+  ${svg}
+  <br/>
+  <button onclick="window.print()" style="margin-top:16px;padding:8px 24px;background:#0e0e0d;color:#fff;border:none;font-family:monospace;font-size:11px;letter-spacing:2px;cursor:pointer;text-transform:uppercase;">Print</button>
+  </body></html>`);
+  win.document.close();
+}
+
+// SORT
+function sortTable(table,col){
+  const prev=sortState[table];sortState[table]={col,dir:prev&&prev.col===col?prev.dir*-1:1};
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable})[table]?.();
+}
+
+// CSV EXPORT
+function exportCSV(type){
+  let h,rows;
+  if(type==='orders'){h=['ID','Customer','Email','Product','Date','Amount','Status','Payment Method','Transaction ID','Has Proof','Verified By'];rows=ORDERS.map(o=>[o.id,o.customer,o.email||'',o.product,o.date,o.amount,o.status,o.payment?.method||'',o.payment?.txn||'',o.payment?.proofImage?'Yes':'No',o.verifiedBy||'']);}
+  else{h=['Name','Email','Country','Orders','Spent','Joined'];rows=CUSTOMERS.map(c=>[c.name,c.email,c.country,c.orders,c.spent,c.joined]);}
+  const csv=[h,...rows].map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv,'+encodeURIComponent(csv);a.download=type+'_export.csv';a.click();toast('CSV exported');
+}
+
+// DASHBOARD CHARTS
+document.getElementById('current-date').textContent=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+new Chart(document.getElementById('revenue-chart'),{type:'line',data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'],datasets:[{data:[0,0,0,0,0,0,0,0,0,0,0],borderColor:'#8b5e3c',backgroundColor:'rgba(139,94,60,0.06)',borderWidth:1.5,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#8b5e3c'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{family:'Jost',size:10},color:'#8a7f73'}},y:{grid:{color:'rgba(200,184,154,0.2)'},ticks:{font:{family:'Jost',size:10},color:'#8a7f73',callback:v=>'NRs. '+(v/1000).toFixed(0)+'k'}}}}});
+new Chart(document.getElementById('category-chart'),{type:'doughnut',data:{labels:['Outerwear','Dresses','Separates'],datasets:[{data:[0,0,0],backgroundColor:['#8b5e3c','#c8b89a','#d4ccc3'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{family:'Jost',size:10},color:'#6b6258',padding:16,usePointStyle:true}}}}});
+document.getElementById('top-products-list').innerHTML='';
+document.getElementById('activity-list').innerHTML='';
+
+// ANALYTICS CHARTS
+let analyticsInited=false;
+function initAnalytics(){
+  if(analyticsInited)return;analyticsInited=true;
+  document.getElementById('analytics-date').textContent=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  new Chart(document.getElementById('traffic-chart'),{type:'bar',data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'],datasets:[{label:'Visitors',data:[0,0,0,0,0,0,0,0,0,0,0],backgroundColor:'rgba(139,94,60,0.7)',borderRadius:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{family:'Jost',size:10},color:'#8a7f73'}},y:{grid:{color:'rgba(200,184,154,0.2)'},ticks:{font:{family:'Jost',size:10},color:'#8a7f73'}}}}});
+  new Chart(document.getElementById('source-chart'),{type:'doughnut',data:{labels:['Organic','Direct','Social','Referral','Email'],datasets:[{data:[0,0,0,0,0],backgroundColor:['#8b5e3c','#c8b89a','#d4ccc3','#a89080','#e8e3db'],borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{family:'Jost',size:10},color:'#6b6258',padding:12,usePointStyle:true}}}}});
+  new Chart(document.getElementById('country-chart'),{type:'bar',data:{labels:['France','Italy','UK','USA','Germany','Japan','Other'],datasets:[{label:'Revenue',data:[0,0,0,0,0,0,0],backgroundColor:'#c8b89a',borderRadius:2}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(200,184,154,0.2)'},ticks:{font:{family:'Jost',size:10},color:'#8a7f73',callback:v=>'NRs. '+(v/1000).toFixed(0)+'k'}},y:{grid:{display:false},ticks:{font:{family:'Jost',size:10},color:'#8a7f73'}}}}});
+}
+
+// ── CUSTOM ORDERS ────────────────────────────────────────────────────────────
+var _currentCustomOrderId = null;
+
+function getCustomOrders() {
+  try { return JSON.parse(localStorage.getItem('atelier_custom_orders') || '[]'); } catch(e) { return []; }
+}
+function saveCustomOrdersData(arr) { localStorage.setItem('atelier_custom_orders', JSON.stringify(arr)); }
+
+function renderCustomOrdersTable() {
+  var orders = getCustomOrders();
+  var filter = document.getElementById('co-status-filter') ? document.getElementById('co-status-filter').value : '';
+  var search = document.getElementById('co-search') ? document.getElementById('co-search').value.toLowerCase() : '';
+
+  var filtered = orders.filter(function(o) {
+    var matchStatus = !filter || o.status === filter;
+    var matchSearch = !search || (o.customer||'').toLowerCase().includes(search) || (o.email||'').toLowerCase().includes(search) || (o.garment||'').toLowerCase().includes(search) || (o.id||'').toLowerCase().includes(search);
+    return matchStatus && matchSearch;
+  });
+
+  var pending = orders.filter(function(o){ return o.status === 'pending'; }).length;
+  var confirmed = orders.filter(function(o){ return o.status === 'confirmed' || o.status === 'in-production'; }).length;
+  document.getElementById('co-stat-total').textContent = orders.length;
+  document.getElementById('co-stat-pending').textContent = pending;
+  document.getElementById('co-stat-confirmed').textContent = confirmed;
+
+  // Update badge
+  var badge = document.getElementById('custom-badge');
+  if (pending > 0) { badge.style.display = 'flex'; badge.textContent = pending; } else { badge.style.display = 'none'; }
+
+  var STATUS_CLASSES = { pending:'status-processing', confirmed:'status-active', 'in-production':'status-shipped', ready:'status-shipped', completed:'status-completed', cancelled:'status-cancelled' };
+  var tbody = document.getElementById('co-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:3rem;color:#8a7f73;font-size:0.8rem;font-style:italic;">No custom orders yet. Customers can place orders via the Design Studio.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(function(o) {
+    var sc = STATUS_CLASSES[o.status] || 'status-processing';
+    var statusLabel = o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1).replace('-',' ') : 'Pending';
+    return '<tr>' +
+      '<td style="font-family:monospace;font-size:0.7rem;">' + o.id + '</td>' +
+      '<td><p style="font-size:0.78rem;font-weight:500;">' + (o.customer||'—') + '</p><p style="font-size:0.62rem;color:#8a7f73;">' + (o.email||'') + '</p></td>' +
+      '<td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (o.color||'#ccc') + ';border:1px solid rgba(0,0,0,0.15);margin-right:6px;vertical-align:middle;"></span>' + (o.garment||'—') + '</td>' +
+      '<td style="text-transform:capitalize;">' + (o.customizationType||'—') + '<br><span style="font-size:0.6rem;color:#8a7f73;">' + (o.placement||'') + '</span></td>' +
+      '<td>' + (o.size||'—') + '</td>' +
+      '<td>' + (o.qty||1) + '</td>' +
+      '<td>NRs. ' + ((o.totalPrice||0).toLocaleString()) + '</td>' +
+      '<td style="font-size:0.7rem;">' + (o.date||'—') + '</td>' +
+      '<td><span class="status-badge ' + sc + '">' + statusLabel + '</span></td>' +
+      '<td><button class="btn-secondary" style="padding:0.3rem 0.7rem;font-size:0.55rem;" onclick="openCustomOrderModal(\'' + o.id + '\')">View</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function openCustomOrderModal(id) {
+  var orders = getCustomOrders();
+  var o = orders.find(function(x){ return x.id === id; });
+  if (!o) return;
+  _currentCustomOrderId = id;
+  document.getElementById('co-modal-title').textContent = 'Custom Order — ' + o.id;
+  document.getElementById('co-modal-preview').src = o.designPreview || '';
+  document.getElementById('co-modal-status').value = o.status || 'pending';
+  var details = [
+    ['Customer', o.customer],
+    ['Email', o.email],
+    ['Phone', o.phone || '—'],
+    ['Address', o.address],
+    ['Garment', o.garment],
+    ['Colour', '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + o.color + ';border:1px solid rgba(0,0,0,0.1);vertical-align:middle;margin-right:4px;"></span>' + o.color],
+    ['Size', o.size + (o.customSize ? ' (' + o.customSize + ')' : '')],
+    ['Quantity', o.qty],
+    ['Customization', o.customizationType],
+    ['Placement', o.placement],
+    ['Text Design', o.designText || '—'],
+    ['Has Image', o.hasImage ? '✓ Yes' : 'No'],
+    ['Unit Price', 'NRs. ' + (o.unitPrice||0).toLocaleString()],
+    ['Total', 'NRs. ' + (o.totalPrice||0).toLocaleString()],
+    ['Notes', o.notes || '—'],
+    ['Date', o.date + ' ' + (o.time||'')]
+  ].map(function(row) {
+    return '<div style="display:flex;gap:0.5rem;padding:0.2rem 0;border-bottom:1px solid rgba(200,184,154,0.1);"><span style="color:#8a7f73;min-width:110px;font-size:0.68rem;letter-spacing:0.08em;">' + row[0] + '</span><span style="font-size:0.75rem;">' + row[1] + '</span></div>';
+  }).join('');
+  document.getElementById('co-modal-details').innerHTML = details;
+  document.getElementById('modal-customorder').classList.add('open');
+}
+
+function updateCustomOrderStatus() {
+  var orders = getCustomOrders();
+  var idx = orders.findIndex(function(o){ return o.id === _currentCustomOrderId; });
+  if (idx < 0) return;
+  orders[idx].status = document.getElementById('co-modal-status').value;
+  saveCustomOrdersData(orders);
+  closeModal('modal-customorder');
+  renderCustomOrdersTable();
+  showToast('Custom order status updated.');
+}
+
+function deleteCustomOrder() {
+  if (!confirm('Delete this custom order? This cannot be undone.')) return;
+  var orders = getCustomOrders();
+  var filtered = orders.filter(function(o){ return o.id !== _currentCustomOrderId; });
+  saveCustomOrdersData(filtered);
+  closeModal('modal-customorder');
+  renderCustomOrdersTable();
+  showToast('Custom order deleted.');
+}
+
+function exportCustomOrdersCSV() {
+  var orders = getCustomOrders();
+  if (!orders.length) { alert('No custom orders to export.'); return; }
+  var headers = ['ID','Customer','Email','Phone','Garment','Color','Size','Qty','Customization','Placement','Text','Unit Price','Total','Status','Date','Notes'];
+  var rows = orders.map(function(o) {
+    return [o.id,o.customer,o.email,o.phone||'',o.garment,o.color,o.size,o.qty,o.customizationType,o.placement,o.designText||'',o.unitPrice,o.totalPrice,o.status,o.date,o.notes||''].map(function(v){ return '"'+(v||'').toString().replace(/"/g,'""')+'"'; }).join(',');
+  });
+  var csv = [headers.join(',')].concat(rows).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'custom-orders.csv'; a.click();
+}
+
+// Check for new custom orders on load and show badge
+(function() {
+  var orders = getCustomOrders();
+  var pending = orders.filter(function(o){ return o.status === 'pending'; }).length;
+  var badge = document.getElementById('custom-badge');
+  if (badge && pending > 0) { badge.style.display = 'flex'; badge.textContent = pending; }
+})();
+// ─────────────────────────────────────────────────────────────────────────────
+</script>
+<script>
+var ANN_STYLES = {
+  dark:   { bg: '#0e0e0d', color: '#f4f1ec' },
+  gold:   { bg: '#c8b89a', color: '#0e0e0d' },
+  accent: { bg: '#8b5e3c', color: '#f4f1ec' },
+  green:  { bg: '#2e7d32', color: '#ffffff' },
+  urgent: { bg: '#8b1a1a', color: '#ffffff' }
+};
+var ANN_TYPE_LABELS = { offer:'🎁 Offer', discount:'💸 Discount', shipping:'🚚 Shipping', event:'🎉 Event', notice:'📌 Notice', newArrival:'✨ New Arrival' };
+
+function getAnnouncements() {
+  try { return JSON.parse(localStorage.getItem('atelier_announcements') || '[]'); } catch(e) { return []; }
+}
+function saveAnnouncements(arr) { localStorage.setItem('atelier_announcements', JSON.stringify(arr)); }
+
+function renderAnnouncementsTable() {
+  var anns = getAnnouncements();
+  var filter = document.getElementById('ann-filter') ? document.getElementById('ann-filter').value : '';
+  var filtered = filter ? anns.filter(function(a){ return a.status === filter; }) : anns;
+
+  var total = anns.length;
+  var active = anns.filter(function(a){ return a.status === 'active'; }).length;
+  var scheduled = anns.filter(function(a){ return a.status === 'inactive'; }).length;
+  document.getElementById('ann-stat-total').textContent = total;
+  document.getElementById('ann-stat-active').textContent = active;
+  document.getElementById('ann-stat-scheduled').textContent = scheduled;
+
+  // Live preview of first active announcement
+  var livePreview = document.getElementById('ann-live-preview');
+  var previewBar = document.getElementById('ann-preview-bar');
+  var firstActive = anns.find(function(a){ return a.status === 'active'; });
+  if (firstActive) {
+    var s = ANN_STYLES[firstActive.style] || ANN_STYLES.dark;
+    previewBar.style.background = s.bg;
+    previewBar.style.color = s.color;
+    previewBar.textContent = firstActive.message + (firstActive.linkText ? '  ' + firstActive.linkText : '');
+    livePreview.style.display = 'block';
+  } else {
+    livePreview.style.display = 'none';
+  }
+
+  var tbody = document.getElementById('ann-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:#8a7f73;font-style:italic;">No announcements yet. Create your first one.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(function(a, i) {
+    var realIdx = anns.indexOf(a);
+    var s = ANN_STYLES[a.style] || ANN_STYLES.dark;
+    var swatch = '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:'+s.bg+';border:1px solid rgba(0,0,0,0.15);vertical-align:middle;margin-right:5px;"></span>';
+    var statusBadge = a.status === 'active'
+      ? '<span class="status-badge status-active">Active</span>'
+      : '<span class="status-badge status-inactive">Inactive</span>';
+    var msg = a.message.length > 60 ? a.message.substring(0,60)+'…' : a.message;
+    return '<tr>' +
+      '<td style="max-width:260px;"><span style="font-size:0.78rem;">'+msg+'</span>'+(a.linkText?'<br><span style="font-size:0.6rem;color:#8b5e3c;">'+a.linkText+'</span>':'')+'</td>' +
+      '<td><span style="font-size:0.7rem;">'+( ANN_TYPE_LABELS[a.type]||a.type)+'</span></td>' +
+      '<td>'+swatch+'<span style="font-size:0.7rem;text-transform:capitalize;">'+a.style+'</span></td>' +
+      '<td>'+statusBadge+'</td>' +
+      '<td><span style="font-size:0.7rem;">'+(a.dismissible==='yes'?'Yes':'No')+'</span></td>' +
+      '<td><div style="display:flex;gap:0.5rem;flex-wrap:wrap;">' +
+        '<button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="toggleAnnouncement('+realIdx+')">'+(a.status==='active'?'Deactivate':'Activate')+'</button>' +
+        '<button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="editAnnouncement('+realIdx+')">Edit</button>' +
+        '<button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="deleteAnnouncement('+realIdx+')">Delete</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function openAnnouncementModal(idx) {
+  document.getElementById('modal-ann-title').textContent = idx !== undefined ? 'Edit Announcement' : 'New Announcement';
+  document.getElementById('modal-ann-idx').value = idx !== undefined ? idx : '';
+  document.getElementById('ann-msg').value = '';
+  document.getElementById('ann-type').value = 'offer';
+  document.getElementById('ann-style').value = 'dark';
+  document.getElementById('ann-status').value = 'active';
+  document.getElementById('ann-dismissible').value = 'yes';
+  document.getElementById('ann-link').value = '';
+  document.getElementById('ann-link-text').value = '';
+  if (idx !== undefined) {
+    var a = getAnnouncements()[idx];
+    if (a) {
+      document.getElementById('ann-msg').value = a.message || '';
+      document.getElementById('ann-type').value = a.type || 'offer';
+      document.getElementById('ann-style').value = a.style || 'dark';
+      document.getElementById('ann-status').value = a.status || 'active';
+      document.getElementById('ann-dismissible').value = a.dismissible || 'yes';
+      document.getElementById('ann-link').value = a.link || '';
+      document.getElementById('ann-link-text').value = a.linkText || '';
+    }
+  }
+  document.getElementById('modal-announcement').classList.add('open');
+}
+
+function editAnnouncement(idx) { openAnnouncementModal(idx); }
+
+function saveAnnouncement() {
+  var msg = document.getElementById('ann-msg').value.trim();
+  if (!msg) { alert('Please enter an announcement message.'); return; }
+  var anns = getAnnouncements();
+  var idx = document.getElementById('modal-ann-idx').value;
+  var obj = {
+    message: msg,
+    type: document.getElementById('ann-type').value,
+    style: document.getElementById('ann-style').value,
+    status: document.getElementById('ann-status').value,
+    dismissible: document.getElementById('ann-dismissible').value,
+    link: document.getElementById('ann-link').value.trim(),
+    linkText: document.getElementById('ann-link-text').value.trim(),
+    createdAt: idx !== '' ? (anns[parseInt(idx)] || {}).createdAt || new Date().toISOString() : new Date().toISOString()
+  };
+  if (idx !== '') {
+    anns[parseInt(idx)] = obj;
+  } else {
+    anns.unshift(obj);
+  }
+  saveAnnouncements(anns);
+  closeModal('modal-announcement');
+  renderAnnouncementsTable();
+  showToast('Announcement saved successfully.');
+}
+
+function toggleAnnouncement(idx) {
+  var anns = getAnnouncements();
+  if (!anns[idx]) return;
+  anns[idx].status = anns[idx].status === 'active' ? 'inactive' : 'active';
+  saveAnnouncements(anns);
+  renderAnnouncementsTable();
+  showToast('Announcement ' + (anns[idx].status === 'active' ? 'activated' : 'deactivated') + '.');
+}
+
+function deleteAnnouncement(idx) {
+  if (!confirm('Delete this announcement?')) return;
+  var anns = getAnnouncements();
+  anns.splice(idx, 1);
+  saveAnnouncements(anns);
+  renderAnnouncementsTable();
+  showToast('Announcement deleted.');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── PAYMENT SETTINGS ─────────────────────────────────────────────────────────
+var _paymentQRs = { esewa: null, khalti: null, bank: null }; // in-memory QR data URLs
+
+function getPaymentSettings() {
+  try { return JSON.parse(localStorage.getItem('atelier_payment_settings') || '{}'); } catch(e) { return {}; }
+}
+function savePaymentSettingsData(d) {
+  localStorage.setItem('atelier_payment_settings', JSON.stringify(d));
+}
+
+function loadPaymentSettingsForm() {
+  var ps = getPaymentSettings();
+
+  // eSewa
+  document.getElementById('esewa-id').value = ps.esewa_id || '';
+  document.getElementById('esewa-account-name').value = ps.esewa_account_name || '';
+  if (document.getElementById('esewa-enabled')) document.getElementById('esewa-enabled').checked = ps.esewa_enabled !== false;
+  if (ps.esewa_qr) {
+    _paymentQRs.esewa = ps.esewa_qr;
+    document.getElementById('esewa-qr-preview').innerHTML = '<img src="' + ps.esewa_qr + '" style="width:100%;height:100%;object-fit:contain;" alt="eSewa QR"/>';
+  }
+
+  // Khalti
+  document.getElementById('khalti-id').value = ps.khalti_id || '';
+  document.getElementById('khalti-account-name').value = ps.khalti_account_name || '';
+  if (document.getElementById('khalti-enabled')) document.getElementById('khalti-enabled').checked = ps.khalti_enabled !== false;
+  if (ps.khalti_qr) {
+    _paymentQRs.khalti = ps.khalti_qr;
+    document.getElementById('khalti-qr-preview').innerHTML = '<img src="' + ps.khalti_qr + '" style="width:100%;height:100%;object-fit:contain;" alt="Khalti QR"/>';
+  }
+
+  // Bank
+  document.getElementById('bank-name').value = ps.bank_name || '';
+  document.getElementById('bank-acct-name').value = ps.bank_account_name || '';
+  document.getElementById('bank-acct-num').value = ps.bank_account_num || '';
+  document.getElementById('bank-branch').value = ps.bank_branch || '';
+  if (document.getElementById('bank-enabled')) document.getElementById('bank-enabled').checked = ps.bank_enabled !== false;
+  if (ps.bank_qr) {
+    _paymentQRs.bank = ps.bank_qr;
+    document.getElementById('bank-qr-preview').innerHTML = '<img src="' + ps.bank_qr + '" style="width:100%;height:100%;object-fit:contain;" alt="Bank QR"/>';
+  }
+}
+
+function previewQR(method, input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _paymentQRs[method] = e.target.result;
+    document.getElementById(method + '-qr-preview').innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:contain;" alt="' + method + ' QR"/>';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearQR(method) {
+  _paymentQRs[method] = null;
+  var emptyHtml = '<div style="text-align:center;color:#bbb0a5;"><div style="font-size:2rem;margin-bottom:0.25rem;">⊞</div><span style="font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;">Upload QR</span></div>';
+  document.getElementById(method + '-qr-preview').innerHTML = emptyHtml;
+  // Clear file input
+  var input = document.getElementById(method + '-qr-input');
+  if (input) input.value = '';
+}
+
+function savePaymentSettings() {
+  var ps = {
+    // eSewa
+    esewa_id: document.getElementById('esewa-id').value.trim(),
+    esewa_account_name: document.getElementById('esewa-account-name').value.trim(),
+    esewa_enabled: document.getElementById('esewa-enabled') ? document.getElementById('esewa-enabled').checked : true,
+    esewa_qr: _paymentQRs.esewa || getPaymentSettings().esewa_qr || null,
+
+    // Khalti
+    khalti_id: document.getElementById('khalti-id').value.trim(),
+    khalti_account_name: document.getElementById('khalti-account-name').value.trim(),
+    khalti_enabled: document.getElementById('khalti-enabled') ? document.getElementById('khalti-enabled').checked : true,
+    khalti_qr: _paymentQRs.khalti || getPaymentSettings().khalti_qr || null,
+
+    // Bank
+    bank_name: document.getElementById('bank-name').value.trim(),
+    bank_account_name: document.getElementById('bank-acct-name').value.trim(),
+    bank_account_num: document.getElementById('bank-acct-num').value.trim(),
+    bank_branch: document.getElementById('bank-branch').value.trim(),
+    bank_enabled: document.getElementById('bank-enabled') ? document.getElementById('bank-enabled').checked : true,
+    bank_qr: _paymentQRs.bank || getPaymentSettings().bank_qr || null,
+  };
+  savePaymentSettingsData(ps);
+  toast('✓ Payment settings saved successfully');
+}
+
+</script>
+</body>
+</html>

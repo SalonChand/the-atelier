@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shopping Bag | THE ATELIER</title>
+<meta name="description" content="Review your shopping bag at The Atelier. Luxury ready-to-wear pieces, complimentary worldwide shipping, and free returns within 14 days."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+  .serif { font-family: 'Newsreader', serif; }
+  nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; background: rgba(244,241,236,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(200,184,154,0.25); }
+  .nav-logo { text-decoration: none; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; }
+  .nav-logo-text { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .nav-links { display: flex; gap: 2.5rem; }
+  .nav-links a { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6b6258; text-decoration: none; }
+  @media (max-width: 640px) { .nav-links { display: none; } nav { padding: 1.2rem 1.5rem; } }
+
+  main { padding: 8rem 3rem 5rem; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 640px) { main { padding: 7rem 1.5rem 4rem; } }
+
+  .page-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(3rem,7vw,6rem); margin-bottom: 3rem; line-height: 1; }
+
+  .cart-layout { display: grid; grid-template-columns: 1fr 380px; gap: 4rem; align-items: start; }
+  @media (max-width: 1024px) { .cart-layout { grid-template-columns: 1fr; } }
+
+  .cart-items { }
+  .cart-item { display: flex; gap: 2rem; padding: 2rem 0; border-bottom: 1px solid rgba(200,184,154,0.4); align-items: flex-start; }
+  .cart-item-img { width: 120px; height: 160px; object-fit: cover; background: #e8e3db; flex-shrink: 0; }
+  .cart-item-info { flex: 1; }
+  .cart-item-name { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.3rem; margin-bottom: 0.3rem; }
+  .cart-item-meta { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #8a7f73; margin-bottom: 1rem; }
+  .cart-item-actions { display: flex; align-items: center; gap: 1.5rem; }
+  .qty-controls { display: flex; align-items: center; border: 1px solid rgba(14,14,13,0.2); }
+  .qty-btn { width: 2rem; height: 2rem; background: none; border: none; cursor: pointer; font-size: 1rem; transition: background 0.2s; }
+  .qty-btn:hover { background: rgba(14,14,13,0.06); }
+  .qty-num { width: 2.5rem; text-align: center; font-size: 0.8rem; border-left: 1px solid rgba(14,14,13,0.2); border-right: 1px solid rgba(14,14,13,0.2); line-height: 2rem; }
+  .remove-btn { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #a0897a; text-decoration: none; background: none; border: none; cursor: pointer; font-family: 'Jost'; transition: color 0.2s; }
+  .remove-btn:hover { color: #5a1a00; }
+  .cart-item-price { font-size: 0.9rem; font-weight: 500; }
+  .empty-state { text-align: center; padding: 5rem 2rem; }
+  .empty-state h2 { font-family: 'Newsreader', serif; font-style: italic; font-size: 2.5rem; margin-bottom: 1rem; }
+  .empty-state p { font-size: 0.75rem; color: #8a7f73; letter-spacing: 0.1em; margin-bottom: 2rem; }
+  .empty-state a { display: inline-block; padding: 0.9rem 2.5rem; background: var(--ink); color: var(--cream); text-decoration: none; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; }
+
+  .order-summary { background: white; padding: 2.5rem; border: 1px solid rgba(200,184,154,0.3); position: sticky; top: 8rem; }
+  .summary-title { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.8rem; margin-bottom: 2rem; }
+  .summary-line { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 1rem; }
+  .summary-line.total { font-weight: 500; font-size: 0.9rem; padding-top: 1rem; border-top: 1px solid rgba(200,184,154,0.4); margin-top: 0.5rem; }
+  .summary-note { font-size: 0.6rem; color: #8a7f73; letter-spacing: 0.1em; margin-bottom: 2rem; }
+  .checkout-btn { display: block; width: 100%; padding: 1.2rem; background: var(--ink); color: var(--cream); text-align: center; text-decoration: none; font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; border: none; font-family: 'Jost'; transition: background 0.3s; margin-bottom: 1rem; }
+  .checkout-btn:hover { background: var(--accent); }
+  .continue-link { display: block; text-align: center; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; text-decoration: none; }
+  .continue-link:hover { color: var(--ink); }
+
+  .promo-row { display: flex; gap: 0; margin-bottom: 1.5rem; }
+  .promo-input { flex: 1; padding: 0.7rem 1rem; border: 1px solid rgba(200,184,154,0.5); border-right: none; background: transparent; font-family: 'Jost'; font-size: 0.7rem; outline: none; }
+  .promo-input:focus { border-color: var(--ink); }
+  .promo-btn { padding: 0.7rem 1.2rem; background: var(--ink); color: var(--cream); border: none; font-family: 'Jost'; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; }
+
+  /* FOOTER */
+  footer { background: var(--cream); border-top: 1px solid rgba(200,184,154,0.4); padding: 4rem 3rem 2rem; margin-top: 5rem; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+  @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer-brand { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.8rem; margin-bottom: 1rem; }
+  .footer-tagline { font-size: 0.65rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 1.8; max-width: 240px; }
+  .footer-col h4 { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.2rem; color: var(--ink); }
+  .footer-col a { display: block; font-size: 0.75rem; color: #8a7f73; text-decoration: none; margin-bottom: 0.6rem; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--ink); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(200,184,154,0.3); padding-top: 1.5rem; flex-wrap: wrap; gap: 0.5rem;}
+  .footer-bottom p { font-size: 0.6rem; color: #a89e94; letter-spacing: 0.1em; }
+</style>
+</head>
+<body>
+<!-- ANNOUNCEMENT BANNER -->
+<style>
+  #site-announcement {
+    display: none;
+    position: relative;
+    width: 100%;
+    z-index: 200;
+    text-align: center;
+    padding: 0.65rem 3rem;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  #site-announcement a.ann-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-left: 1rem;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  #site-announcement a.ann-link:hover { opacity: 1; }
+  #ann-dismiss {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    font-size: 0.9rem; opacity: 0.5; color: inherit;
+    transition: opacity 0.2s; line-height: 1;
+  }
+  #ann-dismiss:hover { opacity: 1; }
+  body.has-announcement nav { top: 0; }
+</style>
+<div id="site-announcement">
+  <span id="ann-text"></span>
+  <a id="ann-cta" class="ann-link" href="#" style="display:none;"></a>
+  <button id="ann-dismiss" title="Dismiss">✕</button>
+</div>
+<script>
+  (function() {
+    try {
+      var DISMISSED_KEY = 'atelier_ann_dismissed';
+      var dismissed = JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]');
+      var anns = JSON.parse(localStorage.getItem('atelier_announcements') || '[]');
+      var active = anns.find(function(a) {
+        return a.status === 'active' && dismissed.indexOf(a.createdAt) === -1;
+      });
+      if (!active) return;
+
+      var STYLES = {
+        dark:   { bg: '#0e0e0d', color: '#f4f1ec' },
+        gold:   { bg: '#c8b89a', color: '#0e0e0d' },
+        accent: { bg: '#8b5e3c', color: '#f4f1ec' },
+        green:  { bg: '#2e7d32', color: '#ffffff' },
+        urgent: { bg: '#8b1a1a', color: '#ffffff' }
+      };
+      var s = STYLES[active.style] || STYLES.dark;
+      var bar = document.getElementById('site-announcement');
+      bar.style.background = s.bg;
+      bar.style.color = s.color;
+      bar.style.display = 'block';
+      document.getElementById('ann-text').textContent = active.message;
+
+      if (active.link && active.linkText) {
+        var cta = document.getElementById('ann-cta');
+        cta.href = active.link;
+        cta.textContent = active.linkText;
+        cta.style.display = 'inline';
+      }
+
+      var dismissBtn = document.getElementById('ann-dismiss');
+      if (active.dismissible === 'no') {
+        dismissBtn.style.display = 'none';
+      } else {
+        dismissBtn.addEventListener('click', function() {
+          dismissed.push(active.createdAt);
+          localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+          bar.style.display = 'none';
+          document.body.classList.remove('has-announcement');
+          // Restore nav position
+          var nav = document.querySelector('nav');
+          if (nav) nav.style.top = '';
+        });
+      }
+
+      // Push nav down by announcement height
+      document.body.classList.add('has-announcement');
+      var nav = document.querySelector('nav');
+      if (nav) {
+        var h = bar.offsetHeight;
+        nav.style.top = h + 'px';
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<style>
+  #admin-preview-bar {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #141210; color: #c8b89a;
+    padding: 0.5rem 2rem;
+    font-family: 'Jost', sans-serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    display: none; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+  }
+  #admin-preview-bar a { color: #c8b89a; text-decoration: none; transition: color 0.2s; }
+  #admin-preview-bar a:hover { color: #fff; }
+  body.admin-viewing { padding-top: 36px; }
+  body.admin-viewing nav { top: 36px; }
+</style>
+<div id="admin-preview-bar">
+  <span>⚙ Admin Preview Mode</span>
+  <a href="analyticsDashboard.html">← Back to Dashboard</a>
+</div>
+<script>
+  (function() {
+    if (localStorage.getItem("atelier_admin") === "1") {
+      var bar = document.getElementById("admin-preview-bar");
+      bar.style.display = "flex";
+      document.body.classList.add("admin-viewing");
+    }
+  })();
+</script>
+<nav>
+  <div class="nav-links">
+    <a href="collection.html">← Continue Shopping</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:52px;width:auto;object-fit:contain;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div></div>
+</nav>
+
+<main>
+  <h1 class="page-title">Your Bag</h1>
+  <div id="cart-content"></div>
+</main>
+
+<script>
+function getCart() { return JSON.parse(localStorage.getItem('atelier_cart') || '[]'); }
+function saveCart(cart) { localStorage.setItem('atelier_cart', JSON.stringify(cart)); }
+
+function updateQty(index, delta) {
+  let cart = getCart();
+  cart[index].quantity += delta;
+  if (cart[index].quantity <= 0) cart.splice(index, 1);
+  saveCart(cart);
+  render();
+}
+
+function removeItem(index) {
+  let cart = getCart();
+  cart.splice(index, 1);
+  saveCart(cart);
+  render();
+}
+
+function applyPromo() {
+  const code = document.getElementById('promo-input').value.trim().toUpperCase();
+  const msg = document.getElementById('promo-msg');
+  if (code === 'ATELIER10') {
+    msg.textContent = '10% discount applied!';
+    msg.style.color = '#3a6b3c';
+    window._promoDiscount = 0.10;
+  } else {
+    msg.textContent = 'Invalid promo code.';
+    msg.style.color = '#8b3a3a';
+    window._promoDiscount = 0;
+  }
+  render();
+}
+
+function render() {
+  const cart = getCart();
+  const container = document.getElementById('cart-content');
+
+  if (cart.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h2>Your bag is empty.</h2>
+        <p>Discover pieces crafted for those who know.</p>
+        <a href="collection.html">Explore Collections</a>
+      </div>`;
+    return;
+  }
+
+  let subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+  const discount = window._promoDiscount || 0;
+  const discountAmount = Math.round(subtotal * discount);
+  const total = subtotal - discountAmount;
+
+  const itemsHTML = cart.map((item, i) => `
+    <div class="cart-item">
+      <img class="cart-item-img" src="${item.image}" alt="${item.name}"/>
+      <div class="cart-item-info">
+        <h3 class="cart-item-name">${item.name}</h3>
+        <p class="cart-item-meta">Ref. ${item.id.toUpperCase()}</p>
+        <div class="cart-item-actions">
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="updateQty(${i}, -1)">−</button>
+            <span class="qty-num">${item.quantity}</span>
+            <button class="qty-btn" onclick="updateQty(${i}, 1)">+</button>
+          </div>
+          <button class="remove-btn" onclick="removeItem(${i})">Remove</button>
+        </div>
+      </div>
+      <div class="cart-item-price">NRs. ${(item.price * item.quantity).toLocaleString()}</div>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="cart-layout">
+      <div class="cart-items">${itemsHTML}</div>
+      <aside class="order-summary">
+        <h3 class="summary-title">Summary</h3>
+        <div class="promo-row">
+          <input class="promo-input" id="promo-input" placeholder="Promo Code" value="${window._promoCode || ''}" />
+          <button class="promo-btn" onclick="applyPromo()">Apply</button>
+        </div>
+        <p id="promo-msg" style="font-size:0.65rem;margin-bottom:1rem;min-height:1rem;${discount > 0 ? 'color:#3a6b3c;' : ''}">${discount > 0 ? '10% discount applied!' : ''}</p>
+        <div class="summary-line"><span>Subtotal</span><span>NRs. ${subtotal.toLocaleString()}</span></div>
+        ${discount > 0 ? `<div class="summary-line"><span>Discount (10%)</span><span style="color:#3a6b3c;">−NRs. ${discountAmount.toLocaleString()}</span></div>` : ''}
+        <div class="summary-line"><span>Shipping</span><span style="color:#8a7f73;">Complimentary</span></div>
+        <div class="summary-line"><span>Duties &amp; Taxes</span><span style="color:#8a7f73;">Included</span></div>
+        <div class="summary-line total"><span>Total</span><span>NRs. ${total.toLocaleString()}</span></div>
+        <p class="summary-note" style="margin-top:1rem;">Free returns within 14 days</p>
+        <button class="checkout-btn" onclick="window.location.href='checkout.html'">Proceed to Checkout</button>
+        <a href="collection.html" class="continue-link">Continue Shopping</a>
+      </aside>
+    </div>`;
+}
+
+render();
+</script>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">The Atelier</div>
+      <p class="footer-tagline">Luxury ready-to-wear, crafted for those who understand that clothing is never just clothing.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <a href="collection.html">New Arrivals</a>
+      <a href="collection.html">Collections</a>
+      <a href="collection.html?filter=outerwear">Outerwear</a>
+      <a href="collection.html?filter=dresses">Dresses</a>
+    </div>
+    <div class="footer-col">
+      <h4>House</h4>
+      <a href="aboutUs.html">Our Story</a>
+      <a href="aboutUs.html">Craftsmanship</a>
+      <a href="sustainability.html">Sustainability</a>
+      <a href="press.html">Press</a>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <a href="sizingGuide.html">Sizing Guide</a>
+      <a href="shippingReturns.html">Shipping &amp; Returns</a>
+      <a href="careInstructions.html">Care Instructions</a>
+      <a href="contactUs.html">Contact Us</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 The Atelier. All rights reserved.</p>
+    <p>Privacy Policy · Terms of Service</p>
+    <a id="staff-portal-link" href="adminLogin.html" style="font-size:0.6rem;color:#8a7f73;text-decoration:none;letter-spacing:0.1em;transition:color 0.2s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='#8a7f73'">Staff Portal</a>
+  </div>
+</footer>
+
+<script>
+  // Hide Staff Portal link if logged in as admin
+  (function() {
+    var link = document.getElementById("staff-portal-link");
+    if (link && localStorage.getItem("atelier_admin") === "1") {
+      link.style.display = "none";
+    }
+  })();
+
+  // Secret shortcut: Ctrl+Shift+A = go to admin login (works even if link is hidden)
+  document.addEventListener("keydown", function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === "A") {
+      window.location.href = "adminLogin.html";
+    }
+  });
+</script>
+</body>
+</html>

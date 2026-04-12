@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Checkout | THE ATELIER</title>
+<meta name="description" content="Complete your purchase at The Atelier. Secure checkout with complimentary worldwide shipping and duties included."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; --error: #8b1a1a; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+  .serif { font-family: 'Newsreader', serif; }
+  nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; border-bottom: 1px solid rgba(200,184,154,0.3); }
+  .nav-logo { text-decoration: none; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; }
+  .nav-logo-text { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .progress { display: flex; align-items: center; gap: 1rem; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; }
+  .step { color: #8a7f73; }
+  .step.active { color: var(--ink); font-weight: 500; }
+  .step-sep { color: rgba(200,184,154,0.6); }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 3rem; display: grid; grid-template-columns: 1fr 380px; gap: 5rem; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; gap: 3rem; } nav { padding: 1.2rem 1.5rem; } main { padding: 2rem 1.5rem; } }
+
+  .section-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: 2rem; margin-bottom: 2rem; }
+
+  .form-group { margin-bottom: 1.5rem; position: relative; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-bottom: 0.4rem; }
+  input, select {
+    width: 100%; padding: 0.8rem 0; background: transparent;
+    border: none; border-bottom: 1px solid rgba(200,184,154,0.6);
+    font-family: 'Jost'; font-size: 0.85rem; color: var(--ink); outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--ink); }
+  input.invalid, select.invalid { border-color: var(--error); }
+  .field-error { font-size: 0.6rem; color: var(--error); margin-top: 0.3rem; display: none; }
+  .field-error.show { display: block; }
+  select { appearance: none; cursor: pointer; }
+
+  .separator { border: none; border-top: 1px solid rgba(200,184,154,0.3); margin: 2.5rem 0; }
+
+  .card-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; }
+  @media (max-width: 500px) { .card-row { grid-template-columns: 1fr; } }
+
+  .submit-btn {
+    width: 100%; padding: 1.2rem; background: var(--ink); color: var(--cream);
+    border: none; font-family: 'Jost'; font-size: 0.65rem; letter-spacing: 0.22em;
+    text-transform: uppercase; cursor: pointer; transition: background 0.3s;
+    margin-top: 1rem;
+  }
+  .submit-btn:hover { background: var(--accent); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .secure-note { display: flex; align-items: center; gap: 0.5rem; font-size: 0.6rem; color: #8a7f73; letter-spacing: 0.1em; margin-top: 1rem; justify-content: center; }
+
+  /* Order Summary */
+  .order-summary { background: white; padding: 2.5rem; border: 1px solid rgba(200,184,154,0.3); position: sticky; top: 2rem; }
+  .summary-title { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.5rem; margin-bottom: 2rem; }
+  .summary-items { margin-bottom: 1.5rem; }
+  .summary-item { display: flex; gap: 1rem; margin-bottom: 1.2rem; align-items: flex-start; }
+  .summary-item-img { width: 60px; height: 80px; object-fit: cover; background: #e8e3db; flex-shrink: 0; }
+  .summary-item-info { flex: 1; }
+  .summary-item-name { font-size: 0.8rem; font-family: 'Newsreader', serif; font-style: italic; margin-bottom: 0.2rem; }
+  .summary-item-meta { font-size: 0.6rem; color: #8a7f73; letter-spacing: 0.08em; }
+  .summary-item-price { font-size: 0.8rem; white-space: nowrap; }
+  .summary-divider { border: none; border-top: 1px solid rgba(200,184,154,0.3); margin: 1rem 0; }
+  .summary-line { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.75rem; }
+  .summary-line.total { font-weight: 500; font-size: 0.9rem; }
+
+  /* Payment method cards */
+  .payment-methods { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 2rem; }
+  .pay-card {
+    border: 1.5px solid rgba(200,184,154,0.45); background: white; cursor: pointer;
+    padding: 1.2rem 0.75rem; display: flex; flex-direction: column; align-items: center;
+    gap: 0.6rem; transition: all 0.25s; position: relative; border-radius: 3px;
+    font-family: 'Jost'; color: #6b6258;
+  }
+  .pay-card:hover { border-color: var(--ink); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(14,14,13,0.08); }
+  .pay-card.active { border-color: var(--ink); background: var(--ink); color: var(--cream); box-shadow: 0 8px 24px rgba(14,14,13,0.15); }
+  .pay-card-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+  .pay-card-label { font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; text-align: center; }
+  .pay-card-check { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--warm); display: none; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--ink); }
+  .pay-card.active .pay-card-check { display: flex; }
+
+  /* Payment panels */
+  .pay-panel { display: none; }
+  .pay-panel.active { display: block; }
+  .pay-panel-inner {
+    border: 1px solid rgba(200,184,154,0.35); padding: 2rem;
+    background: white; border-radius: 2px; margin-bottom: 0.5rem;
+  }
+  .pay-panel-header {
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 1.75rem; padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(200,184,154,0.25);
+  }
+  .pay-panel-icon { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .pay-panel-title { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.3rem; }
+  .pay-panel-sub { font-size: 0.62rem; color: #8a7f73; letter-spacing: 0.08em; margin-top: 0.15rem; }
+
+  /* QR section */
+  .qr-section { display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 1.75rem; }
+  .qr-box {
+    flex-shrink: 0; width: 140px; height: 140px; border: 1px solid rgba(200,184,154,0.4);
+    display: flex; align-items: center; justify-content: center; background: #fafaf8;
+    border-radius: 3px; overflow: hidden;
+  }
+  .qr-box img { width: 100%; height: 100%; object-fit: contain; }
+  .qr-placeholder { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; color: #bbb0a5; }
+  .qr-placeholder svg { opacity: 0.4; }
+  .qr-placeholder span { font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  .qr-instructions { flex: 1; min-width: 180px; }
+  .qr-step { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 0.9rem; }
+  .qr-step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--cream); font-size: 0.55rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.05rem; }
+  .qr-step-text { font-size: 0.72rem; color: #5a5249; line-height: 1.6; }
+  .qr-step-text strong { color: var(--ink); font-weight: 500; }
+
+  /* Bank detail box */
+  .bank-detail-row { display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0; border-bottom: 1px solid rgba(200,184,154,0.15); }
+  .bank-detail-row:last-child { border-bottom: none; }
+  .bank-detail-label { font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; }
+  .bank-detail-value { font-size: 0.8rem; color: var(--ink); font-weight: 500; font-family: monospace; letter-spacing: 0.04em; }
+  .copy-btn { padding: 0.2rem 0.6rem; border: 1px solid rgba(200,184,154,0.5); background: transparent; font-family: 'Jost'; font-size: 0.5rem; letter-spacing: 0.12em; cursor: pointer; color: #8a7f73; transition: all 0.2s; border-radius: 2px; }
+  .copy-btn:hover { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+
+  /* Ref number field */
+  .ref-note { background: rgba(200,184,154,0.1); border-left: 3px solid var(--warm); padding: 0.75rem 1rem; font-size: 0.72rem; color: #5a5249; line-height: 1.7; margin-top: 1.25rem; border-radius: 0 2px 2px 0; }
+
+  /* Payment proof upload */
+  .proof-upload-section { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid rgba(200,184,154,0.25); }
+  .proof-upload-label { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink); margin-bottom: 0.5rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+  .proof-upload-label .required-star { color: var(--error); font-size: 0.75rem; }
+  .proof-upload-hint { font-size: 0.65rem; color: #8a7f73; line-height: 1.7; margin-bottom: 1rem; }
+  .proof-dropzone {
+    border: 2px dashed rgba(200,184,154,0.5); background: rgba(244,241,236,0.5);
+    padding: 2rem 1.5rem; text-align: center; cursor: pointer;
+    transition: all 0.25s; position: relative; border-radius: 3px;
+  }
+  .proof-dropzone:hover { border-color: var(--accent); background: rgba(139,94,60,0.04); }
+  .proof-dropzone.drag-over { border-color: var(--accent); background: rgba(139,94,60,0.08); transform: scale(1.01); }
+  .proof-dropzone.has-file { border-style: solid; border-color: #3a6b3c; background: rgba(58,107,60,0.04); }
+  .proof-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .proof-dropzone-icon { font-size: 1.8rem; margin-bottom: 0.5rem; opacity: 0.5; }
+  .proof-dropzone-text { font-size: 0.68rem; color: #8a7f73; letter-spacing: 0.08em; line-height: 1.7; }
+  .proof-dropzone-text strong { color: var(--accent); }
+  .proof-preview-wrap { display: none; align-items: center; gap: 1rem; }
+  .proof-preview-wrap.show { display: flex; }
+  .proof-thumb { max-width: 120px; max-height: 100px; object-fit: contain; border: 1px solid rgba(200,184,154,0.4); border-radius: 2px; }
+  .proof-file-info { flex: 1; }
+  .proof-file-name { font-size: 0.72rem; font-weight: 500; color: var(--ink); margin-bottom: 0.2rem; word-break: break-all; }
+  .proof-file-size { font-size: 0.6rem; color: #8a7f73; letter-spacing: 0.08em; }
+  .proof-file-status { font-size: 0.58rem; color: #3a6b3c; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 0.3rem; display: flex; align-items: center; gap: 0.3rem; }
+  .proof-remove-btn { padding: 0.35rem 0.75rem; border: 1px solid rgba(139,26,26,0.3); background: transparent; font-family: 'Jost'; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; color: #8b1a1a; transition: all 0.2s; flex-shrink: 0; }
+  .proof-remove-btn:hover { background: #8b1a1a; color: #fff; border-color: #8b1a1a; }
+  .proof-error { font-size: 0.6rem; color: var(--error); margin-top: 0.5rem; display: none; }
+  .proof-error.show { display: block; }
+  .proof-mandatory-note { background: rgba(139,26,26,0.06); border-left: 3px solid var(--error); padding: 0.65rem 1rem; font-size: 0.65rem; color: #5a2020; line-height: 1.7; margin-top: 1rem; border-radius: 0 2px 2px 0; }
+</style>
+</head>
+<body>
+<!-- ANNOUNCEMENT BANNER -->
+<style>
+  #site-announcement {
+    display: none;
+    position: relative;
+    width: 100%;
+    z-index: 200;
+    text-align: center;
+    padding: 0.65rem 3rem;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  #site-announcement a.ann-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-left: 1rem;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  #site-announcement a.ann-link:hover { opacity: 1; }
+  #ann-dismiss {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    font-size: 0.9rem; opacity: 0.5; color: inherit;
+    transition: opacity 0.2s; line-height: 1;
+  }
+  #ann-dismiss:hover { opacity: 1; }
+  body.has-announcement nav { top: 0; }
+</style>
+<div id="site-announcement">
+  <span id="ann-text"></span>
+  <a id="ann-cta" class="ann-link" href="#" style="display:none;"></a>
+  <button id="ann-dismiss" title="Dismiss">✕</button>
+</div>
+<script>
+  (function() {
+    try {
+      var DISMISSED_KEY = 'atelier_ann_dismissed';
+      var dismissed = JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]');
+      var anns = JSON.parse(localStorage.getItem('atelier_announcements') || '[]');
+      var active = anns.find(function(a) {
+        return a.status === 'active' && dismissed.indexOf(a.createdAt) === -1;
+      });
+      if (!active) return;
+
+      var STYLES = {
+        dark:   { bg: '#0e0e0d', color: '#f4f1ec' },
+        gold:   { bg: '#c8b89a', color: '#0e0e0d' },
+        accent: { bg: '#8b5e3c', color: '#f4f1ec' },
+        green:  { bg: '#2e7d32', color: '#ffffff' },
+        urgent: { bg: '#8b1a1a', color: '#ffffff' }
+      };
+      var s = STYLES[active.style] || STYLES.dark;
+      var bar = document.getElementById('site-announcement');
+      bar.style.background = s.bg;
+      bar.style.color = s.color;
+      bar.style.display = 'block';
+      document.getElementById('ann-text').textContent = active.message;
+
+      if (active.link && active.linkText) {
+        var cta = document.getElementById('ann-cta');
+        cta.href = active.link;
+        cta.textContent = active.linkText;
+        cta.style.display = 'inline';
+      }
+
+      var dismissBtn = document.getElementById('ann-dismiss');
+      if (active.dismissible === 'no') {
+        dismissBtn.style.display = 'none';
+      } else {
+        dismissBtn.addEventListener('click', function() {
+          dismissed.push(active.createdAt);
+          localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+          bar.style.display = 'none';
+          document.body.classList.remove('has-announcement');
+          // Restore nav position
+          var nav = document.querySelector('nav');
+          if (nav) nav.style.top = '';
+        });
+      }
+
+      // Push nav down by announcement height
+      document.body.classList.add('has-announcement');
+      var nav = document.querySelector('nav');
+      if (nav) {
+        var h = bar.offsetHeight;
+        nav.style.top = h + 'px';
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<style>
+  #admin-preview-bar {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #141210; color: #c8b89a;
+    padding: 0.5rem 2rem;
+    font-family: 'Jost', sans-serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    display: none; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+  }
+  #admin-preview-bar a { color: #c8b89a; text-decoration: none; transition: color 0.2s; }
+  #admin-preview-bar a:hover { color: #fff; }
+  body.admin-viewing { padding-top: 36px; }
+  body.admin-viewing nav { top: 36px; }
+</style>
+<div id="admin-preview-bar">
+  <span>⚙ Admin Preview Mode</span>
+  <a href="analyticsDashboard.html">← Back to Dashboard</a>
+</div>
+<script>
+  (function() {
+    if (localStorage.getItem("atelier_admin") === "1") {
+      var bar = document.getElementById("admin-preview-bar");
+      bar.style.display = "flex";
+      document.body.classList.add("admin-viewing");
+    }
+  })();
+</script>
+<nav>
+  <a href="shoppingCart.html" style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;text-decoration:none;">← Bag</a>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:52px;width:auto;object-fit:contain;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div class="progress">
+    <span class="step active">Shipping</span>
+    <span class="step-sep">/</span>
+    <span class="step" id="step-payment">Payment</span>
+    <span class="step-sep">/</span>
+    <span class="step">Confirm</span>
+  </div>
+</nav>
+
+<main>
+  <div>
+    <!-- SHIPPING -->
+    <h2 class="section-title">Shipping Details</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="fname">First Name</label>
+        <input type="text" id="fname" placeholder="Alexandra"/>
+        <p class="field-error" id="err-fname">Please enter your first name</p>
+      </div>
+      <div class="form-group">
+        <label for="lname">Last Name</label>
+        <input type="text" id="lname" placeholder="Beaumont"/>
+        <p class="field-error" id="err-lname">Please enter your last name</p>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" placeholder="your@email.com"/>
+      <p class="field-error" id="err-email">Please enter a valid email</p>
+    </div>
+    <div class="form-group">
+      <label for="phone">Phone Number</label>
+      <input type="tel" id="phone" placeholder="+1 (555) 000-0000"/>
+    </div>
+    <div class="form-group">
+      <label for="address">Street Address</label>
+      <input type="text" id="address" placeholder="12 Rue de Rivoli"/>
+      <p class="field-error" id="err-address">Please enter your address</p>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="city">City</label>
+        <input type="text" id="city" placeholder="Paris"/>
+        <p class="field-error" id="err-city">Required</p>
+      </div>
+      <div class="form-group">
+        <label for="postal">Postal Code</label>
+        <input type="text" id="postal" placeholder="75001"/>
+        <p class="field-error" id="err-postal">Required</p>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="country">Country</label>
+      <select id="country">
+        <option value="">Select country...</option>
+        <option>France</option><option>United Kingdom</option><option>United States</option>
+        <option>Germany</option><option>Italy</option><option>Japan</option>
+        <option>South Korea</option><option>Australia</option><option>Canada</option>
+        <option>Switzerland</option><option>Netherlands</option><option>Spain</option>
+        <option>Sweden</option><option>Norway</option><option>Denmark</option>
+        <option>Singapore</option><option>United Arab Emirates</option><option>Nepal</option>
+        <option>Other</option>
+      </select>
+      <p class="field-error" id="err-country">Please select your country</p>
+    </div>
+
+    <hr class="separator"/>
+
+    <!-- PAYMENT -->
+    <h2 class="section-title">Payment</h2>
+
+    <!-- Payment Method Cards -->
+    <div class="payment-methods">
+      <button class="pay-card active" data-method="esewa" onclick="selectPayment('esewa',this)">
+        <div class="pay-card-check">✓</div>
+        <div class="pay-card-icon" style="background:#60bb46;">
+          <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <text x="24" y="33" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="20" fill="white">e</text>
+          </svg>
+        </div>
+        <span class="pay-card-label">eSewa</span>
+      </button>
+      <button class="pay-card" data-method="khalti" onclick="selectPayment('khalti',this)">
+        <div class="pay-card-check">✓</div>
+        <div class="pay-card-icon" style="background:#5c2d91;">
+          <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <text x="24" y="33" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="20" fill="white">K</text>
+          </svg>
+        </div>
+        <span class="pay-card-label">Khalti</span>
+      </button>
+      <button class="pay-card" data-method="bank" onclick="selectPayment('bank',this)">
+        <div class="pay-card-check">✓</div>
+        <div class="pay-card-icon" style="background:#0e0e0d;">
+          <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="20" width="32" height="18" rx="2" stroke="white" stroke-width="2.5" fill="none"/>
+            <path d="M8 26h32" stroke="white" stroke-width="2.5"/>
+            <path d="M24 10 L40 18 H8 Z" fill="white"/>
+          </svg>
+        </div>
+        <span class="pay-card-label">Bank Transfer</span>
+      </button>
+    </div>
+
+    <!-- eSewa Panel -->
+    <div class="pay-panel active" id="panel-esewa">
+      <div class="pay-panel-inner">
+        <div class="pay-panel-header">
+          <div class="pay-panel-icon" style="background:#60bb46;display:flex;align-items:center;justify-content:center;">
+            <svg width="26" height="26" viewBox="0 0 48 48"><text x="24" y="33" text-anchor="middle" font-family="Arial Black" font-weight="900" font-size="24" fill="white">e</text></svg>
+          </div>
+          <div>
+            <p class="pay-panel-title">Pay via eSewa</p>
+            <p class="pay-panel-sub">Scan the QR code or send to the registered eSewa ID</p>
+          </div>
+        </div>
+        <div class="qr-section">
+          <div class="qr-box" id="esewa-qr-display">
+            <div class="qr-placeholder">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="19" y="14" width="2" height="2"/><rect x="14" y="19" width="2" height="2"/><rect x="18" y="19" width="3" height="2"/></svg>
+              <span>QR not set</span>
+            </div>
+          </div>
+          <div class="qr-instructions">
+            <div class="qr-step"><div class="qr-step-num">1</div><div class="qr-step-text">Open your <strong>eSewa app</strong> and tap <strong>Scan QR</strong></div></div>
+            <div class="qr-step"><div class="qr-step-num">2</div><div class="qr-step-text">Scan the QR code or send to eSewa ID: <strong id="esewa-id-display" style="color:#60bb46;">—</strong></div></div>
+            <div class="qr-step"><div class="qr-step-num">3</div><div class="qr-step-text">Enter the exact amount and complete the payment</div></div>
+            <div class="qr-step"><div class="qr-step-num">4</div><div class="qr-step-text">Enter your <strong>transaction ID</strong> below and place your order</div></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="esewa-txn">eSewa Transaction ID *</label>
+          <input type="text" id="esewa-txn" placeholder="e.g. 0001ABC123456789"/>
+          <p class="field-error" id="err-esewa-txn">Please enter your eSewa transaction ID</p>
+        </div>
+        <div class="form-group">
+          <label for="esewa-mobile">eSewa Registered Mobile Number *</label>
+          <input type="text" id="esewa-mobile" placeholder="98XXXXXXXX"/>
+          <p class="field-error" id="err-esewa-mobile">Please enter your eSewa mobile number</p>
+        </div>
+        <div class="proof-upload-section">
+          <p class="proof-upload-label"><span>📎</span> Upload Payment Proof <span class="required-star">*</span></p>
+          <p class="proof-upload-hint">Upload a screenshot of your eSewa payment confirmation. Your order will be verified by our team before processing.</p>
+          <div class="proof-dropzone" id="esewa-proof-zone">
+            <input type="file" accept="image/*" onchange="handleProofUpload('esewa', this)"/>
+            <div id="esewa-proof-placeholder">
+              <div class="proof-dropzone-icon">📤</div>
+              <p class="proof-dropzone-text">Drag & drop or <strong>click to upload</strong><br/>PNG, JPG up to 5MB</p>
+            </div>
+            <div class="proof-preview-wrap" id="esewa-proof-preview">
+              <img class="proof-thumb" id="esewa-proof-thumb" src="" alt="Payment proof"/>
+              <div class="proof-file-info">
+                <p class="proof-file-name" id="esewa-proof-name"></p>
+                <p class="proof-file-size" id="esewa-proof-size"></p>
+                <p class="proof-file-status">✓ Ready to submit</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="proof-remove-btn" id="esewa-proof-remove" style="display:none;margin-top:0.5rem;" onclick="removeProof('esewa')">Remove Screenshot</button>
+          <p class="proof-error" id="err-esewa-proof">Payment screenshot is required to place your order</p>
+          <div class="proof-mandatory-note">⚠ Payment verification is mandatory. Orders without valid payment proof will not be processed.</div>
+        </div>
+        <div class="ref-note" style="margin-top:1rem;">💡 Your order will be reviewed within 1–2 hours during business hours. You'll receive a confirmation once payment is verified.</div>
+      </div>
+    </div>
+
+    <!-- Khalti Panel -->
+    <div class="pay-panel" id="panel-khalti">
+      <div class="pay-panel-inner">
+        <div class="pay-panel-header">
+          <div class="pay-panel-icon" style="background:#5c2d91;display:flex;align-items:center;justify-content:center;">
+            <svg width="26" height="26" viewBox="0 0 48 48"><text x="24" y="33" text-anchor="middle" font-family="Arial Black" font-weight="900" font-size="24" fill="white">K</text></svg>
+          </div>
+          <div>
+            <p class="pay-panel-title">Pay via Khalti</p>
+            <p class="pay-panel-sub">Scan the QR code or send to the registered Khalti ID</p>
+          </div>
+        </div>
+        <div class="qr-section">
+          <div class="qr-box" id="khalti-qr-display">
+            <div class="qr-placeholder">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="19" y="14" width="2" height="2"/><rect x="14" y="19" width="2" height="2"/><rect x="18" y="19" width="3" height="2"/></svg>
+              <span>QR not set</span>
+            </div>
+          </div>
+          <div class="qr-instructions">
+            <div class="qr-step"><div class="qr-step-num">1</div><div class="qr-step-text">Open your <strong>Khalti app</strong> and tap <strong>Send Money / QR</strong></div></div>
+            <div class="qr-step"><div class="qr-step-num">2</div><div class="qr-step-text">Scan the QR code or send to Khalti ID: <strong id="khalti-id-display" style="color:#5c2d91;">—</strong></div></div>
+            <div class="qr-step"><div class="qr-step-num">3</div><div class="qr-step-text">Enter the exact order amount and confirm</div></div>
+            <div class="qr-step"><div class="qr-step-num">4</div><div class="qr-step-text">Enter your <strong>transaction ID</strong> below and place your order</div></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="khalti-txn">Khalti Transaction ID *</label>
+          <input type="text" id="khalti-txn" placeholder="e.g. TXN0001234567"/>
+          <p class="field-error" id="err-khalti-txn">Please enter your Khalti transaction ID</p>
+        </div>
+        <div class="form-group">
+          <label for="khalti-mobile">Khalti Registered Mobile Number *</label>
+          <input type="text" id="khalti-mobile" placeholder="98XXXXXXXX"/>
+          <p class="field-error" id="err-khalti-mobile">Please enter your Khalti mobile number</p>
+        </div>
+        <div class="proof-upload-section">
+          <p class="proof-upload-label"><span>📎</span> Upload Payment Proof <span class="required-star">*</span></p>
+          <p class="proof-upload-hint">Upload a screenshot of your Khalti payment confirmation. Your order will be verified by our team before processing.</p>
+          <div class="proof-dropzone" id="khalti-proof-zone">
+            <input type="file" accept="image/*" onchange="handleProofUpload('khalti', this)"/>
+            <div id="khalti-proof-placeholder">
+              <div class="proof-dropzone-icon">📤</div>
+              <p class="proof-dropzone-text">Drag & drop or <strong>click to upload</strong><br/>PNG, JPG up to 5MB</p>
+            </div>
+            <div class="proof-preview-wrap" id="khalti-proof-preview">
+              <img class="proof-thumb" id="khalti-proof-thumb" src="" alt="Payment proof"/>
+              <div class="proof-file-info">
+                <p class="proof-file-name" id="khalti-proof-name"></p>
+                <p class="proof-file-size" id="khalti-proof-size"></p>
+                <p class="proof-file-status">✓ Ready to submit</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="proof-remove-btn" id="khalti-proof-remove" style="display:none;margin-top:0.5rem;" onclick="removeProof('khalti')">Remove Screenshot</button>
+          <p class="proof-error" id="err-khalti-proof">Payment screenshot is required to place your order</p>
+          <div class="proof-mandatory-note">⚠ Payment verification is mandatory. Orders without valid payment proof will not be processed.</div>
+        </div>
+        <div class="ref-note" style="margin-top:1rem;">💡 Your order will be reviewed within 1–2 hours during business hours. You'll receive a confirmation once payment is verified.</div>
+      </div>
+    </div>
+
+    <!-- Bank Transfer Panel -->
+    <div class="pay-panel" id="panel-bank">
+      <div class="pay-panel-inner">
+        <div class="pay-panel-header">
+          <div class="pay-panel-icon" style="background:#0e0e0d;display:flex;align-items:center;justify-content:center;">
+            <svg width="26" height="26" viewBox="0 0 48 48" fill="none"><rect x="8" y="20" width="32" height="18" rx="2" stroke="white" stroke-width="2.5"/><path d="M8 26h32" stroke="white" stroke-width="2.5"/><path d="M24 10 L40 18 H8 Z" fill="white"/></svg>
+          </div>
+          <div>
+            <p class="pay-panel-title">Bank Transfer</p>
+            <p class="pay-panel-sub">Transfer directly to our bank account</p>
+          </div>
+        </div>
+        <div class="qr-section">
+          <div class="qr-box" id="bank-qr-display">
+            <div class="qr-placeholder">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="19" y="14" width="2" height="2"/><rect x="14" y="19" width="2" height="2"/><rect x="18" y="19" width="3" height="2"/></svg>
+              <span>QR not set</span>
+            </div>
+          </div>
+          <div style="flex:1;min-width:180px;">
+            <div class="bank-detail-row">
+              <span class="bank-detail-label">Bank Name</span>
+              <div style="display:flex;align-items:center;gap:0.5rem;"><span class="bank-detail-value" id="bank-name-display">—</span></div>
+            </div>
+            <div class="bank-detail-row">
+              <span class="bank-detail-label">Account Name</span>
+              <div style="display:flex;align-items:center;gap:0.5rem;"><span class="bank-detail-value" id="bank-account-name-display">—</span></div>
+            </div>
+            <div class="bank-detail-row">
+              <span class="bank-detail-label">Account Number</span>
+              <div style="display:flex;align-items:center;gap:0.5rem;"><span class="bank-detail-value" id="bank-account-num-display">—</span></div><button class="copy-btn" onclick="copyText('bank-account-num-display')">Copy</button>
+            </div>
+            <div class="bank-detail-row">
+              <span class="bank-detail-label">Branch / SWIFT</span>
+              <div style="display:flex;align-items:center;gap:0.5rem;"><span class="bank-detail-value" id="bank-branch-display">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="bank-txn">Transaction / Reference Number *</label>
+          <input type="text" id="bank-txn" placeholder="e.g. TXN123456789"/>
+          <p class="field-error" id="err-bank-txn">Please enter your bank transaction reference number</p>
+        </div>
+        <div class="form-group">
+          <label for="bank-sender">Account Holder Name *</label>
+          <input type="text" id="bank-sender" placeholder="Your full name as on bank account"/>
+          <p class="field-error" id="err-bank-sender">Please enter your account holder name</p>
+        </div>
+        <div class="proof-upload-section">
+          <p class="proof-upload-label"><span>📎</span> Upload Payment Proof <span class="required-star">*</span></p>
+          <p class="proof-upload-hint">Upload a screenshot or photo of your bank transfer receipt. Your order will be verified by our team before processing.</p>
+          <div class="proof-dropzone" id="bank-proof-zone">
+            <input type="file" accept="image/*" onchange="handleProofUpload('bank', this)"/>
+            <div id="bank-proof-placeholder">
+              <div class="proof-dropzone-icon">📤</div>
+              <p class="proof-dropzone-text">Drag & drop or <strong>click to upload</strong><br/>PNG, JPG up to 5MB</p>
+            </div>
+            <div class="proof-preview-wrap" id="bank-proof-preview">
+              <img class="proof-thumb" id="bank-proof-thumb" src="" alt="Payment proof"/>
+              <div class="proof-file-info">
+                <p class="proof-file-name" id="bank-proof-name"></p>
+                <p class="proof-file-size" id="bank-proof-size"></p>
+                <p class="proof-file-status">✓ Ready to submit</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="proof-remove-btn" id="bank-proof-remove" style="display:none;margin-top:0.5rem;" onclick="removeProof('bank')">Remove Screenshot</button>
+          <p class="proof-error" id="err-bank-proof">Payment screenshot is required to place your order</p>
+          <div class="proof-mandatory-note">⚠ Payment verification is mandatory. Orders without valid payment proof will not be processed.</div>
+        </div>
+        <div class="ref-note" style="margin-top:1rem;">💡 Please use your <strong>order number</strong> as the payment reference. Your order will be reviewed within 1–2 hours during business hours.</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="place-order-btn">Place Order</button>
+    <p class="secure-note">🔒 &nbsp;Secure Payment · No card data stored</p>
+  </div>
+
+  <!-- ORDER SUMMARY -->
+  <aside class="order-summary">
+    <h3 class="summary-title">Order Summary</h3>
+    <div class="summary-items" id="summary-items"></div>
+    <hr class="summary-divider"/>
+    <div class="summary-line"><span>Subtotal</span><span id="summary-subtotal">—</span></div>
+    <div class="summary-line"><span>Shipping</span><span style="color:#8a7f73;">Complimentary</span></div>
+    <div class="summary-line"><span>Duties &amp; Taxes</span><span style="color:#8a7f73;">Included</span></div>
+    <hr class="summary-divider"/>
+    <div class="summary-line total"><span>Total</span><span id="summary-total">—</span></div>
+  </aside>
+</main>
+
+<script>
+// ── CART GUARD ──────────────────────────────────────────────────────────────
+const cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+if (cart.length === 0) { window.location.href = 'shoppingCart.html'; }
+
+// ── PAYMENT SETTINGS (from admin dashboard) ──────────────────────────────────
+function getPaymentSettings() {
+  try { return JSON.parse(localStorage.getItem('atelier_payment_settings') || '{}'); } catch { return {}; }
+}
+
+function loadPaymentUI() {
+  const ps = getPaymentSettings();
+
+  // eSewa
+  const esewaQR = document.getElementById('esewa-qr-display');
+  if (ps.esewa_qr) {
+    esewaQR.innerHTML = `<img src="${ps.esewa_qr}" alt="eSewa QR"/>`;
+  }
+  const esewaIdEl = document.getElementById('esewa-id-display');
+  if (esewaIdEl) esewaIdEl.textContent = ps.esewa_id || '—';
+
+  // Khalti
+  const khaltiQR = document.getElementById('khalti-qr-display');
+  if (ps.khalti_qr) {
+    khaltiQR.innerHTML = `<img src="${ps.khalti_qr}" alt="Khalti QR"/>`;
+  }
+  const khaltiIdEl = document.getElementById('khalti-id-display');
+  if (khaltiIdEl) khaltiIdEl.textContent = ps.khalti_id || '—';
+
+  // Bank
+  const bankQR = document.getElementById('bank-qr-display');
+  if (ps.bank_qr) {
+    bankQR.innerHTML = `<img src="${ps.bank_qr}" alt="Bank QR"/>`;
+  }
+  document.getElementById('bank-name-display').textContent = ps.bank_name || '—';
+  document.getElementById('bank-account-name-display').textContent = ps.bank_account_name || '—';
+  document.getElementById('bank-account-num-display').textContent = ps.bank_account_num || '—';
+  document.getElementById('bank-branch-display').textContent = ps.bank_branch || '—';
+}
+loadPaymentUI();
+
+// ── PAYMENT METHOD SELECTION ─────────────────────────────────────────────────
+let activeMethod = 'esewa';
+function selectPayment(method, btn) {
+  activeMethod = method;
+  document.querySelectorAll('.pay-card').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.pay-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + method).classList.add('active');
+}
+
+// ── COPY HELPER ──────────────────────────────────────────────────────────────
+function copyText(elId) {
+  const val = document.getElementById(elId).textContent;
+  navigator.clipboard.writeText(val).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    btn.style.background = 'var(--ink)'; btn.style.color = 'var(--cream)';
+    setTimeout(() => { btn.textContent = 'Copy'; btn.style.background = ''; btn.style.color = ''; }, 2000);
+  });
+}
+
+// ── PAYMENT PROOF UPLOAD ────────────────────────────────────────────────────
+const _proofData = { esewa: null, khalti: null, bank: null };
+
+function handleProofUpload(method, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    alert('Please upload an image file (PNG, JPG, etc.)');
+    input.value = '';
+    return;
+  }
+  // Validate file size (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('File is too large. Maximum size is 5MB.');
+    input.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    _proofData[method] = e.target.result;
+
+    // Update UI
+    const zone = document.getElementById(method + '-proof-zone');
+    zone.classList.add('has-file');
+    document.getElementById(method + '-proof-placeholder').style.display = 'none';
+    const preview = document.getElementById(method + '-proof-preview');
+    preview.classList.add('show');
+    document.getElementById(method + '-proof-thumb').src = e.target.result;
+    document.getElementById(method + '-proof-name').textContent = file.name;
+    document.getElementById(method + '-proof-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+    document.getElementById(method + '-proof-remove').style.display = 'inline-block';
+
+    // Clear error if shown
+    const errEl = document.getElementById('err-' + method + '-proof');
+    if (errEl) errEl.classList.remove('show');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeProof(method) {
+  _proofData[method] = null;
+  const zone = document.getElementById(method + '-proof-zone');
+  zone.classList.remove('has-file');
+  document.getElementById(method + '-proof-placeholder').style.display = 'block';
+  const preview = document.getElementById(method + '-proof-preview');
+  preview.classList.remove('show');
+  document.getElementById(method + '-proof-thumb').src = '';
+  document.getElementById(method + '-proof-remove').style.display = 'none';
+  // Reset file input
+  const fileInput = zone.querySelector('input[type="file"]');
+  if (fileInput) fileInput.value = '';
+}
+
+// Drag-and-drop support for all proof zones
+['esewa', 'khalti', 'bank'].forEach(method => {
+  const zone = document.getElementById(method + '-proof-zone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const input = zone.querySelector('input[type="file"]');
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      handleProofUpload(method, input);
+    }
+  });
+});
+
+// ── VALIDATION ───────────────────────────────────────────────────────────────
+function validate() {
+  let valid = true;
+  const checks = [
+    { id: 'fname',   err: 'err-fname',   test: v => v.trim().length > 0 },
+    { id: 'lname',   err: 'err-lname',   test: v => v.trim().length > 0 },
+    { id: 'email',   err: 'err-email',   test: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+    { id: 'address', err: 'err-address', test: v => v.trim().length > 3 },
+    { id: 'city',    err: 'err-city',    test: v => v.trim().length > 0 },
+    { id: 'postal',  err: 'err-postal',  test: v => v.trim().length > 0 },
+    { id: 'country', err: 'err-country', test: v => v.length > 0 },
+  ];
+
+  // Per-method required fields
+  if (activeMethod === 'esewa') {
+    checks.push(
+      { id: 'esewa-txn',    err: 'err-esewa-txn',    test: v => v.trim().length > 4 },
+      { id: 'esewa-mobile', err: 'err-esewa-mobile',  test: v => v.trim().length >= 10 }
+    );
+  } else if (activeMethod === 'khalti') {
+    checks.push(
+      { id: 'khalti-txn',    err: 'err-khalti-txn',    test: v => v.trim().length > 4 },
+      { id: 'khalti-mobile', err: 'err-khalti-mobile',  test: v => v.trim().length >= 10 }
+    );
+  } else if (activeMethod === 'bank') {
+    checks.push(
+      { id: 'bank-txn',    err: 'err-bank-txn',    test: v => v.trim().length > 4 },
+      { id: 'bank-sender', err: 'err-bank-sender',  test: v => v.trim().length > 2 }
+    );
+  }
+
+  checks.forEach(({ id, err, test }) => {
+    const el = document.getElementById(id);
+    const errEl = document.getElementById(err);
+    if (!el) return;
+    if (!test(el.value)) {
+      el.classList.add('invalid');
+      if (errEl) errEl.classList.add('show');
+      valid = false;
+    } else {
+      el.classList.remove('invalid');
+      if (errEl) errEl.classList.remove('show');
+    }
+  });
+
+  // Validate payment proof upload (mandatory)
+  const proofErr = document.getElementById('err-' + activeMethod + '-proof');
+  if (!_proofData[activeMethod]) {
+    if (proofErr) proofErr.classList.add('show');
+    // Highlight the dropzone
+    const zone = document.getElementById(activeMethod + '-proof-zone');
+    if (zone) { zone.style.borderColor = 'var(--error)'; setTimeout(() => { zone.style.borderColor = ''; }, 3000); }
+    valid = false;
+  } else {
+    if (proofErr) proofErr.classList.remove('show');
+  }
+
+  return valid;
+}
+
+// ── PLACE ORDER ──────────────────────────────────────────────────────────────
+document.getElementById('place-order-btn').addEventListener('click', () => {
+  if (!validate()) return;
+  const btn = document.getElementById('place-order-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  // Collect payment details
+  let paymentInfo = { method: activeMethod, proofImage: _proofData[activeMethod] };
+  if (activeMethod === 'esewa') {
+    paymentInfo.txn = document.getElementById('esewa-txn').value.trim();
+    paymentInfo.mobile = document.getElementById('esewa-mobile').value.trim();
+  } else if (activeMethod === 'khalti') {
+    paymentInfo.txn = document.getElementById('khalti-txn').value.trim();
+    paymentInfo.mobile = document.getElementById('khalti-mobile').value.trim();
+  } else if (activeMethod === 'bank') {
+    paymentInfo.txn = document.getElementById('bank-txn').value.trim();
+    paymentInfo.sender = document.getElementById('bank-sender').value.trim();
+  }
+
+  // Save order to admin dashboard
+  const orderId = 'ATL-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
+  const customer = {
+    name: document.getElementById('fname').value.trim() + ' ' + document.getElementById('lname').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    address: [document.getElementById('address').value.trim(), document.getElementById('city').value.trim(), document.getElementById('postal').value.trim(), document.getElementById('country').value].filter(Boolean).join(', '),
+    country: document.getElementById('country').value
+  };
+  const subtotalVal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+  const productSummary = cart.map(i => i.name).join(', ');
+
+  // Write order — status is "awaiting-verification" until admin approves payment
+  const orders = JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]');
+  orders.unshift({
+    id: orderId,
+    customer: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    address: customer.address,
+    product: productSummary,
+    date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    amount: subtotalVal,
+    status: 'awaiting-verification',
+    payment: paymentInfo
+  });
+  localStorage.setItem('atelier_admin_orders', JSON.stringify(orders));
+
+  // Write / update customer
+  const customers = JSON.parse(localStorage.getItem('atelier_admin_customers') || '[]');
+  const existingIdx = customers.findIndex(c => c.email.toLowerCase() === customer.email.toLowerCase());
+  if (existingIdx >= 0) {
+    customers[existingIdx].orders = (customers[existingIdx].orders || 0) + 1;
+    customers[existingIdx].spent = (customers[existingIdx].spent || 0) + subtotalVal;
+  } else {
+    customers.unshift({
+      name: customer.name, email: customer.email, phone: customer.phone,
+      country: customer.country, orders: 1, spent: subtotalVal,
+      joined: new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+    });
+  }
+  localStorage.setItem('atelier_admin_customers', JSON.stringify(customers));
+
+  // Store order ID for confirmation page
+  localStorage.setItem('atelier_last_order_id', orderId);
+
+  setTimeout(() => {
+    localStorage.removeItem('atelier_cart');
+    window.location.href = 'orderConfirmation.html';
+  }, 1800);
+});
+
+// ── ORDER SUMMARY ────────────────────────────────────────────────────────────
+const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+document.getElementById('summary-subtotal').textContent = 'NRs. ' + subtotal.toLocaleString();
+document.getElementById('summary-total').textContent = 'NRs. ' + subtotal.toLocaleString();
+document.getElementById('summary-items').innerHTML = cart.map(item => `
+  <div class="summary-item">
+    <img class="summary-item-img" src="${item.image}" alt="${item.name}"/>
+    <div class="summary-item-info">
+      <p class="summary-item-name">${item.name}</p>
+      <p class="summary-item-meta">Qty: ${item.quantity}</p>
+    </div>
+    <span class="summary-item-price">NRs. ${(item.price * item.quantity).toLocaleString()}</span>
+  </div>
+`).join('');
+</script>
+</body>
+</html>

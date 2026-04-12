@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Care Instructions | THE ATELIER</title>
+<meta name="description" content="How to care for your Atelier pieces — preserving rare fabrics and architectural construction for years to come."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300;1,6..72,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); }
+  nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; background: rgba(244,241,236,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(200,184,154,0.25); }
+  .nav-logo { text-decoration: none; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; }
+  .nav-logo-text { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .nav-links { display: flex; gap: 2.5rem; }
+  .nav-links a { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6b6258; text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--ink); }
+  .cart-badge { position: absolute; top: -8px; right: -10px; background: var(--accent); color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: none; align-items: center; justify-content: center; }
+  @media (max-width: 640px) { .nav-links { display: none; } nav { padding: 1.2rem 1.5rem; } }
+
+  .page-hero { padding: 10rem 3rem 5rem; border-bottom: 1px solid rgba(200,184,154,0.3); }
+  .breadcrumb { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-bottom: 1.5rem; }
+  .breadcrumb a { color: inherit; text-decoration: none; }
+  .breadcrumb a:hover { color: var(--ink); }
+  h1 { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(3rem, 6vw, 5rem); line-height: 1; margin-bottom: 1.5rem; }
+  .hero-sub { font-size: 0.75rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 2; max-width: 520px; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 5rem 3rem; }
+  @media (max-width: 640px) { main { padding: 3rem 1.5rem; } .page-hero { padding: 8rem 1.5rem 3rem; } }
+
+  .section-label { font-size: 0.55rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--warm); margin-bottom: 1rem; }
+  .section-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 2rem; }
+  .section-body { font-size: 0.8rem; line-height: 2; color: #5a5249; margin-bottom: 2.5rem; }
+  .divider { border: none; border-top: 1px solid rgba(200,184,154,0.3); margin: 4rem 0; }
+
+  /* Fabric cards */
+  .fabric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 4rem; }
+  @media (max-width: 900px) { .fabric-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 560px) { .fabric-grid { grid-template-columns: 1fr; } }
+  .fabric-card { border: 1px solid rgba(200,184,154,0.35); padding: 2rem; }
+  .fabric-card h3 { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.3rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(200,184,154,0.3); }
+  .care-row { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.6rem; }
+  .care-icon { font-size: 0.9rem; flex-shrink: 0; width: 1.2rem; }
+  .care-text { font-size: 0.72rem; color: #5a5249; line-height: 1.6; }
+  .care-do { color: #2e7d32; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+  .care-dont { color: #8b1a1a; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+
+  /* Symbol guide */
+  .symbol-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 1.5rem; margin-bottom: 4rem; }
+  @media (max-width: 700px) { .symbol-grid { grid-template-columns: repeat(3,1fr); } }
+  .symbol-card { text-align: center; padding: 1.5rem 1rem; border: 1px solid rgba(200,184,154,0.25); }
+  .symbol-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .symbol-name { font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink); margin-bottom: 0.3rem; font-weight: 500; }
+  .symbol-desc { font-size: 0.65rem; color: #8a7f73; line-height: 1.5; }
+
+  /* Storage tips */
+  .storage-list { margin-bottom: 4rem; }
+  .storage-item { display: grid; grid-template-columns: 2.5rem 1fr; gap: 1.5rem; padding: 1.75rem 0; border-bottom: 1px solid rgba(200,184,154,0.2); align-items: start; }
+  .storage-item:last-child { border-bottom: none; }
+  .storage-icon { font-size: 1.3rem; margin-top: 0.1rem; }
+  .storage-item h4 { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .storage-item p { font-size: 0.75rem; color: #6b6258; line-height: 1.8; }
+
+  .notice { padding: 1.5rem 2rem; border-left: 3px solid var(--warm); background: rgba(200,184,154,0.08); margin-bottom: 2rem; font-size: 0.78rem; color: #5a5249; line-height: 1.8; }
+  .notice strong { color: var(--ink); }
+
+  .cta-band { background: var(--ink); color: var(--cream); padding: 4rem 3rem; text-align: center; }
+  .cta-band h2 { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: 2.2rem; margin-bottom: 1rem; }
+  .cta-band p { font-size: 0.72rem; color: rgba(244,241,236,0.6); letter-spacing: 0.1em; margin-bottom: 2rem; }
+  .cta-band a { display: inline-block; padding: 0.9rem 2.5rem; border: 1px solid var(--warm); color: var(--warm); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none; transition: all 0.3s; }
+  .cta-band a:hover { background: var(--warm); color: var(--ink); }
+
+  footer { background: var(--cream); border-top: 1px solid rgba(200,184,154,0.4); padding: 4rem 3rem 2rem; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+  @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer-brand { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.8rem; margin-bottom: 1rem; }
+  .footer-tagline { font-size: 0.65rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 1.8; max-width: 240px; }
+  .footer-col h4 { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.2rem; }
+  .footer-col a { display: block; font-size: 0.75rem; color: #8a7f73; text-decoration: none; margin-bottom: 0.6rem; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--ink); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(200,184,154,0.3); padding-top: 1.5rem; flex-wrap: wrap; gap: 0.5rem; }
+  .footer-bottom p { font-size: 0.6rem; color: #a89e94; letter-spacing: 0.1em; }
+  .footer-bottom a { font-size: 0.6rem; color: #8a7f73; text-decoration: none; letter-spacing: 0.1em; }
+</style>
+</head>
+<body>
+<!-- ANNOUNCEMENT BANNER -->
+<style>
+  #site-announcement {
+    display: none;
+    position: relative;
+    width: 100%;
+    z-index: 200;
+    text-align: center;
+    padding: 0.65rem 3rem;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  #site-announcement a.ann-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-left: 1rem;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  #site-announcement a.ann-link:hover { opacity: 1; }
+  #ann-dismiss {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    font-size: 0.9rem; opacity: 0.5; color: inherit;
+    transition: opacity 0.2s; line-height: 1;
+  }
+  #ann-dismiss:hover { opacity: 1; }
+  body.has-announcement nav { top: 0; }
+</style>
+<div id="site-announcement">
+  <span id="ann-text"></span>
+  <a id="ann-cta" class="ann-link" href="#" style="display:none;"></a>
+  <button id="ann-dismiss" title="Dismiss">✕</button>
+</div>
+<script>
+  (function() {
+    try {
+      var DISMISSED_KEY = 'atelier_ann_dismissed';
+      var dismissed = JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]');
+      var anns = JSON.parse(localStorage.getItem('atelier_announcements') || '[]');
+      var active = anns.find(function(a) {
+        return a.status === 'active' && dismissed.indexOf(a.createdAt) === -1;
+      });
+      if (!active) return;
+
+      var STYLES = {
+        dark:   { bg: '#0e0e0d', color: '#f4f1ec' },
+        gold:   { bg: '#c8b89a', color: '#0e0e0d' },
+        accent: { bg: '#8b5e3c', color: '#f4f1ec' },
+        green:  { bg: '#2e7d32', color: '#ffffff' },
+        urgent: { bg: '#8b1a1a', color: '#ffffff' }
+      };
+      var s = STYLES[active.style] || STYLES.dark;
+      var bar = document.getElementById('site-announcement');
+      bar.style.background = s.bg;
+      bar.style.color = s.color;
+      bar.style.display = 'block';
+      document.getElementById('ann-text').textContent = active.message;
+
+      if (active.link && active.linkText) {
+        var cta = document.getElementById('ann-cta');
+        cta.href = active.link;
+        cta.textContent = active.linkText;
+        cta.style.display = 'inline';
+      }
+
+      var dismissBtn = document.getElementById('ann-dismiss');
+      if (active.dismissible === 'no') {
+        dismissBtn.style.display = 'none';
+      } else {
+        dismissBtn.addEventListener('click', function() {
+          dismissed.push(active.createdAt);
+          localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+          bar.style.display = 'none';
+          document.body.classList.remove('has-announcement');
+          // Restore nav position
+          var nav = document.querySelector('nav');
+          if (nav) nav.style.top = '';
+        });
+      }
+
+      // Push nav down by announcement height
+      document.body.classList.add('has-announcement');
+      var nav = document.querySelector('nav');
+      if (nav) {
+        var h = bar.offsetHeight;
+        nav.style.top = h + 'px';
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<style>
+  #admin-preview-bar {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #141210; color: #c8b89a;
+    padding: 0.5rem 2rem;
+    font-family: 'Jost', sans-serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    display: none; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+  }
+  #admin-preview-bar a { color: #c8b89a; text-decoration: none; transition: color 0.2s; }
+  #admin-preview-bar a:hover { color: #fff; }
+  body.admin-viewing { padding-top: 36px; }
+  body.admin-viewing nav { top: 36px; }
+</style>
+<div id="admin-preview-bar">
+  <span>⚙ Admin Preview Mode</span>
+  <a href="analyticsDashboard.html">← Back to Dashboard</a>
+</div>
+<script>
+  (function() {
+    if (localStorage.getItem("atelier_admin") === "1") {
+      var bar = document.getElementById("admin-preview-bar");
+      bar.style.display = "flex";
+      document.body.classList.add("admin-viewing");
+    }
+  })();
+</script>
+
+<nav>
+  <div class="nav-links">
+    <a href="collection.html">Shop</a>
+    <a href="collection.html">Collections</a>
+    <a href="aboutUs.html">About</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:52px;width:auto;object-fit:contain;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div style="display:flex;gap:1.5rem;align-items:center;">
+    <a href="shoppingCart.html" style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink);text-decoration:none;position:relative;">
+      Bag <span class="cart-badge" id="cart-count">0</span>
+    </a>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="breadcrumb"><a href="index.html">Home</a> &nbsp;/&nbsp; <span>Care Instructions</span></div>
+  <h1>Caring for<br/>Your Pieces</h1>
+  <p class="hero-sub">A garment treated with care becomes better with time. These guidelines will help your Atelier pieces develop their full character across years of wear.</p>
+</div>
+
+<main>
+
+  <p class="section-label">By Fabric</p>
+  <h2 class="section-title">Care by Material</h2>
+  <p class="section-body">Each fabric in our collection has its own temperament. Follow these guidelines specific to your garment's material for the best results. Always check the care label inside your piece first.</p>
+
+  <div class="fabric-grid">
+
+    <div class="fabric-card">
+      <h3>Wool &amp; Cashmere</h3>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Dry clean or hand wash in cold water with wool-specific detergent</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Lay flat to dry on a clean towel away from heat</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Steam to remove creases — never iron directly</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Tumble dry or wring — this distorts the fibres permanently</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Hang on a hanger when wet — store folded only</span></div>
+    </div>
+
+    <div class="fabric-card">
+      <h3>Silk &amp; Crepe</h3>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Dry clean only, or hand wash with silk-specific wash in cool water</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Press on reverse with a cool iron and a pressing cloth</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Store in a cotton garment bag away from direct light</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Apply perfume or hairspray directly onto silk</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Rub stains — blot gently with a clean, damp cloth</span></div>
+    </div>
+
+    <div class="fabric-card">
+      <h3>Linen &amp; Cotton</h3>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Machine wash on a gentle, cool cycle (30°C maximum)</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Iron whilst slightly damp for best results</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Dry naturally — linen softens beautifully with each wash</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Wash above 30°C — this causes shrinkage and colour loss</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Bleach or use optical brighteners</span></div>
+    </div>
+
+    <div class="fabric-card">
+      <h3>Structured Wool Blends</h3>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Dry clean only for all structured tailored pieces</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Brush with a soft clothes brush after each wear</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Store on a wide, shaped hanger to preserve shoulder structure</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Over-clean — dry cleaning too frequently weakens fibres</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Compress in luggage without a garment bag</span></div>
+    </div>
+
+    <div class="fabric-card">
+      <h3>Jersey &amp; Matte Fabrics</h3>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Hand wash in cool water or machine wash inside-out on gentle cycle</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Reshape whilst damp and dry flat</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Store folded rather than hung to avoid stretching</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Tumble dry on high heat — causes permanent distortion</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Iron directly — use a pressing cloth or steam only</span></div>
+    </div>
+
+    <div class="fabric-card">
+      <h3>Water-Resistant Gabardine</h3>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Spot clean minor marks with a damp cloth and mild soap</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Hang immediately after rain to dry naturally</span></div>
+      <div class="care-row"><span class="care-do">✓ Do</span><span class="care-text">Re-proof with a fabric DWR spray once yearly</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Machine wash — this strips the water-resistant coating</span></div>
+      <div class="care-row"><span class="care-dont">✗ Don't</span><span class="care-text">Iron the outer shell — heat damages the coating</span></div>
+    </div>
+
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- CARE SYMBOLS -->
+  <p class="section-label">Reference</p>
+  <h2 class="section-title">Care Label Symbols</h2>
+  <p class="section-body">A quick reference for the symbols you'll find on the care labels inside each Atelier piece.</p>
+
+  <div class="symbol-grid">
+    <div class="symbol-card"><div class="symbol-icon">🪣</div><div class="symbol-name">Machine Wash</div><div class="symbol-desc">Safe to machine wash on the indicated temperature</div></div>
+    <div class="symbol-card"><div class="symbol-icon">🤲</div><div class="symbol-name">Hand Wash</div><div class="symbol-desc">Hand wash only in cool water with mild detergent</div></div>
+    <div class="symbol-card"><div class="symbol-icon">🚫</div><div class="symbol-name">Do Not Wash</div><div class="symbol-desc">Dry clean only — do not immerse in water</div></div>
+    <div class="symbol-card"><div class="symbol-icon">♨️</div><div class="symbol-name">Steam Only</div><div class="symbol-desc">Use a garment steamer — do not apply iron directly</div></div>
+    <div class="symbol-card"><div class="symbol-icon">🌬️</div><div class="symbol-name">Dry Flat</div><div class="symbol-desc">Reshape and lay flat on a clean surface to dry</div></div>
+    <div class="symbol-card"><div class="symbol-icon">🧴</div><div class="symbol-name">Dry Clean</div><div class="symbol-desc">Professional dry cleaning recommended</div></div>
+    <div class="symbol-card"><div class="symbol-icon">❄️</div><div class="symbol-name">Cold Wash</div><div class="symbol-desc">Use cold water only — maximum 30°C</div></div>
+    <div class="symbol-card"><div class="symbol-icon">🌿</div><div class="symbol-name">Natural Dry</div><div class="symbol-desc">Hang or lay flat to dry naturally — no tumble dry</div></div>
+    <div class="symbol-card"><div class="symbol-icon">🔲</div><div class="symbol-name">No Tumble Dry</div><div class="symbol-desc">Do not use a tumble dryer under any circumstances</div></div>
+    <div class="symbol-card"><div class="symbol-icon">✨</div><div class="symbol-name">No Bleach</div><div class="symbol-desc">Do not use bleach or optical brightening agents</div></div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- STORAGE -->
+  <p class="section-label">Longevity</p>
+  <h2 class="section-title">Storage &amp; Preservation</h2>
+
+  <div class="storage-list">
+    <div class="storage-item">
+      <div class="storage-icon">◈</div>
+      <div>
+        <h4>Breathable Garment Bags</h4>
+        <p>Store all pieces in cotton or linen garment bags — never plastic. Plastic traps moisture and accelerates fibre breakdown. Our pieces are delivered with a cotton dust bag for this purpose.</p>
+      </div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-icon">◫</div>
+      <div>
+        <h4>Correct Hanger Shape</h4>
+        <p>Structured coats and jackets should be hung on wide, shaped wooden hangers that support the shoulder seams. Knitwear and draped pieces should always be folded flat.</p>
+      </div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-icon">◧</div>
+      <div>
+        <h4>Moth Prevention</h4>
+        <p>Use natural cedar blocks or lavender sachets near wool and cashmere. Replace every 3–4 months. Avoid direct contact with garments — wrap cedar in cloth if placing inside a bag.</p>
+      </div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-icon">◨</div>
+      <div>
+        <h4>Rest Between Wears</h4>
+        <p>Allow garments to rest for at least 24 hours between wears. This gives fibres time to recover their shape and allows any moisture from body heat to dissipate fully.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="notice">
+    <strong>Lifetime Garment Repair:</strong> The Atelier offers lifetime repair service on all pieces. If a seam opens, a button is lost, or minor damage occurs, contact us at <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="630002110623170b060217060f0a06114d000c0e">[email&#160;protected]</a> and we will restore your piece at no cost.
+  </div>
+
+</main>
+
+<div class="cta-band">
+  <h2>Questions About Your Garment?</h2>
+  <p>Our care team is here to help preserve your investment.</p>
+  <a href="contactUs.html">Contact Care Team</a>
+</div>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">The Atelier</div>
+      <p class="footer-tagline">Luxury ready-to-wear, crafted for those who understand that clothing is never just clothing.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <a href="collection.html">New Arrivals</a>
+      <a href="collection.html">Collections</a>
+      <a href="collection.html">Outerwear</a>
+      <a href="collection.html">Dresses</a>
+    </div>
+    <div class="footer-col">
+      <h4>House</h4>
+      <a href="aboutUs.html">Our Story</a>
+      <a href="aboutUs.html">Craftsmanship</a>
+      <a href="sustainability.html">Sustainability</a>
+      <a href="press.html">Press</a>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <a href="sizingGuide.html">Sizing Guide</a>
+      <a href="shippingReturns.html">Shipping &amp; Returns</a>
+      <a href="careInstructions.html">Care Instructions</a>
+      <a href="contactUs.html">Contact Us</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 The Atelier. All rights reserved.</p>
+    <p>Privacy Policy · Terms of Service</p>
+    <a id="staff-portal-link" href="adminLogin.html" style="font-size:0.6rem;color:#8a7f73;text-decoration:none;letter-spacing:0.1em;">Staff Portal</a>
+  </div>
+</footer>
+
+<script>
+  (function() {
+    var cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+    var count = cart.reduce(function(s, i) { return s + i.quantity; }, 0);
+    var badge = document.getElementById('cart-count');
+    if (count > 0) { badge.style.display = 'flex'; badge.textContent = count; }
+  })();
+</script>
+
+<script>
+  // Hide Staff Portal link if logged in as admin
+  (function() {
+    var link = document.getElementById("staff-portal-link");
+    if (link && localStorage.getItem("atelier_admin") === "1") {
+      link.style.display = "none";
+    }
+  })();
+
+  // Secret shortcut: Ctrl+Shift+A = go to admin login (works even if link is hidden)
+  document.addEventListener("keydown", function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === "A") {
+      window.location.href = "adminLogin.html";
+    }
+  });
+</script>
+</body>
+</html>

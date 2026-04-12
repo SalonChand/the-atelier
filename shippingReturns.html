@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shipping &amp; Returns | THE ATELIER</title>
+<meta name="description" content="Complimentary worldwide shipping and free returns within 14 days. Everything you need to know about The Atelier delivery and returns policy."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300;1,6..72,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); }
+  nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; background: rgba(244,241,236,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(200,184,154,0.25); }
+  .nav-logo { text-decoration: none; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; }
+  .nav-logo-text { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .nav-links { display: flex; gap: 2.5rem; }
+  .nav-links a { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6b6258; text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--ink); }
+  .cart-badge { position: absolute; top: -8px; right: -10px; background: var(--accent); color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: none; align-items: center; justify-content: center; }
+  @media (max-width: 640px) { .nav-links { display: none; } nav { padding: 1.2rem 1.5rem; } }
+
+  .page-hero { padding: 10rem 3rem 5rem; border-bottom: 1px solid rgba(200,184,154,0.3); }
+  .breadcrumb { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-bottom: 1.5rem; }
+  .breadcrumb a { color: inherit; text-decoration: none; }
+  .breadcrumb a:hover { color: var(--ink); }
+  h1 { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(3rem, 6vw, 5rem); line-height: 1; margin-bottom: 1.5rem; }
+  .hero-sub { font-size: 0.75rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 2; max-width: 520px; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 5rem 3rem; }
+  @media (max-width: 640px) { main { padding: 3rem 1.5rem; } .page-hero { padding: 8rem 1.5rem 3rem; } }
+
+  .section-label { font-size: 0.55rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--warm); margin-bottom: 1rem; }
+  .section-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 2rem; }
+  .section-body { font-size: 0.8rem; line-height: 2; color: #5a5249; margin-bottom: 2rem; }
+  .divider { border: none; border-top: 1px solid rgba(200,184,154,0.3); margin: 4rem 0; }
+
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 4rem; }
+  @media (max-width: 700px) { .policy-grid { grid-template-columns: 1fr; } }
+  .policy-card { padding: 2.5rem; border: 1px solid rgba(200,184,154,0.35); }
+  .policy-card-icon { font-size: 1.8rem; margin-bottom: 1.2rem; }
+  .policy-card h3 { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; margin-bottom: 0.75rem; }
+  .policy-card p { font-size: 0.75rem; color: #6b6258; line-height: 1.9; }
+  .policy-card .highlight { font-weight: 500; color: var(--ink); font-size: 0.8rem; margin-bottom: 0.5rem; display: block; }
+
+  .steps { counter-reset: step; margin-bottom: 3rem; }
+  .step { display: grid; grid-template-columns: 3rem 1fr; gap: 1.5rem; padding: 2rem 0; border-bottom: 1px solid rgba(200,184,154,0.2); align-items: start; }
+  .step:last-child { border-bottom: none; }
+  .step-num { font-family: 'Newsreader', serif; font-style: italic; font-size: 2.5rem; color: rgba(200,184,154,0.5); line-height: 1; }
+  .step-content h4 { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.5rem; }
+  .step-content p { font-size: 0.78rem; color: #6b6258; line-height: 1.8; }
+
+  .zone-table-wrap { overflow-x: auto; margin-bottom: 4rem; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 2px solid rgba(200,184,154,0.4); }
+  thead th { padding: 0.75rem 1rem; text-align: left; font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: #8a7f73; font-weight: 400; }
+  tbody td { padding: 0.9rem 1rem; border-bottom: 1px solid rgba(200,184,154,0.15); font-size: 0.78rem; }
+  tbody tr:hover td { background: rgba(200,184,154,0.07); }
+  .tag-free { display: inline-block; padding: 0.2rem 0.6rem; background: rgba(58,107,60,0.1); color: #2e7d32; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 2px; }
+
+  .notice { padding: 1.5rem 2rem; border-left: 3px solid var(--warm); background: rgba(200,184,154,0.08); margin-bottom: 2rem; font-size: 0.78rem; color: #5a5249; line-height: 1.8; }
+  .notice strong { color: var(--ink); }
+
+  .cta-band { background: var(--ink); color: var(--cream); padding: 4rem 3rem; text-align: center; }
+  .cta-band h2 { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: 2.2rem; margin-bottom: 1rem; }
+  .cta-band p { font-size: 0.72rem; color: rgba(244,241,236,0.6); letter-spacing: 0.1em; margin-bottom: 2rem; }
+  .cta-band a { display: inline-block; padding: 0.9rem 2.5rem; border: 1px solid var(--warm); color: var(--warm); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none; transition: all 0.3s; }
+  .cta-band a:hover { background: var(--warm); color: var(--ink); }
+
+  footer { background: var(--cream); border-top: 1px solid rgba(200,184,154,0.4); padding: 4rem 3rem 2rem; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+  @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer-brand { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.8rem; margin-bottom: 1rem; }
+  .footer-tagline { font-size: 0.65rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 1.8; max-width: 240px; }
+  .footer-col h4 { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.2rem; }
+  .footer-col a { display: block; font-size: 0.75rem; color: #8a7f73; text-decoration: none; margin-bottom: 0.6rem; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--ink); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(200,184,154,0.3); padding-top: 1.5rem; flex-wrap: wrap; gap: 0.5rem; }
+  .footer-bottom p { font-size: 0.6rem; color: #a89e94; letter-spacing: 0.1em; }
+  .footer-bottom a { font-size: 0.6rem; color: #8a7f73; text-decoration: none; letter-spacing: 0.1em; }
+</style>
+</head>
+<body>
+<!-- ANNOUNCEMENT BANNER -->
+<style>
+  #site-announcement {
+    display: none;
+    position: relative;
+    width: 100%;
+    z-index: 200;
+    text-align: center;
+    padding: 0.65rem 3rem;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  #site-announcement a.ann-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-left: 1rem;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  #site-announcement a.ann-link:hover { opacity: 1; }
+  #ann-dismiss {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    font-size: 0.9rem; opacity: 0.5; color: inherit;
+    transition: opacity 0.2s; line-height: 1;
+  }
+  #ann-dismiss:hover { opacity: 1; }
+  body.has-announcement nav { top: 0; }
+</style>
+<div id="site-announcement">
+  <span id="ann-text"></span>
+  <a id="ann-cta" class="ann-link" href="#" style="display:none;"></a>
+  <button id="ann-dismiss" title="Dismiss">✕</button>
+</div>
+<script>
+  (function() {
+    try {
+      var DISMISSED_KEY = 'atelier_ann_dismissed';
+      var dismissed = JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]');
+      var anns = JSON.parse(localStorage.getItem('atelier_announcements') || '[]');
+      var active = anns.find(function(a) {
+        return a.status === 'active' && dismissed.indexOf(a.createdAt) === -1;
+      });
+      if (!active) return;
+
+      var STYLES = {
+        dark:   { bg: '#0e0e0d', color: '#f4f1ec' },
+        gold:   { bg: '#c8b89a', color: '#0e0e0d' },
+        accent: { bg: '#8b5e3c', color: '#f4f1ec' },
+        green:  { bg: '#2e7d32', color: '#ffffff' },
+        urgent: { bg: '#8b1a1a', color: '#ffffff' }
+      };
+      var s = STYLES[active.style] || STYLES.dark;
+      var bar = document.getElementById('site-announcement');
+      bar.style.background = s.bg;
+      bar.style.color = s.color;
+      bar.style.display = 'block';
+      document.getElementById('ann-text').textContent = active.message;
+
+      if (active.link && active.linkText) {
+        var cta = document.getElementById('ann-cta');
+        cta.href = active.link;
+        cta.textContent = active.linkText;
+        cta.style.display = 'inline';
+      }
+
+      var dismissBtn = document.getElementById('ann-dismiss');
+      if (active.dismissible === 'no') {
+        dismissBtn.style.display = 'none';
+      } else {
+        dismissBtn.addEventListener('click', function() {
+          dismissed.push(active.createdAt);
+          localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+          bar.style.display = 'none';
+          document.body.classList.remove('has-announcement');
+          // Restore nav position
+          var nav = document.querySelector('nav');
+          if (nav) nav.style.top = '';
+        });
+      }
+
+      // Push nav down by announcement height
+      document.body.classList.add('has-announcement');
+      var nav = document.querySelector('nav');
+      if (nav) {
+        var h = bar.offsetHeight;
+        nav.style.top = h + 'px';
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<style>
+  #admin-preview-bar {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #141210; color: #c8b89a;
+    padding: 0.5rem 2rem;
+    font-family: 'Jost', sans-serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    display: none; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+  }
+  #admin-preview-bar a { color: #c8b89a; text-decoration: none; transition: color 0.2s; }
+  #admin-preview-bar a:hover { color: #fff; }
+  body.admin-viewing { padding-top: 36px; }
+  body.admin-viewing nav { top: 36px; }
+</style>
+<div id="admin-preview-bar">
+  <span>⚙ Admin Preview Mode</span>
+  <a href="analyticsDashboard.html">← Back to Dashboard</a>
+</div>
+<script>
+  (function() {
+    if (localStorage.getItem("atelier_admin") === "1") {
+      var bar = document.getElementById("admin-preview-bar");
+      bar.style.display = "flex";
+      document.body.classList.add("admin-viewing");
+    }
+  })();
+</script>
+
+<nav>
+  <div class="nav-links">
+    <a href="collection.html">Shop</a>
+    <a href="collection.html">Collections</a>
+    <a href="aboutUs.html">About</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:52px;width:auto;object-fit:contain;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div style="display:flex;gap:1.5rem;align-items:center;">
+    <a href="shoppingCart.html" style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink);text-decoration:none;position:relative;">
+      Bag <span class="cart-badge" id="cart-count">0</span>
+    </a>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="breadcrumb"><a href="index.html">Home</a> &nbsp;/&nbsp; <span>Shipping &amp; Returns</span></div>
+  <h1>Shipping<br/>&amp; Returns</h1>
+  <p class="hero-sub">Every order is dispatched with the same care that goes into creating each piece. Complimentary worldwide shipping, always.</p>
+</div>
+
+<main>
+
+  <div class="policy-grid">
+    <div class="policy-card">
+      <div class="policy-card-icon">◈</div>
+      <h3>Complimentary Shipping</h3>
+      <span class="highlight">Free on every order, worldwide</span>
+      <p>We offer complimentary express shipping on all orders regardless of value. All duties and taxes are included in the price displayed at checkout — no hidden costs, ever.</p>
+    </div>
+    <div class="policy-card">
+      <div class="policy-card-icon">◫</div>
+      <h3>Free Returns</h3>
+      <span class="highlight">14 days from date of receipt</span>
+      <p>If a piece is not right, return it within 14 days in its original, unworn condition with all tags attached. We will arrange collection from your address at no cost.</p>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- DELIVERY ZONES -->
+  <p class="section-label">Delivery</p>
+  <h2 class="section-title">Estimated Delivery Times</h2>
+  <p class="section-body">Orders are processed within 1–2 business days and dispatched via our preferred premium courier partners. You will receive a tracking link once your order leaves our atelier.</p>
+
+  <div class="zone-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Region</th>
+          <th>Countries</th>
+          <th>Estimated Delivery</th>
+          <th>Shipping Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="font-weight:500;">Nepal &amp; South Asia</td><td>Nepal, India, Sri Lanka, Bangladesh</td><td>2–4 business days</td><td><span class="tag-free">Complimentary</span></td></tr>
+        <tr><td style="font-weight:500;">Europe</td><td>France, UK, Germany, Italy, Spain &amp; more</td><td>3–5 business days</td><td><span class="tag-free">Complimentary</span></td></tr>
+        <tr><td style="font-weight:500;">North America</td><td>United States, Canada</td><td>4–7 business days</td><td><span class="tag-free">Complimentary</span></td></tr>
+        <tr><td style="font-weight:500;">Asia Pacific</td><td>Japan, South Korea, Australia, Singapore</td><td>3–6 business days</td><td><span class="tag-free">Complimentary</span></td></tr>
+        <tr><td style="font-weight:500;">Middle East</td><td>UAE, Saudi Arabia, Qatar</td><td>4–6 business days</td><td><span class="tag-free">Complimentary</span></td></tr>
+        <tr><td style="font-weight:500;">Rest of World</td><td>All other destinations</td><td>5–10 business days</td><td><span class="tag-free">Complimentary</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="notice">
+    <strong>Please note:</strong> Delivery times are estimates and may be affected by customs clearance, public holidays, or courier delays outside our control. All duties and taxes are pre-paid — your parcel will not be held at customs.
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- RETURNS PROCESS -->
+  <p class="section-label">Returns</p>
+  <h2 class="section-title">How to Return</h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-content">
+        <h4>Contact Us Within 14 Days</h4>
+        <p>Email us at <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1361766766617d6053677b767267767f7a76613d707c7e">[email&#160;protected]</a> or use the Contact page, quoting your order number. Please include the reason for your return — your feedback helps us improve.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-content">
+        <h4>Receive Your Return Label</h4>
+        <p>We will send a prepaid return shipping label to your email within 24 hours. No printing required if you use a digital label compatible courier drop-off point.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-content">
+        <h4>Pack &amp; Dispatch</h4>
+        <p>Repack the garment in its original tissue wrapping with all tags still attached. Drop it at the designated courier location or request a home collection.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-content">
+        <h4>Refund Processed</h4>
+        <p>Once we receive and inspect your return, a full refund to your original payment method will be issued within 3–5 business days. You will receive an email confirmation.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="notice">
+    <strong>Return eligibility:</strong> Items must be unworn, unwashed, and in original condition with all Atelier tags attached. Garments showing signs of wear, alteration, or damage will not be accepted. Final sale items are non-returnable.
+  </div>
+
+</main>
+
+<div class="cta-band">
+  <h2>Questions About Your Order?</h2>
+  <p>Our client services team responds within one business day.</p>
+  <a href="contactUs.html">Get in Touch</a>
+</div>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">The Atelier</div>
+      <p class="footer-tagline">Luxury ready-to-wear, crafted for those who understand that clothing is never just clothing.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <a href="collection.html">New Arrivals</a>
+      <a href="collection.html">Collections</a>
+      <a href="collection.html">Outerwear</a>
+      <a href="collection.html">Dresses</a>
+    </div>
+    <div class="footer-col">
+      <h4>House</h4>
+      <a href="aboutUs.html">Our Story</a>
+      <a href="aboutUs.html">Craftsmanship</a>
+      <a href="sustainability.html">Sustainability</a>
+      <a href="press.html">Press</a>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <a href="sizingGuide.html">Sizing Guide</a>
+      <a href="shippingReturns.html">Shipping &amp; Returns</a>
+      <a href="careInstructions.html">Care Instructions</a>
+      <a href="contactUs.html">Contact Us</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 The Atelier. All rights reserved.</p>
+    <p>Privacy Policy · Terms of Service</p>
+    <a id="staff-portal-link" href="adminLogin.html" style="font-size:0.6rem;color:#8a7f73;text-decoration:none;letter-spacing:0.1em;">Staff Portal</a>
+  </div>
+</footer>
+
+
+<script>
+  (function() {
+    var cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+    var count = cart.reduce(function(s, i) { return s + i.quantity; }, 0);
+    var badge = document.getElementById('cart-count');
+    if (count > 0) { badge.style.display = 'flex'; badge.textContent = count; }
+  })();
+</script>
+
+<script>
+  // Hide Staff Portal link if logged in as admin
+  (function() {
+    var link = document.getElementById("staff-portal-link");
+    if (link && localStorage.getItem("atelier_admin") === "1") {
+      link.style.display = "none";
+    }
+  })();
+
+  // Secret shortcut: Ctrl+Shift+A = go to admin login (works even if link is hidden)
+  document.addEventListener("keydown", function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === "A") {
+      window.location.href = "adminLogin.html";
+    }
+  });
+</script>
+</body>
+</html>

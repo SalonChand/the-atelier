@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sizing Guide | THE ATELIER</title>
+<meta name="description" content="The Atelier sizing guide — find your perfect fit across our curated collections of ready-to-wear."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300;1,6..72,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); }
+  nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; background: rgba(244,241,236,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(200,184,154,0.25); }
+  .nav-logo { text-decoration: none; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; }
+  .nav-logo-text { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .nav-links { display: flex; gap: 2.5rem; }
+  .nav-links a { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6b6258; text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--ink); }
+  .cart-badge { position: absolute; top: -8px; right: -10px; background: var(--accent); color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: none; align-items: center; justify-content: center; }
+  @media (max-width: 640px) { .nav-links { display: none; } nav { padding: 1.2rem 1.5rem; } }
+
+  .page-hero { padding: 10rem 3rem 5rem; border-bottom: 1px solid rgba(200,184,154,0.3); }
+  .breadcrumb { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #8a7f73; margin-bottom: 1.5rem; }
+  .breadcrumb a { color: inherit; text-decoration: none; }
+  .breadcrumb a:hover { color: var(--ink); }
+  h1 { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(3rem, 6vw, 5rem); line-height: 1; margin-bottom: 1.5rem; }
+  .hero-sub { font-size: 0.75rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 2; max-width: 520px; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 5rem 3rem; }
+  @media (max-width: 640px) { main { padding: 3rem 1.5rem; } .page-hero { padding: 8rem 1.5rem 3rem; } }
+
+  .section-label { font-size: 0.55rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--warm); margin-bottom: 1rem; }
+  .section-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 2rem; }
+  .section-body { font-size: 0.8rem; line-height: 2; color: #5a5249; margin-bottom: 2rem; }
+
+  .measure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-bottom: 4rem; align-items: start; }
+  @media (max-width: 700px) { .measure-grid { grid-template-columns: 1fr; } }
+  .measure-item { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-start; }
+  .measure-num { font-family: 'Newsreader', serif; font-style: italic; font-size: 2rem; color: var(--warm); line-height: 1; flex-shrink: 0; width: 2rem; text-align: center; }
+  .measure-text h4 { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.3rem; }
+  .measure-text p { font-size: 0.75rem; color: #6b6258; line-height: 1.7; }
+
+  .size-table-wrap { overflow-x: auto; margin-bottom: 4rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+  thead tr { border-bottom: 1px solid var(--ink); }
+  thead th { padding: 0.75rem 1rem; text-align: left; font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: #8a7f73; font-weight: 400; }
+  tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(200,184,154,0.25); }
+  tbody tr:hover td { background: rgba(200,184,154,0.07); }
+  .size-label { font-weight: 500; }
+
+  .tip-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2rem; margin-bottom: 4rem; }
+  @media (max-width: 700px) { .tip-grid { grid-template-columns: 1fr; } }
+  .tip-card { padding: 2rem; border: 1px solid rgba(200,184,154,0.35); }
+  .tip-icon { font-size: 1.5rem; margin-bottom: 1rem; }
+  .tip-card h4 { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .tip-card p { font-size: 0.72rem; color: #6b6258; line-height: 1.8; }
+
+  .cta-band { background: var(--ink); color: var(--cream); padding: 4rem 3rem; text-align: center; }
+  .cta-band h2 { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: 2.2rem; margin-bottom: 1rem; }
+  .cta-band p { font-size: 0.72rem; color: rgba(244,241,236,0.6); letter-spacing: 0.1em; margin-bottom: 2rem; }
+  .cta-band a { display: inline-block; padding: 0.9rem 2.5rem; border: 1px solid var(--warm); color: var(--warm); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none; transition: all 0.3s; }
+  .cta-band a:hover { background: var(--warm); color: var(--ink); }
+
+  footer { background: var(--cream); border-top: 1px solid rgba(200,184,154,0.4); padding: 4rem 3rem 2rem; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+  @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer-brand { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.8rem; margin-bottom: 1rem; }
+  .footer-tagline { font-size: 0.65rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 1.8; max-width: 240px; }
+  .footer-col h4 { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.2rem; color: var(--ink); }
+  .footer-col a { display: block; font-size: 0.75rem; color: #8a7f73; text-decoration: none; margin-bottom: 0.6rem; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--ink); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(200,184,154,0.3); padding-top: 1.5rem; flex-wrap: wrap; gap: 0.5rem; }
+  .footer-bottom p { font-size: 0.6rem; color: #a89e94; letter-spacing: 0.1em; }
+  .footer-bottom a { font-size: 0.6rem; color: #8a7f73; text-decoration: none; letter-spacing: 0.1em; }
+  .footer-bottom a:hover { color: var(--ink); }
+
+  .divider { border: none; border-top: 1px solid rgba(200,184,154,0.3); margin: 4rem 0; }
+</style>
+</head>
+<body>
+<!-- ANNOUNCEMENT BANNER -->
+<style>
+  #site-announcement {
+    display: none;
+    position: relative;
+    width: 100%;
+    z-index: 200;
+    text-align: center;
+    padding: 0.65rem 3rem;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  #site-announcement a.ann-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-left: 1rem;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  #site-announcement a.ann-link:hover { opacity: 1; }
+  #ann-dismiss {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    font-size: 0.9rem; opacity: 0.5; color: inherit;
+    transition: opacity 0.2s; line-height: 1;
+  }
+  #ann-dismiss:hover { opacity: 1; }
+  body.has-announcement nav { top: 0; }
+</style>
+<div id="site-announcement">
+  <span id="ann-text"></span>
+  <a id="ann-cta" class="ann-link" href="#" style="display:none;"></a>
+  <button id="ann-dismiss" title="Dismiss">✕</button>
+</div>
+<script>
+  (function() {
+    try {
+      var DISMISSED_KEY = 'atelier_ann_dismissed';
+      var dismissed = JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]');
+      var anns = JSON.parse(localStorage.getItem('atelier_announcements') || '[]');
+      var active = anns.find(function(a) {
+        return a.status === 'active' && dismissed.indexOf(a.createdAt) === -1;
+      });
+      if (!active) return;
+
+      var STYLES = {
+        dark:   { bg: '#0e0e0d', color: '#f4f1ec' },
+        gold:   { bg: '#c8b89a', color: '#0e0e0d' },
+        accent: { bg: '#8b5e3c', color: '#f4f1ec' },
+        green:  { bg: '#2e7d32', color: '#ffffff' },
+        urgent: { bg: '#8b1a1a', color: '#ffffff' }
+      };
+      var s = STYLES[active.style] || STYLES.dark;
+      var bar = document.getElementById('site-announcement');
+      bar.style.background = s.bg;
+      bar.style.color = s.color;
+      bar.style.display = 'block';
+      document.getElementById('ann-text').textContent = active.message;
+
+      if (active.link && active.linkText) {
+        var cta = document.getElementById('ann-cta');
+        cta.href = active.link;
+        cta.textContent = active.linkText;
+        cta.style.display = 'inline';
+      }
+
+      var dismissBtn = document.getElementById('ann-dismiss');
+      if (active.dismissible === 'no') {
+        dismissBtn.style.display = 'none';
+      } else {
+        dismissBtn.addEventListener('click', function() {
+          dismissed.push(active.createdAt);
+          localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+          bar.style.display = 'none';
+          document.body.classList.remove('has-announcement');
+          // Restore nav position
+          var nav = document.querySelector('nav');
+          if (nav) nav.style.top = '';
+        });
+      }
+
+      // Push nav down by announcement height
+      document.body.classList.add('has-announcement');
+      var nav = document.querySelector('nav');
+      if (nav) {
+        var h = bar.offsetHeight;
+        nav.style.top = h + 'px';
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<style>
+  #admin-preview-bar {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #141210; color: #c8b89a;
+    padding: 0.5rem 2rem;
+    font-family: 'Jost', sans-serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    display: none; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+  }
+  #admin-preview-bar a { color: #c8b89a; text-decoration: none; transition: color 0.2s; }
+  #admin-preview-bar a:hover { color: #fff; }
+  body.admin-viewing { padding-top: 36px; }
+  body.admin-viewing nav { top: 36px; }
+</style>
+<div id="admin-preview-bar">
+  <span>⚙ Admin Preview Mode</span>
+  <a href="analyticsDashboard.html">← Back to Dashboard</a>
+</div>
+<script>
+  (function() {
+    if (localStorage.getItem("atelier_admin") === "1") {
+      var bar = document.getElementById("admin-preview-bar");
+      bar.style.display = "flex";
+      document.body.classList.add("admin-viewing");
+    }
+  })();
+</script>
+
+<nav>
+  <div class="nav-links">
+    <a href="collection.html">Shop</a>
+    <a href="collection.html">Collections</a>
+    <a href="aboutUs.html">About</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:52px;width:auto;object-fit:contain;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div style="display:flex;gap:1.5rem;align-items:center;">
+    <a href="shoppingCart.html" style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink);text-decoration:none;position:relative;">
+      Bag <span class="cart-badge" id="cart-count">0</span>
+    </a>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="breadcrumb"><a href="index.html">Home</a> &nbsp;/&nbsp; <span>Sizing Guide</span></div>
+  <h1>Find Your<br/>Perfect Fit</h1>
+  <p class="hero-sub">Our pieces are constructed with precision. Taking a few accurate measurements ensures your garment moves with you exactly as intended.</p>
+</div>
+
+<main>
+
+  <!-- HOW TO MEASURE -->
+  <p class="section-label">Step One</p>
+  <h2 class="section-title">How to Measure</h2>
+  <p class="section-body">Use a soft measuring tape held close to the body — not tight, not loose. Measure over underwear only. Have someone assist you for the most accurate results. All measurements below are in centimetres.</p>
+
+  <div class="measure-grid">
+    <div>
+      <div class="measure-item">
+        <div class="measure-num">1</div>
+        <div class="measure-text">
+          <h4>Bust</h4>
+          <p>Measure around the fullest part of your chest, keeping the tape parallel to the floor. Keep your arms relaxed at your sides.</p>
+        </div>
+      </div>
+      <div class="measure-item">
+        <div class="measure-num">2</div>
+        <div class="measure-text">
+          <h4>Waist</h4>
+          <p>Measure around your natural waist — the narrowest part of your torso, typically 2–3 cm above your navel.</p>
+        </div>
+      </div>
+      <div class="measure-item">
+        <div class="measure-num">3</div>
+        <div class="measure-text">
+          <h4>Hips</h4>
+          <p>Measure around the fullest part of your hips and seat, approximately 20 cm below your natural waist.</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="measure-item">
+        <div class="measure-num">4</div>
+        <div class="measure-text">
+          <h4>Shoulder Width</h4>
+          <p>Measure from the tip of one shoulder across to the tip of the other, following the curve of your back.</p>
+        </div>
+      </div>
+      <div class="measure-item">
+        <div class="measure-num">5</div>
+        <div class="measure-text">
+          <h4>Sleeve Length</h4>
+          <p>From the shoulder tip to your wrist bone, with your arm slightly bent. This ensures correct cuff placement.</p>
+        </div>
+      </div>
+      <div class="measure-item">
+        <div class="measure-num">6</div>
+        <div class="measure-text">
+          <h4>Inseam</h4>
+          <p>From the crotch seam down to the floor along the inner leg. Stand straight with feet slightly apart.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- SIZE CHARTS -->
+  <p class="section-label">Size Charts</p>
+  <h2 class="section-title">Tops, Coats &amp; Dresses</h2>
+
+  <div class="size-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Atelier Size</th>
+          <th>Int'l</th>
+          <th>Bust (cm)</th>
+          <th>Waist (cm)</th>
+          <th>Hips (cm)</th>
+          <th>Shoulder (cm)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="size-label">XS</td><td>32 / 2</td><td>80 – 83</td><td>62 – 65</td><td>88 – 91</td><td>36</td></tr>
+        <tr><td class="size-label">S</td><td>34 / 4</td><td>84 – 87</td><td>66 – 69</td><td>92 – 95</td><td>37</td></tr>
+        <tr><td class="size-label">M</td><td>36 / 6</td><td>88 – 92</td><td>70 – 74</td><td>96 – 100</td><td>38.5</td></tr>
+        <tr><td class="size-label">L</td><td>38 / 8</td><td>93 – 97</td><td>75 – 79</td><td>101 – 105</td><td>40</td></tr>
+        <tr><td class="size-label">XL</td><td>40 / 10</td><td>98 – 103</td><td>80 – 85</td><td>106 – 111</td><td>41.5</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="section-title" style="margin-top:3rem;">Trousers &amp; Skirts</h2>
+  <div class="size-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Atelier Size</th>
+          <th>Int'l</th>
+          <th>Waist (cm)</th>
+          <th>Hips (cm)</th>
+          <th>Inseam (cm)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="size-label">XS</td><td>32</td><td>62 – 65</td><td>88 – 91</td><td>77</td></tr>
+        <tr><td class="size-label">S</td><td>34</td><td>66 – 69</td><td>92 – 95</td><td>78</td></tr>
+        <tr><td class="size-label">M</td><td>36</td><td>70 – 74</td><td>96 – 100</td><td>79</td></tr>
+        <tr><td class="size-label">L</td><td>38</td><td>75 – 79</td><td>101 – 105</td><td>80</td></tr>
+        <tr><td class="size-label">XL</td><td>40</td><td>80 – 85</td><td>106 – 111</td><td>81</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- FIT TIPS -->
+  <p class="section-label">Fit Philosophy</p>
+  <h2 class="section-title">Our Approach to Fit</h2>
+  <div class="tip-grid">
+    <div class="tip-card">
+      <div class="tip-icon">◈</div>
+      <h4>Between Sizes</h4>
+      <p>If your measurements fall between two sizes, we recommend sizing up for coats and structured pieces, and sizing down for draped or bias-cut garments.</p>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon">◫</div>
+      <h4>Fabric Behaviour</h4>
+      <p>Our silk and crepe pieces have natural drape and ease. Wool and structured fabrics are cut with precise allowances — refer to the shoulder measurement above all else.</p>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon">◧</div>
+      <h4>Still Unsure?</h4>
+      <p>Our client advisors are available to assist with personal fit consultations. Contact us and we will guide you to the correct size based on your exact measurements.</p>
+    </div>
+  </div>
+
+</main>
+
+<div class="cta-band">
+  <h2>Need Personal Assistance?</h2>
+  <p>Our team is available to guide you through your sizing questions.</p>
+  <a href="contactUs.html">Contact Our Team</a>
+</div>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">The Atelier</div>
+      <p class="footer-tagline">Luxury ready-to-wear, crafted for those who understand that clothing is never just clothing.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <a href="collection.html">New Arrivals</a>
+      <a href="collection.html">Collections</a>
+      <a href="collection.html">Outerwear</a>
+      <a href="collection.html">Dresses</a>
+    </div>
+    <div class="footer-col">
+      <h4>House</h4>
+      <a href="aboutUs.html">Our Story</a>
+      <a href="aboutUs.html">Craftsmanship</a>
+      <a href="sustainability.html">Sustainability</a>
+      <a href="press.html">Press</a>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <a href="sizingGuide.html">Sizing Guide</a>
+      <a href="shippingReturns.html">Shipping &amp; Returns</a>
+      <a href="careInstructions.html">Care Instructions</a>
+      <a href="contactUs.html">Contact Us</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 The Atelier. All rights reserved.</p>
+    <p>Privacy Policy · Terms of Service</p>
+    <a id="staff-portal-link" href="adminLogin.html" style="font-size:0.6rem;color:#8a7f73;text-decoration:none;letter-spacing:0.1em;">Staff Portal</a>
+  </div>
+</footer>
+
+<script>
+  (function() {
+    const cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+    const count = cart.reduce((s, i) => s + i.quantity, 0);
+    const badge = document.getElementById('cart-count');
+    if (count > 0) { badge.style.display = 'flex'; badge.textContent = count; }
+  })();
+</script>
+
+<script>
+  // Hide Staff Portal link if logged in as admin
+  (function() {
+    var link = document.getElementById("staff-portal-link");
+    if (link && localStorage.getItem("atelier_admin") === "1") {
+      link.style.display = "none";
+    }
+  })();
+
+  // Secret shortcut: Ctrl+Shift+A = go to admin login (works even if link is hidden)
+  document.addEventListener("keydown", function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === "A") {
+      window.location.href = "adminLogin.html";
+    }
+  });
+</script>
+</body>
+</html>

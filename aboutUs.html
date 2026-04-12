@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>About | THE ATELIER</title>
+<meta name="description" content="Discover the story behind The Atelier — a house of luxury ready-to-wear founded in Paris, driven by obsessive craftsmanship, rare materials, and an unwavering aesthetic point of view."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300;1,6..72,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; width: 100%; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.5rem 3rem;
+    background: rgba(244,241,236,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(200,184,154,0.25);
+    transition: all 0.4s ease;
+  }
+  nav.scrolled { padding: 1rem 3rem; }
+  .nav-logo { text-decoration: none; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; }
+  .nav-logo-text { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .nav-links { display: flex; gap: 2.5rem; }
+  .nav-links a { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6b6258; text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover, .nav-links a.active { color: var(--ink); }
+  .nav-icons { display: flex; gap: 1.5rem; align-items: center; }
+  .nav-icons a { color: var(--ink); text-decoration: none; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; position: relative; }
+  .cart-badge { position: absolute; top: -8px; right: -10px; background: var(--accent); color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: none; align-items: center; justify-content: center; }
+  @media (max-width: 640px) { .nav-links { display: none; } nav { padding: 1.2rem 1.5rem; } nav.scrolled { padding: 0.9rem 1.5rem; } .hamburger { display: flex; } }
+
+  /* HAMBURGER */
+  .hamburger {
+    display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px; z-index: 200;
+  }
+  .hamburger span { width: 22px; height: 1.5px; background: var(--ink); transition: all 0.3s; }
+  .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+  .mobile-nav {
+    display: none; position: fixed; inset: 0; z-index: 150;
+    background: rgba(244,241,236,0.98); backdrop-filter: blur(20px);
+    flex-direction: column; align-items: center; justify-content: center; gap: 2.5rem;
+  }
+  .mobile-nav.open { display: flex; }
+  .mobile-nav a { font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
+  .mobile-nav a:hover { color: var(--accent); }
+
+  /* HERO — full bleed with overlay text */
+  .about-hero {
+    height: 80vh; position: relative;
+    display: flex; align-items: flex-end;
+    padding: 0 3rem 5rem;
+    overflow: hidden;
+  }
+  .about-hero-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    transform: scale(1.05);
+    animation: heroZoom 8s ease-out forwards;
+  }
+  @keyframes heroZoom { to { transform: scale(1); } }
+  .about-hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(14,14,13,0.72) 0%, rgba(14,14,13,0.2) 60%, transparent 100%);
+  }
+  .about-hero-content { position: relative; z-index: 2; }
+  .about-hero-content h1 {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: clamp(4rem, 9vw, 8rem); line-height: 0.9; color: #fff;
+    margin-bottom: 1.2rem;
+    opacity: 0; transform: translateY(30px);
+    animation: fadeUp 1s 0.3s ease forwards;
+  }
+  .about-hero-content p {
+    color: rgba(255,255,255,0.65); font-size: 0.65rem;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    opacity: 0; animation: fadeUp 1s 0.6s ease forwards;
+  }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 640px) { .about-hero { padding: 0 1.5rem 3.5rem; } }
+
+  /* FOUNDING STORY */
+  .founding {
+    display: grid; grid-template-columns: 1fr 1fr; min-height: 600px;
+  }
+  .founding-text {
+    background: var(--ink); color: var(--cream);
+    padding: 7rem 5rem; display: flex; flex-direction: column; justify-content: center;
+  }
+  .founding-label {
+    font-size: 0.55rem; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--warm); margin-bottom: 2rem;
+  }
+  .founding-text h2 {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: clamp(2.2rem, 3.5vw, 3.5rem); line-height: 1.1;
+    margin-bottom: 2.5rem; color: var(--cream);
+  }
+  .founding-text p {
+    font-size: 0.8rem; line-height: 2; color: rgba(244,241,236,0.65);
+    margin-bottom: 1.5rem;
+  }
+  .founding-img { position: relative; overflow: hidden; }
+  .founding-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s ease; }
+  .founding-img:hover img { transform: scale(1.04); }
+  @media (max-width: 900px) { .founding { grid-template-columns: 1fr; } .founding-text { padding: 5rem 2rem; } }
+
+  /* PHILOSOPHY NUMBERS */
+  .philosophy { padding: 8rem 3rem; background: var(--cream); }
+  .philosophy-header {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4rem;
+    align-items: end; margin-bottom: 6rem;
+    border-bottom: 1px solid rgba(200,184,154,0.4); padding-bottom: 4rem;
+  }
+  .philosophy-header h2 {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: clamp(2.5rem, 5vw, 4.5rem); line-height: 1.05;
+  }
+  .philosophy-header p {
+    font-size: 0.8rem; line-height: 2; color: #6b6258;
+    align-self: end;
+  }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+  .stat { padding: 2.5rem 0; border-top: 1px solid rgba(200,184,154,0.5); }
+  .stat-num {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: clamp(3rem, 6vw, 5rem); color: var(--ink);
+    line-height: 1; margin-bottom: 0.75rem;
+  }
+  .stat-label { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: #8a7f73; }
+  @media (max-width: 800px) { .philosophy-header { grid-template-columns: 1fr; gap: 2rem; } .stats { grid-template-columns: 1fr; } .philosophy { padding: 5rem 1.5rem; } }
+
+  /* PILLARS */
+  .pillars { background: var(--ink); padding: 8rem 3rem; }
+  .pillars-title {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--warm); margin-bottom: 5rem; text-align: center;
+  }
+  .pillars-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .pillar {
+    padding: 3.5rem; border-right: 1px solid rgba(200,184,154,0.12);
+    transition: background 0.4s;
+  }
+  .pillar:last-child { border-right: none; }
+  .pillar:hover { background: rgba(200,184,154,0.05); }
+  .pillar-num {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: 4rem; color: rgba(200,184,154,0.15); line-height: 1;
+    margin-bottom: 1.5rem;
+  }
+  .pillar h3 {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: 1.6rem; color: var(--cream); margin-bottom: 1rem;
+  }
+  .pillar p { font-size: 0.75rem; line-height: 1.9; color: rgba(244,241,236,0.5); }
+  @media (max-width: 900px) { .pillars-grid { grid-template-columns: 1fr; } .pillar { border-right: none; border-bottom: 1px solid rgba(200,184,154,0.12); } .pillar:last-child { border-bottom: none; } .pillars { padding: 5rem 1.5rem; } }
+
+  /* ATELIER TEAM */
+  .team { padding: 8rem 3rem; }
+  .team-header { text-align: center; margin-bottom: 5rem; }
+  .team-header h2 {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 1rem;
+  }
+  .team-header p { font-size: 0.65rem; color: #8a7f73; letter-spacing: 0.15em; text-transform: uppercase; }
+  .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3rem 2rem; }
+  .team-card { text-align: center; }
+  .team-card-img {
+    aspect-ratio: 3/4; overflow: hidden; background: #e8e3db;
+    margin-bottom: 1.5rem; position: relative;
+  }
+  .team-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s ease; filter: grayscale(20%); }
+  .team-card:hover .team-card-img img { transform: scale(1.05); filter: grayscale(0%); }
+  .team-card h3 {
+    font-family: 'Newsreader', serif; font-style: italic; font-size: 1.3rem;
+    margin-bottom: 0.3rem;
+  }
+  .team-card .role { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: #8a7f73; margin-bottom: 0.8rem; }
+  .team-card .bio { font-size: 0.75rem; line-height: 1.8; color: #6b6258; max-width: 260px; margin: 0 auto; }
+  @media (max-width: 900px) { .team-grid { grid-template-columns: 1fr 1fr; } .team { padding: 5rem 1.5rem; } }
+  @media (max-width: 500px) { .team-grid { grid-template-columns: 1fr; } }
+
+  /* QUOTE STRIP */
+  .quote-strip {
+    background: var(--warm); padding: 6rem 3rem; text-align: center;
+  }
+  .quote-strip blockquote {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.2;
+    color: var(--ink); max-width: 860px; margin: 0 auto 1.5rem;
+  }
+  .quote-strip cite {
+    font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(14,14,13,0.55); font-style: normal;
+  }
+
+  /* CTA */
+  .about-cta {
+    padding: 7rem 3rem; display: flex; flex-direction: column;
+    align-items: center; text-align: center;
+  }
+  .about-cta h2 {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 1.5rem;
+  }
+  .about-cta p { font-size: 0.75rem; color: #8a7f73; line-height: 2; max-width: 400px; margin-bottom: 3rem; }
+  .about-cta a {
+    display: inline-block; padding: 1.1rem 3rem;
+    background: var(--ink); color: var(--cream);
+    font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase;
+    text-decoration: none; transition: background 0.3s, color 0.3s;
+  }
+  .about-cta a:hover { background: var(--accent); }
+
+  /* FOOTER */
+  footer { background: var(--cream); border-top: 1px solid rgba(200,184,154,0.4); padding: 4rem 3rem 2rem; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+  @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer-brand { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.8rem; margin-bottom: 1rem; }
+  .footer-tagline { font-size: 0.65rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 1.8; max-width: 240px; }
+  .footer-col h4 { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.2rem; color: var(--ink); }
+  .footer-col a { display: block; font-size: 0.75rem; color: #8a7f73; text-decoration: none; margin-bottom: 0.6rem; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--ink); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(200,184,154,0.3); padding-top: 1.5rem; flex-wrap: wrap; gap: 0.5rem; }
+  .footer-bottom p { font-size: 0.6rem; color: #a89e94; letter-spacing: 0.1em; }
+  .footer-bottom a { font-size: 0.6rem; color: #8a7f73; text-decoration: none; transition: color 0.2s; letter-spacing: 0.1em; }
+  .footer-bottom a:hover { color: var(--ink); }
+  @media (max-width: 640px) { footer { padding: 3rem 1.5rem 1.5rem; } }
+</style>
+</head>
+<body>
+<!-- ANNOUNCEMENT BANNER -->
+<style>
+  #site-announcement {
+    display: none;
+    position: relative;
+    width: 100%;
+    z-index: 200;
+    text-align: center;
+    padding: 0.65rem 3rem;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  #site-announcement a.ann-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-left: 1rem;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  #site-announcement a.ann-link:hover { opacity: 1; }
+  #ann-dismiss {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    font-size: 0.9rem; opacity: 0.5; color: inherit;
+    transition: opacity 0.2s; line-height: 1;
+  }
+  #ann-dismiss:hover { opacity: 1; }
+  body.has-announcement nav { top: 0; }
+</style>
+<div id="site-announcement">
+  <span id="ann-text"></span>
+  <a id="ann-cta" class="ann-link" href="#" style="display:none;"></a>
+  <button id="ann-dismiss" title="Dismiss">✕</button>
+</div>
+<script>
+  (function() {
+    try {
+      var DISMISSED_KEY = 'atelier_ann_dismissed';
+      var dismissed = JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]');
+      var anns = JSON.parse(localStorage.getItem('atelier_announcements') || '[]');
+      var active = anns.find(function(a) {
+        return a.status === 'active' && dismissed.indexOf(a.createdAt) === -1;
+      });
+      if (!active) return;
+
+      var STYLES = {
+        dark:   { bg: '#0e0e0d', color: '#f4f1ec' },
+        gold:   { bg: '#c8b89a', color: '#0e0e0d' },
+        accent: { bg: '#8b5e3c', color: '#f4f1ec' },
+        green:  { bg: '#2e7d32', color: '#ffffff' },
+        urgent: { bg: '#8b1a1a', color: '#ffffff' }
+      };
+      var s = STYLES[active.style] || STYLES.dark;
+      var bar = document.getElementById('site-announcement');
+      bar.style.background = s.bg;
+      bar.style.color = s.color;
+      bar.style.display = 'block';
+      document.getElementById('ann-text').textContent = active.message;
+
+      if (active.link && active.linkText) {
+        var cta = document.getElementById('ann-cta');
+        cta.href = active.link;
+        cta.textContent = active.linkText;
+        cta.style.display = 'inline';
+      }
+
+      var dismissBtn = document.getElementById('ann-dismiss');
+      if (active.dismissible === 'no') {
+        dismissBtn.style.display = 'none';
+      } else {
+        dismissBtn.addEventListener('click', function() {
+          dismissed.push(active.createdAt);
+          localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+          bar.style.display = 'none';
+          document.body.classList.remove('has-announcement');
+          // Restore nav position
+          var nav = document.querySelector('nav');
+          if (nav) nav.style.top = '';
+        });
+      }
+
+      // Push nav down by announcement height
+      document.body.classList.add('has-announcement');
+      var nav = document.querySelector('nav');
+      if (nav) {
+        var h = bar.offsetHeight;
+        nav.style.top = h + 'px';
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<style>
+  #admin-preview-bar {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #141210; color: #c8b89a;
+    padding: 0.5rem 2rem;
+    font-family: 'Jost', sans-serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    display: none; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+  }
+  #admin-preview-bar a { color: #c8b89a; text-decoration: none; transition: color 0.2s; }
+  #admin-preview-bar a:hover { color: #fff; }
+  body.admin-viewing { padding-top: 36px; }
+  body.admin-viewing nav { top: 36px; }
+</style>
+<div id="admin-preview-bar">
+  <span>⚙ Admin Preview Mode</span>
+  <a href="analyticsDashboard.html">← Back to Dashboard</a>
+</div>
+<script>
+  (function() {
+    if (localStorage.getItem("atelier_admin") === "1") {
+      var bar = document.getElementById("admin-preview-bar");
+      bar.style.display = "flex";
+      document.body.classList.add("admin-viewing");
+    }
+  })();
+</script>
+
+<nav id="main-nav">
+  <button class="hamburger" id="hamburger" onclick="document.getElementById('hamburger').classList.toggle('open');document.getElementById('mobile-nav').classList.toggle('open');">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="nav-links">
+    <a href="collection.html">Shop</a>
+    <a href="collection.html">Collections</a>
+    <a href="aboutUs.html" class="active">About</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:52px;width:auto;object-fit:contain;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div class="nav-icons">
+    <a href="shoppingCart.html" style="position:relative;">
+      Bag
+      <span class="cart-badge" id="cart-count">0</span>
+    </a>
+  </div>
+</nav>
+<div class="mobile-nav" id="mobile-nav">
+  <a href="collection.html">Shop</a>
+  <a href="collection.html">Collections</a>
+  <a href="aboutUs.html">About</a>
+  <a href="shoppingCart.html">Bag</a>
+</div>
+
+<!-- HERO -->
+<section class="about-hero">
+  <img class="about-hero-img"
+    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDg4JVIrDrlU05UcLS66lFXS5P159VoAN8DjZhlN1AXOd7dk9m-E2Kiipx8WvlLbVKC6XSG7So_CPTetAFvhA3fY3xEOCC5E9c5KHArm4io9fxXvThGvF0m_tCrTKsWhsNkAj2ne2k-NkUO-hE8AXxb04g2XN4S81aejSQCbXwYFA8hNU-T3kcexY4Jd6qm2im1c0ncSlwAUjL4abFjXwF20vid_lyxsdiLToq9LHBJ-oYhqfgRbeMZjymA2FLbayoIeC-8OklTW9Dt"
+    alt="The Atelier Atelier"/>
+  <div class="about-hero-overlay"></div>
+  <div class="about-hero-content">
+    <h1>The House<br/>of The Atelier</h1>
+    <p>Est. 2019 · Paris · New York · Tokyo</p>
+  </div>
+</section>
+
+<!-- FOUNDING STORY -->
+<section class="founding">
+  <div class="founding-text">
+    <p class="founding-label">Our Origins</p>
+    <h2>Born from a belief that clothing is never just clothing.</h2>
+    <p>The Atelier was founded in 2019 in a modest Parisian studio, driven by a single conviction: that the clothes we wear are an extension of our inner architecture. Each piece should feel inevitable — as though it could not have existed in any other form.</p>
+    <p>What began as a small atelier producing bespoke pieces for a discerning few has grown into a house of ready-to-wear that refuses to compromise on the values that gave it life: obsessive craftsmanship, rare materials, and an unwavering aesthetic point of view.</p>
+  </div>
+  <div class="founding-img">
+    <img
+      src="https://lh3.googleusercontent.com/aida-public/AB6AXuDa_HopUfJqhxDfjOR3wu2ouTau1gjZ5fjF2NX_6IP62wQZHFu6zDBqNiKQVKAvVNznxQ9jkQTKW5gy7u0tkOAbNPRezd6ayVgtObm9paVInkGfGHjZLarSJCgSBnujONTlmuKMrwBN6WlF8-LKpWR-1w_3DDYqB3S4ZE4wcuezIq_7dxACr-f2H11_jCsrdXO0KwzJtJhqazqw3Y2gUzi2gySKKDJfycCzeQEFseWS7ltR3No64PyYKp98VmuZ8yYce8Qc0NDIGX86"
+      alt="Atelier Studio"/>
+  </div>
+</section>
+
+<!-- PHILOSOPHY -->
+<section class="philosophy">
+  <div class="philosophy-header">
+    <h2>A philosophy<br/>of quiet<br/>conviction.</h2>
+    <p>We do not follow trends. We observe the human body in motion, study the way light falls on fabric at dusk, and then we make decisions — slow, deliberate decisions — about what a garment should feel like from the inside out.</p>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num">6</div>
+      <div class="stat-label">Years of craft</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">14</div>
+      <div class="stat-label">Master artisans</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">3</div>
+      <div class="stat-label">Ateliers worldwide</div>
+    </div>
+  </div>
+</section>
+
+<!-- PILLARS -->
+<section class="pillars">
+  <p class="pillars-title">What We Stand For</p>
+  <div class="pillars-grid">
+    <div class="pillar">
+      <div class="pillar-num">01</div>
+      <h3>Radical Materiality</h3>
+      <p>We source only from mills with a heritage longer than our own — cashmeres from the Mongolian plateau, silks from the looms of Lyon. The hand-feel of a garment is its first conversation with the body.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-num">02</div>
+      <h3>Architectural Restraint</h3>
+      <p>Every cut begins as a structural problem. We draw from the language of architecture — cantilever, tension, negative space — to construct silhouettes that feel both inevitable and surprising.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-num">03</div>
+      <h3>Enduring Responsibility</h3>
+      <p>We produce in limited runs, refuse seasonal surplus, and offer lifetime garment repair. Fashion built to last is fashion that respects the world it inhabits.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section class="team">
+  <div class="team-header">
+    <h2>The Makers</h2>
+    <p>The hands behind the house</p>
+  </div>
+  <div class="team-grid">
+    <div class="team-card">
+      <div class="team-card-img">
+        <img
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuD58X9mNKlcoMnVue7EQjJDzmq-BCc3Z5Y9VpeGv-Pg53ycWRzD9i_2ntIxKdW7sbPAzrPiUOU7akCjlfPTNlpYw7ljLET_EUTFlA2iW8d0Z3XIcs9USdeFL0Zqiweq6oh81hPYxEHiAvA3NkEnHE-bAgZoPe8BHhBSHa5Wi8cxh-m3P_Rsldy2gJyzi2EDiKL-Uw-OIQ6YLU8vezuERQEyaqmPwGLwLyG5QqjaFpn5Dj17uVS_yzWyfnLWg-w9q1jFI_4YMVD0kDTp"
+          alt="Isabelle Voss"/>
+      </div>
+      <h3>Isabelle Voss</h3>
+      <p class="role">Creative Director & Founder</p>
+      <p class="bio">Trained at Studio Berçot and refined under Demeulemeester, Isabelle brings a rigorous intellectual curiosity to each collection.</p>
+    </div>
+    <div class="team-card">
+      <div class="team-card-img">
+        <img
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuDg4JVIrDrlU05UcLS66lFXS5P159VoAN8DjZhlN1AXOd7dk9m-E2Kiipx8WvlLbVKC6XSG7So_CPTetAFvhA3fY3xEOCC5E9c5KHArm4io9fxXvThGvF0m_tCrTKsWhsNkAj2ne2k-NkUO-hE8AXxb04g2XN4S81aejSQCbXwYFA8hNU-T3kcexY4Jd6qm2im1c0ncSlwAUjL4abFjXwF20vid_lyxsdiLToq9LHBJ-oYhqfgRbeMZjymA2FLbayoIeC-8OklTW9Dt"
+          alt="Kenji Maeda"/>
+      </div>
+      <h3>Kenji Maeda</h3>
+      <p class="role">Head of Construction</p>
+      <p class="bio">With thirty years of pattern-making experience across Tokyo and Milan, Kenji translates Isabelle's vision into garments that move like a second skin.</p>
+    </div>
+    <div class="team-card">
+      <div class="team-card-img">
+        <img
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuDa_HopUfJqhxDfjOR3wu2ouTau1gjZ5fjF2NX_6IP62wQZHFu6zDBqNiKQVKAvVNznxQ9jkQTKW5gy7u0tkOAbNPRezd6ayVgtObm9paVInkGfGHjZLarSJCgSBnujONTlmuKMrwBN6WlF8-LKpWR-1w_3DDYqB3S4ZE4wcuezIq_7dxACr-f2H11_jCsrdXO0KwzJtJhqazqw3Y2gUzi2gySKKDJfycCzeQEFseWS7ltR3No64PyYKp98VmuZ8yYce8Qc0NDIGX86"
+          alt="Solène Archambault"/>
+      </div>
+      <h3>Solène Archambault</h3>
+      <p class="role">Textile Director</p>
+      <p class="bio">Solène travels twice yearly to source materials directly from artisan mills, ensuring every fabric passes a rigorous hand, weight, and drape evaluation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- QUOTE -->
+<div class="quote-strip">
+  <blockquote>"To dress well is to think clearly about who you are and who you intend to become."</blockquote>
+  <cite>— Isabelle Voss, Founder</cite>
+</div>
+
+<!-- CTA -->
+<section class="about-cta">
+  <h2>Discover the collection.</h2>
+  <p>Each season, a limited number of pieces. Each piece, a small argument for beauty as a way of life.</p>
+  <a href="collection.html">Shop the Collection</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">The Atelier</div>
+      <p class="footer-tagline">Luxury ready-to-wear, crafted for those who understand that clothing is never just clothing.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <a href="collection.html">New Arrivals</a>
+      <a href="collection.html">Collections</a>
+      <a href="collection.html">Outerwear</a>
+      <a href="collection.html">Dresses</a>
+    </div>
+    <div class="footer-col">
+      <h4>House</h4>
+      <a href="aboutUs.html">Our Story</a>
+      <a href="aboutUs.html">Craftsmanship</a>
+      <a href="sustainability.html">Sustainability</a>
+      <a href="press.html">Press</a>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <a href="sizingGuide.html">Sizing Guide</a>
+      <a href="shippingReturns.html">Shipping &amp; Returns</a>
+      <a href="careInstructions.html">Care Instructions</a>
+      <a href="contactUs.html">Contact Us</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 The Atelier. All rights reserved.</p>
+    <p>Privacy Policy · Terms of Service</p>
+    <a id="staff-portal-link" href="adminLogin.html" style="font-size:0.6rem;color:#8a7f73;text-decoration:none;letter-spacing:0.1em;">Staff Portal</a>
+  </div>
+</footer>
+
+<script>
+  window.addEventListener('scroll', () => {
+    document.getElementById('main-nav').classList.toggle('scrolled', window.scrollY > 60);
+  });
+  (function() {
+    const cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+    const count = cart.reduce((s, i) => s + i.quantity, 0);
+    const badge = document.getElementById('cart-count');
+    if (count > 0) { badge.style.display = 'flex'; badge.textContent = count; }
+  })();
+</script>
+
+<script>
+  // Hide Staff Portal link if logged in as admin
+  (function() {
+    var link = document.getElementById("staff-portal-link");
+    if (link && localStorage.getItem("atelier_admin") === "1") {
+      link.style.display = "none";
+    }
+  })();
+
+  // Secret shortcut: Ctrl+Shift+A = go to admin login (works even if link is hidden)
+  document.addEventListener("keydown", function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === "A") {
+      window.location.href = "adminLogin.html";
+    }
+  });
+</script>
+</body>
+</html>
