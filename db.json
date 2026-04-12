@@ -1,0 +1,21 @@
+{
+  "orders": [],
+  "customers": [],
+  "inquiries": [],
+  "custom_orders": [],
+  "products": [],
+  "inventory": [],
+  "collections": [],
+  "promotions": [],
+  "reviews": [],
+  "announcements": [],
+  "admins": [
+    {
+      "email": "admin@theatelier.com",
+      "password": "atelier2025",
+      "role": "superadmin"
+    }
+  ],
+  "payment_settings": {},
+  "_lastUpdated": "2026-04-12T15:42:23.252Z"
+}
