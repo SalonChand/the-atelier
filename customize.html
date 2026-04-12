@@ -148,7 +148,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 .success-check { width: 56px; height: 56px; border: 1px solid var(--warm); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin: 0 auto 2rem; }
 </style>
 <link rel="stylesheet" href="mobile-app.css"/>
-<script src="sync.js"></script>
+<script src="sync.js" defer></script>
 </head>
 <body>
 
@@ -163,13 +163,23 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
 <div class="customizer-wrap">
 
-  <!-- ── LEFT: Canvas ── -->
+  <!-- ── LEFT: 3D/2D Preview ── -->
   <div class="canvas-area">
     <div style="text-align:center;margin-bottom:1rem;">
       <p style="font-family:'Newsreader',serif;font-style:italic;font-size:1.8rem;">Design Studio</p>
       <p style="font-size:0.6rem;color:#8a7f73;letter-spacing:0.12em;margin-top:0.2rem;">Your customization preview</p>
     </div>
     <div class="canvas-stage">
+      <!-- 3D viewer (for T-shirt) -->
+      <div id="viewer-3d" style="width:100%;height:100%;display:none;position:relative;">
+        <canvas id="three-canvas" style="width:100%;height:100%;display:block;cursor:grab;"></canvas>
+        <div id="loading-3d" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(248,245,240,0.9);z-index:5;">
+          <div style="width:36px;height:36px;border:2px solid rgba(200,184,154,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin3d 0.8s linear infinite;"></div>
+          <p style="font-size:0.6rem;color:#8a7f73;letter-spacing:0.12em;margin-top:1rem;text-transform:uppercase;">Loading 3D Model…</p>
+        </div>
+      </div>
+      <style>@keyframes spin3d { to { transform: rotate(360deg); } }</style>
+      <!-- 2D fallback canvas (for other garments) -->
       <canvas id="garment-canvas" width="500" height="500"></canvas>
     </div>
     <div class="view-toggle">
@@ -178,7 +188,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
       <button class="view-btn" onclick="setView('left',this)">Left</button>
       <button class="view-btn" onclick="setView('right',this)">Right</button>
     </div>
-    <p class="canvas-hint">Upload an image or enter text to preview your design</p>
+    <p class="canvas-hint" id="canvas-hint">Drag to rotate · Scroll to zoom · Upload a design above</p>
   </div>
 
   <!-- ── RIGHT: Controls ── -->
@@ -794,6 +804,303 @@ function placeCustomOrder() {
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 updateCanvas();
+</script>
+
+<!-- Three.js 3D Viewer for T-shirt -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ── GLTFLoader (inline minimal version for r128) ──────────────────────
+  // We'll load GLTFLoader from CDN
+  var gltfScript = document.createElement('script');
+  gltfScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+  gltfScript.onload = function() {
+    var orbitScript = document.createElement('script');
+    orbitScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
+    orbitScript.onload = initViewer3D;
+    document.head.appendChild(orbitScript);
+  };
+  document.head.appendChild(gltfScript);
+
+  var scene, camera, renderer, controls, tshirtModel;
+  var viewer3d = document.getElementById('viewer-3d');
+  var threeCanvas = document.getElementById('three-canvas');
+  var canvas2d = document.getElementById('garment-canvas');
+  var loadingEl = document.getElementById('loading-3d');
+  var is3DActive = false;
+
+  function initViewer3D() {
+    // Scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf8f5f0);
+
+    // Camera
+    var aspect = threeCanvas.clientWidth / threeCanvas.clientHeight || 1;
+    camera = new THREE.PerspectiveCamera(35, aspect, 0.1, 1000);
+    camera.position.set(0, 1.2, 3);
+
+    // Renderer
+    renderer = new THREE.WebGLRenderer({
+      canvas: threeCanvas,
+      antialias: true,
+      alpha: true
+    });
+    renderer.setSize(threeCanvas.clientWidth, threeCanvas.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+
+    // Lights — studio lighting setup
+    var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    var keyLight = new THREE.DirectionalLight(0xfff5e6, 0.9);
+    keyLight.position.set(3, 5, 4);
+    keyLight.castShadow = true;
+    scene.add(keyLight);
+
+    var fillLight = new THREE.DirectionalLight(0xe6f0ff, 0.4);
+    fillLight.position.set(-3, 3, 2);
+    scene.add(fillLight);
+
+    var rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    rimLight.position.set(0, 2, -4);
+    scene.add(rimLight);
+
+    // Soft ground reflection
+    var groundGeo = new THREE.PlaneGeometry(10, 10);
+    var groundMat = new THREE.MeshStandardMaterial({ color: 0xf0ece6, roughness: 0.9, metalness: 0 });
+    var ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.5;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Orbit Controls
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = false;
+    controls.minDistance = 1.5;
+    controls.maxDistance = 6;
+    controls.minPolarAngle = Math.PI * 0.2;
+    controls.maxPolarAngle = Math.PI * 0.75;
+    controls.target.set(0, 0.8, 0);
+    controls.update();
+
+    // Load the T-shirt model
+    var loader = new THREE.GLTFLoader();
+    loader.load('tshirt.glb',
+      function(gltf) {
+        tshirtModel = gltf.scene;
+
+        // Center and scale the model
+        var box = new THREE.Box3().setFromObject(tshirtModel);
+        var center = box.getCenter(new THREE.Vector3());
+        var size = box.getSize(new THREE.Vector3());
+        var maxDim = Math.max(size.x, size.y, size.z);
+        var scale = 2.0 / maxDim;
+        tshirtModel.scale.setScalar(scale);
+
+        // Re-center after scaling
+        box.setFromObject(tshirtModel);
+        center = box.getCenter(new THREE.Vector3());
+        tshirtModel.position.sub(center);
+        tshirtModel.position.y += size.y * scale * 0.5;
+
+        // Enable shadows
+        tshirtModel.traverse(function(child) {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            // Store original material for color changes
+            child.userData.originalMaterial = child.material.clone();
+          }
+        });
+
+        scene.add(tshirtModel);
+
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+
+        // Apply initial color
+        updateModelColor(state.color);
+
+        console.log('[3D] T-shirt model loaded successfully');
+      },
+      function(progress) {
+        // Loading progress
+        if (progress.total > 0) {
+          var pct = Math.round((progress.loaded / progress.total) * 100);
+          var loadText = loadingEl ? loadingEl.querySelector('p') : null;
+          if (loadText) loadText.textContent = 'Loading 3D Model… ' + pct + '%';
+        }
+      },
+      function(error) {
+        console.error('[3D] Failed to load model:', error);
+        if (loadingEl) {
+          loadingEl.innerHTML = '<p style="font-size:0.65rem;color:#8b1a1a;">Failed to load 3D model</p><p style="font-size:0.55rem;color:#8a7f73;margin-top:0.5rem;">Falling back to 2D preview</p>';
+        }
+        // Fall back to 2D
+        setTimeout(function() { switchTo2D(); }, 2000);
+      }
+    );
+
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      if (controls) controls.update();
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+    animate();
+
+    // Handle resize
+    window.addEventListener('resize', function() {
+      if (!is3DActive) return;
+      var w = viewer3d.clientWidth;
+      var h = viewer3d.clientHeight;
+      if (w === 0 || h === 0) return;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+
+    // If current garment is T-shirt, show 3D immediately
+    if (state.garment === 'tshirt') {
+      switchTo3D();
+    }
+  }
+
+  // ── SWITCH BETWEEN 3D AND 2D ──────────────────────────────────────────
+  function switchTo3D() {
+    is3DActive = true;
+    viewer3d.style.display = 'block';
+    canvas2d.style.display = 'none';
+    document.getElementById('canvas-hint').textContent = 'Drag to rotate · Scroll to zoom · Upload a design above';
+
+    // Resize renderer
+    setTimeout(function() {
+      var w = viewer3d.clientWidth;
+      var h = viewer3d.clientHeight;
+      if (w > 0 && h > 0 && camera && renderer) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
+    }, 100);
+  }
+
+  function switchTo2D() {
+    is3DActive = false;
+    viewer3d.style.display = 'none';
+    canvas2d.style.display = 'block';
+    document.getElementById('canvas-hint').textContent = 'Upload an image or enter text to preview your design';
+    updateCanvas();
+  }
+
+  // ── UPDATE MODEL COLOR ────────────────────────────────────────────────
+  function updateModelColor(hexColor) {
+    if (!tshirtModel) return;
+    var color = new THREE.Color(hexColor);
+    tshirtModel.traverse(function(child) {
+      if (child.isMesh && child.material) {
+        // Clone material to avoid shared state
+        if (!child.userData.customMaterial) {
+          child.userData.customMaterial = child.material.clone();
+          child.material = child.userData.customMaterial;
+        }
+        child.material.color.copy(color);
+        child.material.needsUpdate = true;
+      }
+    });
+  }
+
+  // ── CAMERA VIEWS ──────────────────────────────────────────────────────
+  function setCameraView(view) {
+    if (!camera || !controls || !is3DActive) return;
+    var target = new THREE.Vector3(0, 0.8, 0);
+    var pos;
+    switch(view) {
+      case 'front':  pos = new THREE.Vector3(0, 1.2, 3); break;
+      case 'back':   pos = new THREE.Vector3(0, 1.2, -3); break;
+      case 'left':   pos = new THREE.Vector3(-3, 1.2, 0); break;
+      case 'right':  pos = new THREE.Vector3(3, 1.2, 0); break;
+      default:       pos = new THREE.Vector3(0, 1.2, 3);
+    }
+
+    // Animate camera position
+    var startPos = camera.position.clone();
+    var startTime = Date.now();
+    var duration = 600;
+
+    function animateCamera() {
+      var elapsed = Date.now() - startTime;
+      var t = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      t = 1 - Math.pow(1 - t, 3);
+
+      camera.position.lerpVectors(startPos, pos, t);
+      controls.target.copy(target);
+      controls.update();
+
+      if (t < 1) requestAnimationFrame(animateCamera);
+    }
+    animateCamera();
+  }
+
+  // ── OVERRIDE EXISTING FUNCTIONS ───────────────────────────────────────
+  // Override selectGarment to switch between 3D and 2D
+  var _origSelectGarment = window.selectGarment;
+  window.selectGarment = function(g, btn) {
+    _origSelectGarment(g, btn);
+    if (g === 'tshirt' && tshirtModel) {
+      switchTo3D();
+      updateModelColor(state.color);
+    } else {
+      switchTo2D();
+    }
+  };
+
+  // Override selectColor to update 3D model color
+  var _origSelectColor = window.selectColor;
+  window.selectColor = function(c, dot) {
+    _origSelectColor(c, dot);
+    if (is3DActive) {
+      updateModelColor(c);
+    }
+  };
+
+  // Override setView to control 3D camera
+  var _origSetView = window.setView;
+  window.setView = function(v, btn) {
+    _origSetView(v, btn);
+    if (is3DActive) {
+      setCameraView(v);
+    }
+  };
+
+  // Override for placeCustomOrder to capture 3D preview
+  var _origPlaceOrder = window.placeCustomOrder;
+  window.placeCustomOrder = function() {
+    // If 3D is active, capture the Three.js canvas instead
+    if (is3DActive && renderer) {
+      renderer.render(scene, camera);
+      // Temporarily swap the canvas reference for the order capture
+      var origCanvas = window.canvas;
+      window.canvas = renderer.domElement;
+      _origPlaceOrder();
+      window.canvas = origCanvas;
+    } else {
+      _origPlaceOrder();
+    }
+  };
+
+})();
 </script>
 <script src="mobile-app.js"></script>
 </body>
