@@ -136,6 +136,7 @@
   }
   .sidebar-overlay.open { display: block; }
 </style>
+<script src="sync.js"></script>
 </head>
 <body>
 <button class="mobile-toggle" id="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('open');">☰</button>
@@ -174,6 +175,10 @@
     <div class="nav-section">
       <p class="nav-section-title">Custom Studio</p>
       <button class="nav-item" onclick="showPanel('customorders',this)" id="nav-customorders" style="position:relative;"><span class="icon">✦</span> Custom Orders <span id="custom-badge" style="margin-left:auto;background:#8b5e3c;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
+    </div>
+    <div class="nav-section">
+      <p class="nav-section-title">System</p>
+      <button class="nav-item" onclick="showPanel('sync',this)" id="nav-sync"><span class="icon">⟳</span> Sync Settings <span id="sync-status-dot" style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;"></span></button>
     </div>
   </nav>
   <div class="sidebar-footer">
@@ -528,6 +533,80 @@
         </tr></thead>
         <tbody id="co-tbody"></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT SETTINGS PANEL -->
+<!-- SYNC SETTINGS PANEL -->
+<div class="panel" id="panel-sync">
+  <div class="topbar">
+    <h1 class="page-title">Sync Settings</h1>
+    <div class="topbar-right">
+      <span id="sync-connection-status" style="padding:0.4rem 1rem;font-size:0.6rem;letter-spacing:0.1em;border:1px solid #ccc;">Not Connected</span>
+    </div>
+  </div>
+  <p style="font-size:0.75rem;color:#6b6258;line-height:1.9;margin-bottom:2.5rem;max-width:650px;">
+    Enable cross-device sync so orders, inquiries, and all store data works across phones, tablets, and desktops. 
+    Data is stored as a JSON file in your GitHub repository — no external database needed.
+  </p>
+
+  <div class="chart-card" style="margin-bottom:1.5rem;">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(200,184,154,0.2);">
+      <div style="width:40px;height:40px;border-radius:8px;background:#24292e;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+      </div>
+      <div>
+        <p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:500;">GitHub Sync</p>
+        <p style="font-size:0.62rem;color:#8a7f73;margin-top:0.1rem;">Store data in your GitHub repository</p>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>GitHub Username *</label>
+      <input type="text" id="sync-owner" placeholder="e.g. SalonChand"/>
+    </div>
+    <div class="form-group">
+      <label>Repository Name *</label>
+      <input type="text" id="sync-repo" placeholder="e.g. the-atelier"/>
+    </div>
+    <div class="form-group">
+      <label>Personal Access Token *</label>
+      <input type="password" id="sync-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"/>
+      <p style="font-size:0.6rem;color:#8a7f73;margin-top:0.4rem;line-height:1.7;">
+        Create at <a href="https://github.com/settings/tokens/new" target="_blank" style="color:var(--accent);text-decoration:underline;">github.com/settings/tokens</a> → 
+        Select <strong>repo</strong> scope → Generate → Paste here.<br/>
+        Token is stored only in this browser's localStorage. Never shared.
+      </p>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1.5rem;">
+      <button class="btn-primary" onclick="connectSync()">Connect & Sync</button>
+      <button class="btn-secondary" onclick="disconnectSync()">Disconnect</button>
+      <button class="btn-secondary" onclick="forcePullSync()">⬇ Pull from GitHub</button>
+      <button class="btn-secondary" onclick="forcePushSync()">⬆ Push to GitHub</button>
+    </div>
+  </div>
+
+  <!-- Sync Status -->
+  <div class="chart-card" style="margin-bottom:1.5rem;">
+    <div class="chart-title"><span>Sync Status</span></div>
+    <div id="sync-log" style="font-family:monospace;font-size:0.7rem;color:#6b6258;line-height:2;max-height:300px;overflow-y:auto;padding:0.5rem 0;">
+      <p style="color:#8a7f73;">No sync activity yet. Connect above to start.</p>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="chart-card">
+    <div class="chart-title"><span>How Cross-Device Sync Works</span></div>
+    <div style="font-size:0.75rem;color:#6b6258;line-height:2;">
+      <p><strong style="color:var(--ink);">1.</strong> All store data (orders, inquiries, products, customers) is saved to a <code style="background:rgba(200,184,154,0.2);padding:0.15rem 0.4rem;font-size:0.68rem;">db.json</code> file in your GitHub repo.</p>
+      <p><strong style="color:var(--ink);">2.</strong> When a customer places an order or sends a message on any device, it auto-syncs to GitHub.</p>
+      <p><strong style="color:var(--ink);">3.</strong> The admin dashboard pulls fresh data every 15 seconds. Other pages sync every 30 seconds.</p>
+      <p><strong style="color:var(--ink);">4.</strong> When you switch back to a tab, it pulls the latest data automatically.</p>
+      <p style="margin-top:1rem;padding:0.75rem 1rem;background:rgba(200,184,154,0.1);border-left:3px solid var(--warm);font-size:0.68rem;">
+        ⚠ <strong>Important:</strong> The token must have <strong>repo</strong> scope. You only need to set this up once per browser. Each device/browser needs to be configured separately.
+      </p>
     </div>
   </div>
 </div>
@@ -1039,7 +1118,7 @@ function showPanel(name,btn){
   // Refresh live purchase data before rendering
   if(name==='orders') ORDERS = getOrders();
   if(name==='customers') CUSTOMERS = getCustomers();
-  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm})[name]?.();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,sync:renderSyncPanel})[name]?.();
 }
 
 function toast(msg){
@@ -1995,7 +2074,8 @@ function printBarcode(idx) {
     .name{font-size:15px;font-weight:bold;margin-bottom:2px;}
     .price{font-size:12px;color:#8b5e3c;margin-bottom:12px;}
     @media print{button{display:none!important;}}
-  </style></head><body>
+  </style><script src="sync.js"></script>
+</head><body>
   <p class="label">THE ATELIER</p>
   <p class="name">${p.name}</p>
   <p class="price">NRs. ${p.price.toLocaleString()} &nbsp;|&nbsp; ${p.color}</p>
@@ -2394,6 +2474,132 @@ function savePaymentSettings() {
   savePaymentSettingsData(ps);
   toast('✓ Payment settings saved successfully');
 }
+
+// ── SYNC SETTINGS PANEL ─────────────────────────────────────────────────
+function addSyncLog(msg) {
+  var log = document.getElementById('sync-log');
+  if (!log) return;
+  var time = new Date().toLocaleTimeString();
+  var p = document.createElement('p');
+  p.textContent = '[' + time + '] ' + msg;
+  log.insertBefore(p, log.firstChild);
+}
+
+function renderSyncPanel() {
+  var config = window.AtelierSync ? window.AtelierSync.getConfig() : {};
+  var connected = window.AtelierSync && window.AtelierSync.isConfigured();
+  
+  document.getElementById('sync-owner').value = config.owner || '';
+  document.getElementById('sync-repo').value = config.repo || '';
+  document.getElementById('sync-token').value = config.token || '';
+  
+  var statusEl = document.getElementById('sync-connection-status');
+  var dotEl = document.getElementById('sync-status-dot');
+  if (connected) {
+    statusEl.textContent = '● Connected';
+    statusEl.style.color = '#2e7d32';
+    statusEl.style.borderColor = '#2e7d32';
+    if (dotEl) dotEl.style.background = '#4caf50';
+  } else {
+    statusEl.textContent = 'Not Connected';
+    statusEl.style.color = '#8a7f73';
+    statusEl.style.borderColor = '#ccc';
+    if (dotEl) dotEl.style.background = '#999';
+  }
+}
+
+function connectSync() {
+  var owner = document.getElementById('sync-owner').value.trim();
+  var repo = document.getElementById('sync-repo').value.trim();
+  var token = document.getElementById('sync-token').value.trim();
+  
+  if (!owner || !repo || !token) {
+    toast('Please fill in all fields');
+    return;
+  }
+  
+  addSyncLog('Connecting to ' + owner + '/' + repo + '...');
+  window.AtelierSync.configure(owner, repo, token);
+  
+  setTimeout(function() {
+    window.AtelierSync.push(function(ok) {
+      if (ok) {
+        addSyncLog('✓ Connected and synced successfully!');
+        toast('✓ Sync connected! Data will now sync across all devices.');
+        renderSyncPanel();
+      } else {
+        addSyncLog('✕ Connection failed. Check your token and repo name.');
+        toast('Sync connection failed. Check credentials.');
+      }
+    });
+  }, 500);
+}
+
+function disconnectSync() {
+  if (!confirm('Disconnect sync? Local data will remain but won\'t sync anymore.')) return;
+  window.AtelierSync.disconnect();
+  addSyncLog('Disconnected from GitHub sync.');
+  toast('Sync disconnected');
+  renderSyncPanel();
+}
+
+function forcePullSync() {
+  addSyncLog('Pulling latest data from GitHub...');
+  window.AtelierSync.pull(function(ok) {
+    if (ok) {
+      addSyncLog('✓ Pull complete. Data refreshed.');
+      toast('✓ Data pulled from GitHub');
+      // Re-render current active panel
+      ORDERS = getOrders();
+      CUSTOMERS = getCustomers();
+      PRODUCTS = ld('products', []);
+      renderOrdersTable();
+      renderCustomersTable();
+      renderInquiriesTable();
+      renderCustomOrdersTable();
+    } else {
+      addSyncLog('✕ Pull failed.');
+      toast('Pull failed');
+    }
+  });
+}
+
+function forcePushSync() {
+  addSyncLog('Pushing all local data to GitHub...');
+  window.AtelierSync.forcePush();
+  setTimeout(function() {
+    addSyncLog('✓ Push complete.');
+    toast('✓ Data pushed to GitHub');
+  }, 3000);
+}
+
+// ── AUTO-REFRESH ON SYNC EVENT ──────────────────────────────────────────
+window.addEventListener('atelier-synced', function() {
+  // Reload data from localStorage (which was just updated by sync.js)
+  ORDERS = getOrders();
+  CUSTOMERS = getCustomers();
+  PRODUCTS = ld('products', []);
+  INVENTORY = ld('inventory', []);
+  COLLECTIONS = ld('collections', []);
+  PROMOTIONS = ld('promotions', []);
+  REVIEWS = ld('reviews', []);
+  
+  // Re-render the currently active panel
+  var activePanel = document.querySelector('.panel.active');
+  if (activePanel) {
+    var id = activePanel.id.replace('panel-', '');
+    ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable})[id]?.();
+  }
+  updateInquiryBadge();
+});
+
+// Update sync dot on load
+(function() {
+  var dotEl = document.getElementById('sync-status-dot');
+  if (dotEl && window.AtelierSync && window.AtelierSync.isConfigured()) {
+    dotEl.style.background = '#4caf50';
+  }
+})();
 
 </script>
 </body>

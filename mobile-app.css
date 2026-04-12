@@ -17,8 +17,12 @@
   /* Smoother touch scrolling */
   * { -webkit-overflow-scrolling: touch; }
 
-  /* Make all tap targets minimum 44px (Apple HIG) */
-  a, button, input, select, textarea, .filter-btn, .size-btn, .nav-item {
+  /* Make navigation tap targets minimum 44px (Apple HIG) */
+  .nav-links a, .nav-icons a, .filter-btn, .size-btn, .nav-item, .hamburger {
+    min-height: 44px;
+  }
+  /* Form inputs 44px */
+  input, select, textarea {
     min-height: 44px;
   }
 
@@ -354,6 +358,22 @@
   /* ── CONTACT PAGE ──────────────────────────────────────────────────── */
   .channel { padding: 1.25rem 0 !important; }
   .channel-value { font-size: 0.85rem !important; }
+  /* Ensure submit button is above tab bar */
+  .submit-btn, .order-btn {
+    position: relative;
+    z-index: 10;
+  }
+  /* Extra scroll room at bottom so buttons aren't hidden by tab bar */
+  main::after {
+    content: '';
+    display: block;
+    height: 20px;
+  }
+
+  /* Success overlays must be above tab bar */
+  .success-overlay, .success-msg {
+    z-index: 1001 !important;
+  }
 
   /* ── INFO PAGES (About, Sustainability, Press, etc.) ───────────────── */
   .page-hero { 
