@@ -1069,7 +1069,7 @@ updateCanvas();
   var decalPlane = null;
   var decalTexture = null;
   var modelBBox = null;
-  var decalState = { x: 0, y: 0, z: 0.5, size: 0.6, placed: false };
+  var decalState = { x: 0, y: 0, z: 0.5, size: 1.2, placed: false };
   var isDraggingDecal = false;
   var raycaster = new THREE.Raycaster();
   var mouse = new THREE.Vector2();
@@ -1250,32 +1250,47 @@ updateCanvas();
 
       raycaster.setFromCamera(mouse, camera);
       var hits = raycaster.intersectObjects(getMeshes(), false);
-    if (hits.length > 0) {
-      var pt = hits[0].point.clone();
-      var normal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
-      pt.add(normal.clone().multiplyScalar(0.015));
-      tshirtModel.worldToLocal(pt);
-      decalState.x = pt.x;
-      decalState.y = pt.y;
-      decalState.z = pt.z;
-      decalState.placed = true;
+      if (hits.length > 0) {
+        var worldPt = hits[0].point.clone();
+        var worldNormal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
+        
+        // Offset slightly along normal
+        worldPt.add(worldNormal.clone().multiplyScalar(0.02));
+        
+        // Convert to model-local space
+        var localPt = worldPt.clone();
+        tshirtModel.worldToLocal(localPt);
+        
+        decalState.x = localPt.x;
+        decalState.y = localPt.y;
+        decalState.z = localPt.z;
+        decalState.placed = true;
 
-      updateDecal();
-      // Re-orient
-      if (decalPlane) {
-        var lookPt2 = pt.clone().add(normal.clone().multiplyScalar(0.1));
-        tshirtModel.worldToLocal(lookPt2);
-        decalPlane.lookAt(lookPt2);
+        // Remove old decal and create new one at this position
+        if (decalPlane) {
+          if (decalPlane.parent) decalPlane.parent.remove(decalPlane);
+          decalPlane.geometry.dispose();
+          if (decalPlane.material.map) decalPlane.material.map.dispose();
+          decalPlane.material.dispose();
+          decalPlane = null;
+        }
+        updateDecal();
+        
+        // Orient decal to face outward from surface
+        if (decalPlane) {
+          var localNormalTarget = worldPt.clone().add(worldNormal.clone().multiplyScalar(0.5));
+          tshirtModel.worldToLocal(localNormalTarget);
+          decalPlane.lookAt(localNormalTarget);
+        }
       }
-    }
-  });
+    });
 
   // ── SCROLL ON CANVAS TO RESIZE DECAL ──────────────────────────────────
   renderer.domElement.addEventListener('wheel', function(e) {
     if (!decalPlane || !is3DActive) return;
     if (!e.shiftKey) return;
     e.preventDefault();
-    decalState.size = Math.max(0.1, Math.min(1.5, decalState.size - e.deltaY * 0.001));
+    decalState.size = Math.max(0.2, Math.min(3.0, decalState.size - e.deltaY * 0.002));
     updateDecal();
   }, { passive: false });
 
@@ -1287,7 +1302,7 @@ updateCanvas();
   if (scaleSlider3D) {
     scaleSlider3D.addEventListener('input', function() {
       if (!is3DActive) return;
-      decalState.size = parseFloat(this.value) * 2; // scale 0-1 slider to 0-2 range
+      decalState.size = 0.2 + parseFloat(this.value) * 4.5; // scale slider 0-1 to 0.2-4.7 range
       updateDecal();
     });
   }
