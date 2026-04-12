@@ -205,16 +205,19 @@
 
   // ── INTERCEPT LOCALSTORAGE WRITES ─────────────────────────────────────
   // Override setItem to automatically sync shared keys to GitHub
-  var _origSetItem = localStorage.setItem.bind(localStorage);
-  
-  localStorage.setItem = function(key, value) {
-    _origSetItem(key, value);
+  // Only if sync is configured — otherwise leave localStorage untouched
+  if (isConfigured()) {
+    var _origSetItem = localStorage.setItem.bind(localStorage);
     
-    // If this is a shared key, schedule a push to GitHub
-    if (KEY_MAP[key]) {
-      schedulePush();
-    }
-  };
+    localStorage.setItem = function(key, value) {
+      _origSetItem(key, value);
+      
+      // If this is a shared key, schedule a push to GitHub
+      if (KEY_MAP[key]) {
+        schedulePush();
+      }
+    };
+  }
 
   // ── PERIODIC PULL (for real-time-ish cross-device updates) ────────────
   function startPeriodicSync() {
