@@ -925,6 +925,9 @@ updateCanvas();
 
         scene.add(tshirtModel);
 
+        // Store bounding box for raycasting
+        modelBBox = new THREE.Box3().setFromObject(tshirtModel);
+
         // Hide loading
         if (loadingEl) loadingEl.style.display = 'none';
 
@@ -1022,23 +1025,76 @@ updateCanvas();
   // ── DECAL SYSTEM — Image/Text overlay on 3D model ────────────────────
   var decalPlane = null;
   var decalTexture = null;
+  var modelBBox = null; // will be set after model loads
 
-  // 3D placement positions (relative to model center)
-  var DECAL_POSITIONS = {
-    'chest-left':   { x: -0.25, y: 1.05, z: 0.42, sx: 0.3, sy: 0.3 },
-    'chest-center': { x: 0,     y: 1.0,  z: 0.44, sx: 0.45, sy: 0.4 },
-    'chest-right':  { x: 0.25,  y: 1.05, z: 0.42, sx: 0.3, sy: 0.3 },
-    'back-center':  { x: 0,     y: 1.0,  z: -0.44, sx: 0.5, sy: 0.45 },
-    'sleeve-left':  { x: -0.52, y: 1.1,  z: 0.1,  sx: 0.22, sy: 0.22 },
-    'sleeve-right': { x: 0.52,  y: 1.1,  z: 0.1,  sx: 0.22, sy: 0.22 }
+  // Placement configs: direction to raycast from, and size
+  var DECAL_CONFIG = {
+    'chest-left':   { dir: 'front', offX: -0.15, offY: 0.05,  sx: 0.25, sy: 0.25 },
+    'chest-center': { dir: 'front', offX: 0,     offY: 0,     sx: 0.4,  sy: 0.35 },
+    'chest-right':  { dir: 'front', offX: 0.15,  offY: 0.05,  sx: 0.25, sy: 0.25 },
+    'back-center':  { dir: 'back',  offX: 0,     offY: 0,     sx: 0.45, sy: 0.4  },
+    'sleeve-left':  { dir: 'left',  offX: 0,     offY: 0.1,   sx: 0.18, sy: 0.18 },
+    'sleeve-right': { dir: 'right', offX: 0,     offY: 0.1,   sx: 0.18, sy: 0.18 }
   };
+
+  function findSurfacePoint(direction, offX, offY) {
+    if (!tshirtModel || !modelBBox) return null;
+
+    var center = modelBBox.getCenter(new THREE.Vector3());
+    var size = modelBBox.getSize(new THREE.Vector3());
+
+    // Starting point for raycast (outside the model)
+    var origin = new THREE.Vector3();
+    var dir = new THREE.Vector3();
+    var up = new THREE.Vector3(0, 1, 0);
+    var right = new THREE.Vector3(1, 0, 0);
+
+    // Target point on model (chest area = upper-center of model)
+    var targetY = center.y + size.y * 0.15 + offY * size.y;
+
+    switch(direction) {
+      case 'front':
+        origin.set(center.x + offX * size.x, targetY, center.z + size.z * 2);
+        dir.set(0, 0, -1);
+        break;
+      case 'back':
+        origin.set(center.x + offX * size.x, targetY, center.z - size.z * 2);
+        dir.set(0, 0, 1);
+        break;
+      case 'left':
+        origin.set(center.x - size.x * 2, targetY + offY * size.y, center.z);
+        dir.set(1, 0, 0);
+        break;
+      case 'right':
+        origin.set(center.x + size.x * 2, targetY + offY * size.y, center.z);
+        dir.set(-1, 0, 0);
+        break;
+    }
+
+    // Raycast to find surface
+    var raycaster = new THREE.Raycaster(origin, dir);
+    var meshes = [];
+    tshirtModel.traverse(function(child) {
+      if (child.isMesh) meshes.push(child);
+    });
+
+    var intersects = raycaster.intersectObjects(meshes, false);
+    if (intersects.length > 0) {
+      return {
+        point: intersects[0].point.clone(),
+        normal: intersects[0].face.normal.clone().transformDirection(intersects[0].object.matrixWorld).normalize()
+      };
+    }
+    return null;
+  }
 
   function updateDecal() {
     if (!is3DActive || !tshirtModel) return;
 
     // Remove existing decal
     if (decalPlane) {
-      scene.remove(decalPlane);
+      if (decalPlane.parent) decalPlane.parent.remove(decalPlane);
+      else scene.remove(decalPlane);
       decalPlane.geometry.dispose();
       if (decalPlane.material.map) decalPlane.material.map.dispose();
       decalPlane.material.dispose();
@@ -1047,33 +1103,27 @@ updateCanvas();
 
     if (state.ctype === 'none') return;
 
-    var placement = DECAL_POSITIONS[state.placement];
-    if (!placement) return;
+    var config = DECAL_CONFIG[state.placement];
+    if (!config) return;
 
     // Create texture from uploaded image or text
     var textureCanvas = document.createElement('canvas');
     textureCanvas.width = 512;
     textureCanvas.height = 512;
     var tctx = textureCanvas.getContext('2d');
-
-    // Clear with transparent background
     tctx.clearRect(0, 0, 512, 512);
 
     var hasContent = false;
 
     if (state.designTab === 'image' && uploadedImg) {
-      // Draw uploaded image centered on texture canvas
       var scale = parseFloat(document.getElementById('design-scale')?.value || 0.35);
       var opacity = parseFloat(document.getElementById('design-opacity')?.value || 1);
       var imgW = 512 * (scale / 0.35) * 0.8;
       var imgH = (imgW / uploadedImg.width) * uploadedImg.height;
       var imgX = (512 - imgW) / 2;
       var imgY = (512 - imgH) / 2;
-
       tctx.globalAlpha = opacity;
-      if (state.ctype === 'embroidery') {
-        tctx.filter = 'saturate(0.7) contrast(1.1)';
-      }
+      if (state.ctype === 'embroidery') tctx.filter = 'saturate(0.7) contrast(1.1)';
       tctx.drawImage(uploadedImg, imgX, imgY, imgW, imgH);
       hasContent = true;
     }
@@ -1083,16 +1133,12 @@ updateCanvas();
       if (txt) {
         var fsize = parseInt(document.getElementById('text-size')?.value || 32);
         var tcol = document.getElementById('text-color')?.value || '#0e0e0d';
-        // Scale font size for 512px canvas
         var canvasFontSize = fsize * 3;
         tctx.font = canvasFontSize + 'px ' + state.font;
         tctx.fillStyle = tcol;
         tctx.textAlign = 'center';
         tctx.textBaseline = 'middle';
-        if (state.ctype === 'embroidery') {
-          tctx.shadowColor = tcol;
-          tctx.shadowBlur = 4;
-        }
+        if (state.ctype === 'embroidery') { tctx.shadowColor = tcol; tctx.shadowBlur = 4; }
         tctx.fillText(txt, 256, 256);
         hasContent = true;
       }
@@ -1100,38 +1146,58 @@ updateCanvas();
 
     if (!hasContent) return;
 
-    // Create Three.js texture from canvas
+    // Find surface point via raycast
+    var hit = findSurfacePoint(config.dir, config.offX, config.offY);
+    if (!hit) {
+      console.warn('[3D] Raycast missed — using fallback position');
+      // Fallback positions
+      var fallbacks = {
+        'chest-left':   { x: -0.2, y: 1.0, z: 0.35 },
+        'chest-center': { x: 0,    y: 0.95, z: 0.38 },
+        'chest-right':  { x: 0.2,  y: 1.0, z: 0.35 },
+        'back-center':  { x: 0,    y: 0.95, z: -0.38 },
+        'sleeve-left':  { x: -0.45, y: 1.05, z: 0.05 },
+        'sleeve-right': { x: 0.45,  y: 1.05, z: 0.05 }
+      };
+      var fb = fallbacks[state.placement] || fallbacks['chest-center'];
+      hit = {
+        point: new THREE.Vector3(fb.x, fb.y, fb.z),
+        normal: new THREE.Vector3(0, 0, config.dir === 'back' ? -1 : 1)
+      };
+    }
+
+    // Create texture
     decalTexture = new THREE.CanvasTexture(textureCanvas);
     decalTexture.encoding = THREE.sRGBEncoding;
     decalTexture.needsUpdate = true;
 
-    // Create plane geometry for the decal
-    var geo = new THREE.PlaneGeometry(placement.sx, placement.sy);
+    // Create plane
+    var geo = new THREE.PlaneGeometry(config.sx, config.sy);
     var mat = new THREE.MeshBasicMaterial({
       map: decalTexture,
       transparent: true,
       depthTest: true,
       depthWrite: false,
       polygonOffset: true,
-      polygonOffsetFactor: -1,
-      side: THREE.DoubleSide
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -4,
+      side: THREE.FrontSide
     });
 
     decalPlane = new THREE.Mesh(geo, mat);
 
-    // Position the decal
-    decalPlane.position.set(placement.x, placement.y, placement.z);
+    // Position slightly in front of the surface (along normal)
+    var offset = hit.normal.clone().multiplyScalar(0.01);
+    decalPlane.position.copy(hit.point).add(offset);
 
-    // Rotate for back and sleeve placements
-    if (state.placement === 'back-center') {
-      decalPlane.rotation.y = Math.PI; // face backward
-    } else if (state.placement === 'sleeve-left') {
-      decalPlane.rotation.y = Math.PI * 0.5;
-    } else if (state.placement === 'sleeve-right') {
-      decalPlane.rotation.y = -Math.PI * 0.5;
-    }
+    // Orient the plane to face outward from the surface
+    var lookTarget = hit.point.clone().add(hit.normal);
+    decalPlane.lookAt(lookTarget);
 
-    scene.add(decalPlane);
+    // Add as child of model so it rotates with it
+    tshirtModel.add(decalPlane);
+    // Convert from world to model-local coords
+    tshirtModel.worldToLocal(decalPlane.position);
   }
 
   // ── HOOK INTO DESIGN CHANGES ──────────────────────────────────────────
