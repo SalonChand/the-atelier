@@ -4,6 +4,12 @@
 <meta charset="utf-8"/>
 <link rel="icon" type="image/png" href="logo.png"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0e0e0d"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="The Atelier"/>
+<link rel="apple-touch-icon" href="logo.png"/>
+<link rel="manifest" href="manifest.json"/>
 <title>Product | THE ATELIER</title>
 <meta name="description" content="Explore luxury ready-to-wear pieces by The Atelier. Each garment is handcrafted from the finest materials with obsessive attention to detail and architectural precision."/>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300;1,6..72,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
@@ -95,6 +101,7 @@
   .notify-bar { background: var(--ink); color: var(--cream); padding: 0.6rem 1rem; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; text-align: center; position: fixed; bottom: 0; left: 0; right: 0; transform: translateY(100%); transition: transform 0.4s; z-index: 200; }
   .notify-bar.show { transform: translateY(0); }
 </style>
+<link rel="stylesheet" href="mobile-app.css"/>
 </head>
 <body>
 <!-- ANNOUNCEMENT BANNER -->
@@ -404,5 +411,6 @@ function updateCartCount() {
 }
 updateCartCount();
 </script>
+<script src="mobile-app.js"></script>
 </body>
 </html>
