@@ -847,9 +847,20 @@ updateCanvas();
   var loader3D = null;   // set after Three.js loads
 
   function showModel(garmentKey) {
-    if (!loader3D) return; // Three.js not ready yet
+    console.log('[3D] showModel called for:', garmentKey, 'loader3D:', !!loader3D);
+    if (!loader3D) {
+      // Three.js not ready yet — queue this request
+      console.log('[3D] Loader not ready, queuing...');
+      var checkInterval = setInterval(function() {
+        if (loader3D) {
+          clearInterval(checkInterval);
+          showModel(garmentKey);
+        }
+      }, 200);
+      return;
+    }
     var file = MODEL_FILES[garmentKey];
-    if (!file) { switchTo2D(); return; }
+    if (!file) { console.log('[3D] No model file for:', garmentKey); switchTo2D(); return; }
 
     // Return cached
     if (loadedModels[garmentKey]) {
@@ -1350,11 +1361,14 @@ updateCanvas();
   // Override selectGarment to load 3D model for any garment with a .glb file
   var _origSelectGarment = window.selectGarment;
   window.selectGarment = function(g, btn) {
+    console.log('[3D] selectGarment override called for:', g);
     _origSelectGarment(g, btn);
     // All garments with GLB files get 3D treatment
     if (MODEL_FILES[g]) {
+      console.log('[3D] Loading 3D model for:', g);
       showModel(g);
     } else {
+      console.log('[3D] No 3D model, falling back to 2D for:', g);
       switchTo2D();
     }
   };
