@@ -199,25 +199,28 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
       <p class="ctrl-title">01 — Select Garment</p>
       <div class="garment-grid">
         <button class="garment-btn active" data-garment="tshirt" onclick="selectGarment('tshirt',this)">
-          <span class="garment-icon">👕</span><span class="garment-label">T-Shirt</span>
+          <svg class="garment-icon" width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4L4 8v6l4-1v15h16V13l4 1V8l-6-4h-3c0 2-2 4-3 4s-3-2-3-4h-3z"/></svg>
+          <span class="garment-label">T-Shirt</span>
         </button>
         <button class="garment-btn" data-garment="shirt" onclick="selectGarment('shirt',this)">
-          <span class="garment-icon">👔</span><span class="garment-label">Shirt</span>
+          <svg class="garment-icon" width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4L4 8v6l4-1v15h16V13l4 1V8l-6-4h-3l-3 4-3-4h-3z"/><line x1="16" y1="8" x2="16" y2="28"/><circle cx="16" cy="14" r="1"/><circle cx="16" cy="19" r="1"/><circle cx="16" cy="24" r="1"/></svg>
+          <span class="garment-label">Shirt</span>
         </button>
         <button class="garment-btn" data-garment="hoodie" onclick="selectGarment('hoodie',this)">
-          <span class="garment-icon">🧥</span><span class="garment-label">Hoodie</span>
+          <svg class="garment-icon" width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 6L3 10v8l5-1v13h16V17l5 1V10l-7-4c0 0-1 5-6 5s-6-5-6-5z"/><path d="M12 16c0 0 2 3 4 3s4-3 4-3"/></svg>
+          <span class="garment-label">Hoodie</span>
         </button>
         <button class="garment-btn" data-garment="jacket" onclick="selectGarment('jacket',this)">
-          <span class="garment-icon">🥼</span><span class="garment-label">Jacket</span>
+          <svg class="garment-icon" width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4L3 9v8l5-2v15h16V15l5 2V9l-7-5h-2l-4 4-4-4h-2z"/><path d="M14 8v20M18 8v20"/><rect x="10" y="18" width="4" height="4" rx="0.5"/></svg>
+          <span class="garment-label">Jacket</span>
         </button>
         <button class="garment-btn" data-garment="coat" onclick="selectGarment('coat',this)">
-          <span class="garment-icon">🧣</span><span class="garment-label">Coat</span>
+          <svg class="garment-icon" width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 8v8l5-2v18h16V14l5 2V8l-7-5h-2l-4 5-4-5h-2z"/><path d="M15 8v20"/><circle cx="15" cy="13" r="1"/><circle cx="15" cy="18" r="1"/><circle cx="15" cy="23" r="1"/></svg>
+          <span class="garment-label">Coat</span>
         </button>
         <button class="garment-btn" data-garment="pant" onclick="selectGarment('pant',this)">
-          <span class="garment-icon">👖</span><span class="garment-label">Pant</span>
-        </button>
-        <button class="garment-btn" data-garment="tracksuit" onclick="selectGarment('tracksuit',this)">
-          <span class="garment-icon">🩱</span><span class="garment-label">Tracksuit</span>
+          <svg class="garment-icon" width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 4h16v8c0 2-2 4-4 4v12h-4V16h-1v12h-4V16c-2 0-4-2-4-4V4z"/><line x1="8" y1="8" x2="24" y2="8"/></svg>
+          <span class="garment-label">Pant</span>
         </button>
       </div>
     </div>
@@ -410,8 +413,8 @@ var state = {
   notes: ''
 };
 
-var GARMENT_NAMES = { tshirt:'T-Shirt', shirt:'Shirt', hoodie:'Hoodie', jacket:'Jacket', coat:'Coat', pant:'Pant', tracksuit:'Tracksuit' };
-var BASE_PRICES   = { tshirt:2800, shirt:3200, hoodie:4500, jacket:5800, coat:7200, pant:3500, tracksuit:5500 };
+var GARMENT_NAMES = { tshirt:'T-Shirt', shirt:'Shirt', hoodie:'Hoodie', jacket:'Jacket', coat:'Coat', pant:'Pant' };
+var BASE_PRICES   = { tshirt:2800, shirt:3200, hoodie:4500, jacket:5800, coat:7200, pant:3500 };
 var CTYPE_PRICES  = { print:500, embroidery:900, none:0 };
 
 // ── GARMENT SHAPES (drawn with Canvas 2D) ──────────────────────────────────
@@ -893,66 +896,108 @@ updateCanvas();
     controls.target.set(0, 0.8, 0);
     controls.update();
 
-    // Load the T-shirt model
+    // ── MULTI-MODEL LOADER ────────────────────────────────────────────────
     var loader = new THREE.GLTFLoader();
-    loader.load('tshirt.glb',
-      function(gltf) {
-        tshirtModel = gltf.scene;
+    var MODEL_FILES = {
+      tshirt: 'tshirt.glb',
+      shirt: 'shirt.glb',
+      hoodie: 'hoodie.glb',
+      jacket: 'jacket.glb',
+      coat: 'coat.glb',
+      pant: 'pant.glb'
+    };
+    var loadedModels = {}; // cache
 
-        // Center and scale the model
-        var box = new THREE.Box3().setFromObject(tshirtModel);
-        var center = box.getCenter(new THREE.Vector3());
-        var size = box.getSize(new THREE.Vector3());
-        var maxDim = Math.max(size.x, size.y, size.z);
-        var scale = 2.0 / maxDim;
-        tshirtModel.scale.setScalar(scale);
+    function loadModel(garmentKey, callback) {
+      var file = MODEL_FILES[garmentKey];
+      if (!file) { callback(null); return; }
 
-        // Re-center after scaling
-        box.setFromObject(tshirtModel);
-        center = box.getCenter(new THREE.Vector3());
-        tshirtModel.position.sub(center);
-        tshirtModel.position.y += size.y * scale * 0.5;
+      // Return cached if already loaded
+      if (loadedModels[garmentKey]) {
+        callback(loadedModels[garmentKey]);
+        return;
+      }
 
-        // Enable shadows
-        tshirtModel.traverse(function(child) {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            // Store original material for color changes
-            child.userData.originalMaterial = child.material.clone();
+      // Show loading
+      if (loadingEl) {
+        loadingEl.style.display = 'flex';
+        var loadText = loadingEl.querySelector('p');
+        if (loadText) loadText.textContent = 'Loading 3D Model…';
+      }
+
+      loader.load(file,
+        function(gltf) {
+          var model = gltf.scene;
+
+          // Center and scale
+          var box = new THREE.Box3().setFromObject(model);
+          var center = box.getCenter(new THREE.Vector3());
+          var size = box.getSize(new THREE.Vector3());
+          var maxDim = Math.max(size.x, size.y, size.z);
+          var scale = 2.0 / maxDim;
+          model.scale.setScalar(scale);
+
+          // Re-center
+          box.setFromObject(model);
+          center = box.getCenter(new THREE.Vector3());
+          model.position.sub(center);
+          model.position.y += size.y * scale * 0.5;
+
+          // Shadows
+          model.traverse(function(child) {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+              child.userData.originalMaterial = child.material.clone();
+            }
+          });
+
+          loadedModels[garmentKey] = model;
+          console.log('[3D] Loaded:', garmentKey);
+          callback(model);
+        },
+        function(progress) {
+          if (progress.total > 0) {
+            var pct = Math.round((progress.loaded / progress.total) * 100);
+            var loadText = loadingEl ? loadingEl.querySelector('p') : null;
+            if (loadText) loadText.textContent = 'Loading ' + (GARMENT_NAMES[garmentKey]||garmentKey) + '… ' + pct + '%';
           }
-        });
+        },
+        function(error) {
+          console.error('[3D] Failed to load:', garmentKey, error);
+          callback(null);
+        }
+      );
+    }
 
+    function showModel(garmentKey) {
+      // Remove current model from scene
+      if (tshirtModel) scene.remove(tshirtModel);
+
+      loadModel(garmentKey, function(model) {
+        if (!model) {
+          // No 3D model for this garment — fall back to 2D
+          if (loadingEl) loadingEl.style.display = 'none';
+          switchTo2D();
+          return;
+        }
+
+        tshirtModel = model;
         scene.add(tshirtModel);
-
-        // Store bounding box for raycasting
         modelBBox = new THREE.Box3().setFromObject(tshirtModel);
 
-        // Hide loading
         if (loadingEl) loadingEl.style.display = 'none';
 
-        // Apply initial color
         updateModelColor(state.color);
+        decalState.placed = false;
+        updateDecal();
 
-        console.log('[3D] T-shirt model loaded successfully');
-      },
-      function(progress) {
-        // Loading progress
-        if (progress.total > 0) {
-          var pct = Math.round((progress.loaded / progress.total) * 100);
-          var loadText = loadingEl ? loadingEl.querySelector('p') : null;
-          if (loadText) loadText.textContent = 'Loading 3D Model… ' + pct + '%';
-        }
-      },
-      function(error) {
-        console.error('[3D] Failed to load model:', error);
-        if (loadingEl) {
-          loadingEl.innerHTML = '<p style="font-size:0.65rem;color:#8b1a1a;">Failed to load 3D model</p><p style="font-size:0.55rem;color:#8a7f73;margin-top:0.5rem;">Falling back to 2D preview</p>';
-        }
-        // Fall back to 2D
-        setTimeout(function() { switchTo2D(); }, 2000);
-      }
-    );
+        switchTo3D();
+      });
+    }
+
+    // Load initial model (T-shirt)
+    showModel('tshirt');
 
     // Animation loop
     function animate() {
@@ -972,11 +1017,6 @@ updateCanvas();
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     });
-
-    // If current garment is T-shirt, show 3D immediately
-    if (state.garment === 'tshirt') {
-      switchTo3D();
-    }
   }
 
   // ── SWITCH BETWEEN 3D AND 2D ──────────────────────────────────────────
@@ -1148,7 +1188,7 @@ updateCanvas();
 
     var origin = new THREE.Vector3();
     var dir = new THREE.Vector3();
-    var chestY = center.y + size.y * 0.12;
+    var chestY = center.y + size.y * 0.2;
 
     if (isBack) {
       origin.set(center.x, chestY, center.z - size.z * 3);
@@ -1318,13 +1358,13 @@ updateCanvas();
   }
 
   // ── OVERRIDE EXISTING FUNCTIONS ───────────────────────────────────────
-  // Override selectGarment to switch between 3D and 2D
+  // Override selectGarment to load 3D model for any garment with a .glb file
   var _origSelectGarment = window.selectGarment;
   window.selectGarment = function(g, btn) {
     _origSelectGarment(g, btn);
-    if (g === 'tshirt' && tshirtModel) {
-      switchTo3D();
-      updateModelColor(state.color);
+    // All garments with GLB files get 3D treatment
+    if (MODEL_FILES[g]) {
+      showModel(g);
     } else {
       switchTo2D();
     }
