@@ -984,7 +984,7 @@ updateCanvas();
     is3DActive = true;
     viewer3d.style.display = 'block';
     canvas2d.style.display = 'none';
-    document.getElementById('canvas-hint').textContent = 'Drag to rotate · Scroll to zoom · Upload a design above';
+    document.getElementById('canvas-hint').textContent = 'Drag to rotate · Design Size slider to resize · Double-click shirt to reposition design';
 
     // Resize renderer
     setTimeout(function() {
@@ -1022,79 +1022,74 @@ updateCanvas();
     });
   }
 
-  // ── DECAL SYSTEM — Image/Text overlay on 3D model ────────────────────
+  // ── DECAL SYSTEM — Click-to-place, drag-to-move design on 3D model ───
   var decalPlane = null;
   var decalTexture = null;
-  var modelBBox = null; // will be set after model loads
+  var modelBBox = null;
+  var decalState = { x: 0, y: 0, z: 0.5, size: 0.6, placed: false };
+  var isDraggingDecal = false;
+  var raycaster = new THREE.Raycaster();
+  var mouse = new THREE.Vector2();
 
-  // Placement configs: direction to raycast from, and size
-  var DECAL_CONFIG = {
-    'chest-left':   { dir: 'front', offX: -0.15, offY: 0.05,  sx: 0.25, sy: 0.25 },
-    'chest-center': { dir: 'front', offX: 0,     offY: 0,     sx: 0.4,  sy: 0.35 },
-    'chest-right':  { dir: 'front', offX: 0.15,  offY: 0.05,  sx: 0.25, sy: 0.25 },
-    'back-center':  { dir: 'back',  offX: 0,     offY: 0,     sx: 0.45, sy: 0.4  },
-    'sleeve-left':  { dir: 'left',  offX: 0,     offY: 0.1,   sx: 0.18, sy: 0.18 },
-    'sleeve-right': { dir: 'right', offX: 0,     offY: 0.1,   sx: 0.18, sy: 0.18 }
-  };
-
-  function findSurfacePoint(direction, offX, offY) {
-    if (!tshirtModel || !modelBBox) return null;
-
-    var center = modelBBox.getCenter(new THREE.Vector3());
-    var size = modelBBox.getSize(new THREE.Vector3());
-
-    // Starting point for raycast (outside the model)
-    var origin = new THREE.Vector3();
-    var dir = new THREE.Vector3();
-    var up = new THREE.Vector3(0, 1, 0);
-    var right = new THREE.Vector3(1, 0, 0);
-
-    // Target point on model (chest area = upper-center of model)
-    var targetY = center.y + size.y * 0.15 + offY * size.y;
-
-    switch(direction) {
-      case 'front':
-        origin.set(center.x + offX * size.x, targetY, center.z + size.z * 2);
-        dir.set(0, 0, -1);
-        break;
-      case 'back':
-        origin.set(center.x + offX * size.x, targetY, center.z - size.z * 2);
-        dir.set(0, 0, 1);
-        break;
-      case 'left':
-        origin.set(center.x - size.x * 2, targetY + offY * size.y, center.z);
-        dir.set(1, 0, 0);
-        break;
-      case 'right':
-        origin.set(center.x + size.x * 2, targetY + offY * size.y, center.z);
-        dir.set(-1, 0, 0);
-        break;
-    }
-
-    // Raycast to find surface
-    var raycaster = new THREE.Raycaster(origin, dir);
+  function getMeshes() {
     var meshes = [];
-    tshirtModel.traverse(function(child) {
-      if (child.isMesh) meshes.push(child);
-    });
+    if (tshirtModel) tshirtModel.traverse(function(c) { if (c.isMesh) meshes.push(c); });
+    return meshes;
+  }
 
-    var intersects = raycaster.intersectObjects(meshes, false);
-    if (intersects.length > 0) {
-      return {
-        point: intersects[0].point.clone(),
-        normal: intersects[0].face.normal.clone().transformDirection(intersects[0].object.matrixWorld).normalize()
-      };
+  function buildDecalTexture() {
+    var tc = document.createElement('canvas');
+    tc.width = 1024; tc.height = 1024;
+    var tctx = tc.getContext('2d');
+    tctx.clearRect(0, 0, 1024, 1024);
+    var hasContent = false;
+
+    if (state.designTab === 'image' && uploadedImg) {
+      var opacity = parseFloat(document.getElementById('design-opacity')?.value || 1);
+      // Draw image filling the canvas while maintaining aspect ratio
+      var iw = uploadedImg.width, ih = uploadedImg.height;
+      var ratio = Math.min(900 / iw, 900 / ih);
+      var dw = iw * ratio, dh = ih * ratio;
+      tctx.globalAlpha = opacity;
+      if (state.ctype === 'embroidery') tctx.filter = 'saturate(0.7) contrast(1.1)';
+      tctx.drawImage(uploadedImg, (1024 - dw) / 2, (1024 - dh) / 2, dw, dh);
+      hasContent = true;
     }
-    return null;
+
+    if (state.designTab === 'text' && state.ctype !== 'none') {
+      var txt = document.getElementById('design-text')?.value || '';
+      if (txt) {
+        var fsize = parseInt(document.getElementById('text-size')?.value || 32) * 4;
+        var tcol = document.getElementById('text-color')?.value || '#0e0e0d';
+        tctx.font = 'bold ' + fsize + 'px ' + state.font;
+        tctx.fillStyle = tcol;
+        tctx.textAlign = 'center';
+        tctx.textBaseline = 'middle';
+        if (state.ctype === 'embroidery') { tctx.shadowColor = tcol; tctx.shadowBlur = 6; }
+        // Word wrap if text is long
+        var words = txt.split(' ');
+        var lines = []; var line = '';
+        for (var w = 0; w < words.length; w++) {
+          var test = line + (line ? ' ' : '') + words[w];
+          if (tctx.measureText(test).width > 900 && line) { lines.push(line); line = words[w]; }
+          else line = test;
+        }
+        lines.push(line);
+        var lineH = fsize * 1.2;
+        var startY = 512 - ((lines.length - 1) * lineH) / 2;
+        for (var l = 0; l < lines.length; l++) tctx.fillText(lines[l], 512, startY + l * lineH);
+        hasContent = true;
+      }
+    }
+    return hasContent ? tc : null;
   }
 
   function updateDecal() {
     if (!is3DActive || !tshirtModel) return;
 
-    // Remove existing decal
+    // Remove old decal
     if (decalPlane) {
       if (decalPlane.parent) decalPlane.parent.remove(decalPlane);
-      else scene.remove(decalPlane);
       decalPlane.geometry.dispose();
       if (decalPlane.material.map) decalPlane.material.map.dispose();
       decalPlane.material.dispose();
@@ -1103,76 +1098,15 @@ updateCanvas();
 
     if (state.ctype === 'none') return;
 
-    var config = DECAL_CONFIG[state.placement];
-    if (!config) return;
+    var texCanvas = buildDecalTexture();
+    if (!texCanvas) return;
 
-    // Create texture from uploaded image or text
-    var textureCanvas = document.createElement('canvas');
-    textureCanvas.width = 512;
-    textureCanvas.height = 512;
-    var tctx = textureCanvas.getContext('2d');
-    tctx.clearRect(0, 0, 512, 512);
-
-    var hasContent = false;
-
-    if (state.designTab === 'image' && uploadedImg) {
-      var scale = parseFloat(document.getElementById('design-scale')?.value || 0.35);
-      var opacity = parseFloat(document.getElementById('design-opacity')?.value || 1);
-      var imgW = 512 * (scale / 0.35) * 0.8;
-      var imgH = (imgW / uploadedImg.width) * uploadedImg.height;
-      var imgX = (512 - imgW) / 2;
-      var imgY = (512 - imgH) / 2;
-      tctx.globalAlpha = opacity;
-      if (state.ctype === 'embroidery') tctx.filter = 'saturate(0.7) contrast(1.1)';
-      tctx.drawImage(uploadedImg, imgX, imgY, imgW, imgH);
-      hasContent = true;
-    }
-
-    if (state.designTab === 'text' && state.ctype !== 'none') {
-      var txt = document.getElementById('design-text')?.value || '';
-      if (txt) {
-        var fsize = parseInt(document.getElementById('text-size')?.value || 32);
-        var tcol = document.getElementById('text-color')?.value || '#0e0e0d';
-        var canvasFontSize = fsize * 3;
-        tctx.font = canvasFontSize + 'px ' + state.font;
-        tctx.fillStyle = tcol;
-        tctx.textAlign = 'center';
-        tctx.textBaseline = 'middle';
-        if (state.ctype === 'embroidery') { tctx.shadowColor = tcol; tctx.shadowBlur = 4; }
-        tctx.fillText(txt, 256, 256);
-        hasContent = true;
-      }
-    }
-
-    if (!hasContent) return;
-
-    // Find surface point via raycast
-    var hit = findSurfacePoint(config.dir, config.offX, config.offY);
-    if (!hit) {
-      console.warn('[3D] Raycast missed — using fallback position');
-      // Fallback positions
-      var fallbacks = {
-        'chest-left':   { x: -0.2, y: 1.0, z: 0.35 },
-        'chest-center': { x: 0,    y: 0.95, z: 0.38 },
-        'chest-right':  { x: 0.2,  y: 1.0, z: 0.35 },
-        'back-center':  { x: 0,    y: 0.95, z: -0.38 },
-        'sleeve-left':  { x: -0.45, y: 1.05, z: 0.05 },
-        'sleeve-right': { x: 0.45,  y: 1.05, z: 0.05 }
-      };
-      var fb = fallbacks[state.placement] || fallbacks['chest-center'];
-      hit = {
-        point: new THREE.Vector3(fb.x, fb.y, fb.z),
-        normal: new THREE.Vector3(0, 0, config.dir === 'back' ? -1 : 1)
-      };
-    }
-
-    // Create texture
-    decalTexture = new THREE.CanvasTexture(textureCanvas);
+    decalTexture = new THREE.CanvasTexture(texCanvas);
     decalTexture.encoding = THREE.sRGBEncoding;
     decalTexture.needsUpdate = true;
 
-    // Create plane
-    var geo = new THREE.PlaneGeometry(config.sx, config.sy);
+    var sz = decalState.size;
+    var geo = new THREE.PlaneGeometry(sz, sz);
     var mat = new THREE.MeshBasicMaterial({
       map: decalTexture,
       transparent: true,
@@ -1181,88 +1115,174 @@ updateCanvas();
       polygonOffset: true,
       polygonOffsetFactor: -4,
       polygonOffsetUnits: -4,
-      side: THREE.FrontSide
+      side: THREE.DoubleSide
     });
 
     decalPlane = new THREE.Mesh(geo, mat);
 
-    // Position slightly in front of the surface (along normal)
-    var offset = hit.normal.clone().multiplyScalar(0.01);
-    decalPlane.position.copy(hit.point).add(offset);
+    // Place on surface using raycast if not manually placed yet
+    if (!decalState.placed) {
+      autoPlaceDecal();
+    } else {
+      // Use saved local position
+      decalPlane.position.set(decalState.x, decalState.y, decalState.z);
+      // Face outward based on z position
+      if (decalState.z < 0) decalPlane.rotation.y = Math.PI;
+    }
 
-    // Orient the plane to face outward from the surface
-    var lookTarget = hit.point.clone().add(hit.normal);
-    decalPlane.lookAt(lookTarget);
-
-    // Add as child of model so it rotates with it
     tshirtModel.add(decalPlane);
-    // Convert from world to model-local coords
-    tshirtModel.worldToLocal(decalPlane.position);
+    decalState.placed = true;
   }
 
-  // ── HOOK INTO DESIGN CHANGES ──────────────────────────────────────────
-  // Watch for image uploads
-  var _origHandleImageUpload = window.handleImageUpload;
-  window.handleImageUpload = function(e) {
-    _origHandleImageUpload(e);
-    // Wait for image to load then update decal
-    setTimeout(function() { updateDecal(); }, 200);
-  };
+  function autoPlaceDecal() {
+    if (!decalPlane || !tshirtModel || !modelBBox) return;
+    var center = modelBBox.getCenter(new THREE.Vector3());
+    var size = modelBBox.getSize(new THREE.Vector3());
 
-  // Watch for image removal
-  var _origClearDesign = window.clearDesign;
-  window.clearDesign = function() {
-    _origClearDesign();
+    // Determine raycast based on placement
+    var isBack = state.placement === 'back-center';
+    var isSleeveL = state.placement === 'sleeve-left';
+    var isSleeveR = state.placement === 'sleeve-right';
+    var isLeft = state.placement === 'chest-left';
+    var isRight = state.placement === 'chest-right';
+
+    var origin = new THREE.Vector3();
+    var dir = new THREE.Vector3();
+    var chestY = center.y + size.y * 0.12;
+
+    if (isBack) {
+      origin.set(center.x, chestY, center.z - size.z * 3);
+      dir.set(0, 0, 1);
+    } else if (isSleeveL) {
+      origin.set(center.x - size.x * 3, chestY + size.y * 0.08, center.z);
+      dir.set(1, 0, 0);
+    } else if (isSleeveR) {
+      origin.set(center.x + size.x * 3, chestY + size.y * 0.08, center.z);
+      dir.set(-1, 0, 0);
+    } else {
+      var offX = isLeft ? -size.x * 0.2 : isRight ? size.x * 0.2 : 0;
+      origin.set(center.x + offX, chestY, center.z + size.z * 3);
+      dir.set(0, 0, -1);
+    }
+
+    var rc = new THREE.Raycaster(origin, dir);
+    var hits = rc.intersectObjects(getMeshes(), false);
+
+    if (hits.length > 0) {
+      var pt = hits[0].point.clone();
+      var normal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
+      // Offset slightly
+      pt.add(normal.clone().multiplyScalar(0.015));
+      // Convert to model-local
+      tshirtModel.worldToLocal(pt);
+      decalPlane.position.copy(pt);
+      // Orient to face outward
+      var lookPt = pt.clone().add(normal.clone().multiplyScalar(0.1));
+      tshirtModel.worldToLocal(lookPt);
+      decalPlane.lookAt(lookPt);
+
+      decalState.x = pt.x;
+      decalState.y = pt.y;
+      decalState.z = pt.z;
+    } else {
+      // Fallback
+      decalPlane.position.set(0, 0.1, isBack ? -0.45 : 0.45);
+      if (isBack) decalPlane.rotation.y = Math.PI;
+      decalState.x = 0; decalState.y = 0.1; decalState.z = isBack ? -0.45 : 0.45;
+    }
+  }
+
+  // ── INTERACTIVE: Click shirt to re-place design ───────────────────────
+  renderer.domElement.addEventListener('dblclick', function(e) {
+    if (!is3DActive || !tshirtModel || state.ctype === 'none') return;
+    if (!uploadedImg && !(state.designTab === 'text' && document.getElementById('design-text')?.value)) return;
+
+    var rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    var hits = raycaster.intersectObjects(getMeshes(), false);
+    if (hits.length > 0) {
+      var pt = hits[0].point.clone();
+      var normal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
+      pt.add(normal.clone().multiplyScalar(0.015));
+      tshirtModel.worldToLocal(pt);
+      decalState.x = pt.x;
+      decalState.y = pt.y;
+      decalState.z = pt.z;
+      decalState.placed = true;
+
+      updateDecal();
+      // Re-orient
+      if (decalPlane) {
+        var lookPt2 = pt.clone().add(normal.clone().multiplyScalar(0.1));
+        tshirtModel.worldToLocal(lookPt2);
+        decalPlane.lookAt(lookPt2);
+      }
+    }
+  });
+
+  // ── SCROLL ON CANVAS TO RESIZE DECAL ──────────────────────────────────
+  renderer.domElement.addEventListener('wheel', function(e) {
+    if (!decalPlane || !is3DActive) return;
+    // Only resize if Shift is held, otherwise zoom camera
+    if (!e.shiftKey) return;
+    e.preventDefault();
+    decalState.size = Math.max(0.1, Math.min(1.5, decalState.size - e.deltaY * 0.001));
     updateDecal();
-  };
+  }, { passive: false });
 
-  // Watch for text changes
-  var designTextEl = document.getElementById('design-text');
-  if (designTextEl) {
-    designTextEl.addEventListener('input', function() {
-      if (is3DActive) updateDecal();
+  // ── DESIGN SIZE SLIDER → controls decal size ─────────────────────────
+  // Override the design-scale slider to control 3D decal size
+  var scaleSlider3D = document.getElementById('design-scale');
+  if (scaleSlider3D) {
+    scaleSlider3D.addEventListener('input', function() {
+      if (!is3DActive) return;
+      decalState.size = parseFloat(this.value) * 2; // scale 0-1 slider to 0-2 range
+      updateDecal();
     });
   }
 
-  // Watch for scale/opacity slider changes
-  var scaleSlider = document.getElementById('design-scale');
+  // ── HOOK INTO DESIGN CHANGES ──────────────────────────────────────────
+  var _origHandleImageUpload = window.handleImageUpload;
+  window.handleImageUpload = function(e) {
+    _origHandleImageUpload(e);
+    setTimeout(function() {
+      decalState.placed = false; // auto-place on new upload
+      updateDecal();
+    }, 300);
+  };
+
+  var _origClearDesign = window.clearDesign;
+  window.clearDesign = function() {
+    _origClearDesign();
+    decalState.placed = false;
+    updateDecal();
+  };
+
+  var designTextEl = document.getElementById('design-text');
+  if (designTextEl) designTextEl.addEventListener('input', function() { if (is3DActive) updateDecal(); });
+
   var opacitySlider = document.getElementById('design-opacity');
-  if (scaleSlider) scaleSlider.addEventListener('input', function() { if (is3DActive) updateDecal(); });
   if (opacitySlider) opacitySlider.addEventListener('input', function() { if (is3DActive) updateDecal(); });
 
-  // Watch for text size/color changes
   var textSizeEl = document.getElementById('text-size');
   var textColorEl = document.getElementById('text-color');
   if (textSizeEl) textSizeEl.addEventListener('input', function() { if (is3DActive) updateDecal(); });
   if (textColorEl) textColorEl.addEventListener('input', function() { if (is3DActive) updateDecal(); });
 
-  // Watch for design tab switch
   var _origSwitchDesignTab = window.switchDesignTab;
-  window.switchDesignTab = function(tab) {
-    _origSwitchDesignTab(tab);
-    if (is3DActive) updateDecal();
-  };
+  window.switchDesignTab = function(tab) { _origSwitchDesignTab(tab); if (is3DActive) { decalState.placed = false; updateDecal(); } };
 
-  // Watch for placement changes
   var _origSelectPlacement = window.selectPlacement;
-  window.selectPlacement = function(p, btn) {
-    _origSelectPlacement(p, btn);
-    if (is3DActive) updateDecal();
-  };
+  window.selectPlacement = function(p, btn) { _origSelectPlacement(p, btn); if (is3DActive) { decalState.placed = false; updateDecal(); } };
 
-  // Watch for ctype changes
   var _origSelectCtype = window.selectCtype;
-  window.selectCtype = function(t, btn) {
-    _origSelectCtype(t, btn);
-    if (is3DActive) updateDecal();
-  };
+  window.selectCtype = function(t, btn) { _origSelectCtype(t, btn); if (is3DActive) updateDecal(); };
 
-  // Watch for font changes
   var _origSelectFont = window.selectFont;
-  window.selectFont = function(f, btn) {
-    _origSelectFont(f, btn);
-    if (is3DActive) updateDecal();
-  };
+  window.selectFont = function(f, btn) { _origSelectFont(f, btn); if (is3DActive) updateDecal(); };
 
   // ── CAMERA VIEWS ──────────────────────────────────────────────────────
   function setCameraView(view) {
