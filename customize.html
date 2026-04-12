@@ -996,6 +996,9 @@ updateCanvas();
     // Set the loader reference for showModel to use
     loader3D = new THREE.GLTFLoader();
 
+    // Attach event listeners now that renderer exists
+    attachRendererListeners();
+
     // Load initial model
     showModel('tshirt');
 
@@ -1233,16 +1236,20 @@ updateCanvas();
   }
 
   // ── INTERACTIVE: Click shirt to re-place design ───────────────────────
-  renderer.domElement.addEventListener('dblclick', function(e) {
-    if (!is3DActive || !tshirtModel || state.ctype === 'none') return;
-    if (!uploadedImg && !(state.designTab === 'text' && document.getElementById('design-text')?.value)) return;
+  // These listeners are attached after initViewer3D creates the renderer
+  function attachRendererListeners() {
+    if (!renderer || !renderer.domElement) return;
 
-    var rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    renderer.domElement.addEventListener('dblclick', function(e) {
+      if (!is3DActive || !tshirtModel || state.ctype === 'none') return;
+      if (!uploadedImg && !(state.designTab === 'text' && document.getElementById('design-text')?.value)) return;
 
-    raycaster.setFromCamera(mouse, camera);
-    var hits = raycaster.intersectObjects(getMeshes(), false);
+      var rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      var hits = raycaster.intersectObjects(getMeshes(), false);
     if (hits.length > 0) {
       var pt = hits[0].point.clone();
       var normal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
@@ -1266,12 +1273,13 @@ updateCanvas();
   // ── SCROLL ON CANVAS TO RESIZE DECAL ──────────────────────────────────
   renderer.domElement.addEventListener('wheel', function(e) {
     if (!decalPlane || !is3DActive) return;
-    // Only resize if Shift is held, otherwise zoom camera
     if (!e.shiftKey) return;
     e.preventDefault();
     decalState.size = Math.max(0.1, Math.min(1.5, decalState.size - e.deltaY * 0.001));
     updateDecal();
   }, { passive: false });
+
+  } // end attachRendererListeners
 
   // ── DESIGN SIZE SLIDER → controls decal size ─────────────────────────
   // Override the design-scale slider to control 3D decal size
