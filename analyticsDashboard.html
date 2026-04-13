@@ -48,7 +48,7 @@
   .chart-card { background: white; padding: 2rem; border: 1px solid rgba(200,184,154,0.2); }
   .chart-title { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6b6258; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
   canvas { max-height: 260px; }
-  .table-card { background: white; border: 1px solid rgba(200,184,154,0.2); margin-bottom: 2.5rem; }
+  .table-card { background: white; border: 1px solid rgba(200,184,154,0.2); margin-bottom: 2.5rem; overflow: hidden; }
   .table-header { padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(200,184,154,0.2); flex-wrap: wrap; gap: 0.75rem; }
   .table-title { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; }
   .table-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
@@ -337,7 +337,7 @@
       <button class="btn-secondary" style="font-size:0.55rem;padding:0.45rem 1rem;" onclick="document.getElementById('product-lookup-input').value='';productLookup()">Clear</button>
     </div>
     <div id="product-lookup-results" style="display:none;"></div>
-    <table><thead><tr><th onclick="sortTable('orders','id')">Order ↕</th><th onclick="sortTable('orders','customer')">Customer ↕</th><th>Product</th><th onclick="sortTable('orders','date')">Date ↕</th><th onclick="sortTable('orders','amount')">Amount ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="orders-tbody"></tbody></table>
+    <div class="table-scroll"><table><thead><tr><th onclick="sortTable('orders','id')">Order ↕</th><th onclick="sortTable('orders','customer')">Customer ↕</th><th>Product</th><th onclick="sortTable('orders','date')">Date ↕</th><th onclick="sortTable('orders','amount')">Amount ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="orders-tbody"></tbody></table></div>
     <div class="pagination" id="orders-pagination"></div>
   </div>
 </div>
@@ -359,7 +359,7 @@
         <button class="btn-primary" onclick="openProductModal()">+ Add Product</button>
       </div>
     </div>
-    <table><thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Color</th><th onclick="sortTable('products','price')">Price ↕</th><th onclick="sortTable('products','stock')">Stock ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="products-tbody"></tbody></table>
+    <div class="table-scroll"><table><thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Color</th><th onclick="sortTable('products','price')">Price ↕</th><th onclick="sortTable('products','stock')">Stock ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="products-tbody"></tbody></table>
   </div>
 </div>
 
@@ -378,7 +378,7 @@
         <input class="table-search" placeholder="Search inventory..." id="inv-search" oninput="renderInventoryTable()"/>
       </div>
     </div>
-    <table><thead><tr><th>Product</th><th>SKU</th><th>Size</th><th onclick="sortTable('inventory','stock')">Stock ↕</th><th>Level</th><th>Status</th><th>Actions</th></tr></thead><tbody id="inventory-tbody"></tbody></table>
+    <div class="table-scroll"><table><thead><tr><th>Product</th><th>SKU</th><th>Size</th><th onclick="sortTable('inventory','stock')">Stock ↕</th><th>Level</th><th>Status</th><th>Actions</th></tr></thead><tbody id="inventory-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -398,7 +398,7 @@
         <button class="btn-primary" onclick="exportCSV('customers')">Export CSV</button>
       </div>
     </div>
-    <table><thead><tr><th>Name</th><th>Email</th><th>Country</th><th>Products Bought</th><th onclick="sortTable('customers','orders')">Orders ↕</th><th onclick="sortTable('customers','spent')">Total Spent ↕</th><th>Joined</th><th>Action</th></tr></thead><tbody id="customers-tbody"></tbody></table>
+    <div class="table-scroll"><table><thead><tr><th>Name</th><th>Email</th><th>Country</th><th>Products Bought</th><th onclick="sortTable('customers','orders')">Orders ↕</th><th onclick="sortTable('customers','spent')">Total Spent ↕</th><th>Joined</th><th>Action</th></tr></thead><tbody id="customers-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -410,7 +410,7 @@
       <span class="table-title">Manage Collections</span>
       <div class="table-actions"><button class="btn-primary" onclick="openCollectionModal()">+ New Collection</button></div>
     </div>
-    <table><thead><tr><th>Collection Name</th><th>Season</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead><tbody id="collections-tbody"></tbody></table>
+    <div class="table-scroll"><table><thead><tr><th>Collection Name</th><th>Season</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead><tbody id="collections-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -422,7 +422,7 @@
       <span class="table-title">Promo Codes &amp; Discounts</span>
       <div class="table-actions"><button class="btn-primary" onclick="openPromoModal()">+ Create Promo</button></div>
     </div>
-    <table><thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Used</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead><tbody id="promotions-tbody"></tbody></table>
+    <div class="table-scroll"><table><thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Used</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead><tbody id="promotions-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -447,7 +447,7 @@
         <input class="table-search" placeholder="Search reviews..." id="review-search" oninput="renderReviewsTable()"/>
       </div>
     </div>
-    <table><thead><tr><th>Customer</th><th>Product</th><th>Rating</th><th>Review</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="reviews-tbody"></tbody></table>
+    <div class="table-scroll"><table><thead><tr><th>Customer</th><th>Product</th><th>Rating</th><th>Review</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="reviews-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -464,10 +464,10 @@
         <button class="btn-primary" onclick="openAdminModal('','admin')">+ Add Admin</button>
       </div>
     </div>
-    <table>
+    <div class="table-scroll"><table>
       <thead><tr><th>Email</th><th>Role</th><th>Password</th><th>Actions</th></tr></thead>
       <tbody id="admins-tbody"></tbody>
-    </table>
+    </table></div>
   </div>
 </div>
 
@@ -509,6 +509,7 @@
         <input class="table-search" placeholder="Search inquiries..." id="inq-search" oninput="renderInquiriesTable()"/>
       </div>
     </div>
+    <div class="table-scroll">
     <table>
       <thead><tr>
         <th></th>
@@ -523,6 +524,7 @@
       </tr></thead>
       <tbody id="inquiries-tbody"></tbody>
     </table>
+    </div>
     <div class="pagination" id="inq-pagination"></div>
   </div>
 </div>
@@ -1976,7 +1978,7 @@ function productLookup() {
           <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Action</th>
         </tr></thead>
         <tbody>${rows}</tbody>
-      </table>
+      </table></div>
     </div>`;
 }
 
