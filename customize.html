@@ -1090,9 +1090,9 @@ updateCanvas();
 
   // Design position/size state (in UV space 0-1)
   var designState = {
-    u: 0.5,    // horizontal center
+    u: 0.5,    // horizontal center  
     v: 0.5,    // vertical center
-    scale: 0.25, // smaller default so it appears as a chest print, not full coverage
+    scale: 0.15, // very small — since UV stretches, small = visible on chest
     placed: false
   };
 
@@ -1167,21 +1167,32 @@ updateCanvas();
         designTexture.wrapS = THREE.ClampToEdgeWrapping;
         designTexture.wrapT = THREE.ClampToEdgeWrapping;
       }
-      designTexture.flipY = false;
+      designTexture.flipY = true;
       designTexture.needsUpdate = true;
 
       // Apply to all meshes — clone their own material, just add the map
       tshirtModel.traverse(function(child) {
         if (!child.isMesh) return;
 
+        // Log UV bounds for debugging
+        if (child.geometry.attributes.uv) {
+          var uvs = child.geometry.attributes.uv;
+          var minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+          for (var i = 0; i < uvs.count; i++) {
+            var u = uvs.getX(i), v = uvs.getY(i);
+            if (u < minU) minU = u; if (u > maxU) maxU = u;
+            if (v < minV) minV = v; if (v > maxV) maxV = v;
+          }
+          console.log('[UV] Mesh:', child.name, 'UV range: u[' + minU.toFixed(3) + '-' + maxU.toFixed(3) + '] v[' + minV.toFixed(3) + '-' + maxV.toFixed(3) + ']');
+        }
+
         if (!originalMaterials[child.uuid]) {
           originalMaterials[child.uuid] = child.material.clone();
         }
 
-        // Clone the original material to preserve its type and properties
         var newMat = originalMaterials[child.uuid].clone();
         newMat.map = designTexture;
-        newMat.color.set(0xffffff); // neutral so texture shows true colors
+        newMat.color.set(0xffffff);
         newMat.needsUpdate = true;
         child.material = newMat;
       });
