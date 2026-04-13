@@ -413,6 +413,23 @@ function updateCartCount() {
   if (count > 0) { badge.style.display = 'flex'; badge.textContent = count; } else { badge.style.display = 'none'; }
 }
 updateCartCount();
+
+// Re-render when Firebase syncs product data
+window.addEventListener('atelier-data-updated', function(e) {
+  if (e.detail && e.detail.key === 'atelier_admin_products') {
+    // Reload the product from updated localStorage
+    var arr = JSON.parse(localStorage.getItem('atelier_admin_products') || '[]');
+    var p = arr.find(function(x) { return x.id === pid; });
+    if (p) {
+      document.getElementById('product-img').src = p.image || '';
+      document.getElementById('product-name').textContent = p.name;
+      document.getElementById('product-color').textContent = p.color || '';
+      document.getElementById('product-price').textContent = 'NRs. ' + (p.price||0).toLocaleString();
+      document.getElementById('product-desc').textContent = p.desc || '';
+      document.getElementById('add-btn').disabled = false;
+    }
+  }
+});
 </script>
 <script src="mobile-app.js?v=2"></script>
 </body>

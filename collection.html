@@ -345,6 +345,14 @@ function updateCartCount() {
 
 renderProducts();
 updateCartCount();
+
+// Re-render when Firebase syncs product data from another device
+window.addEventListener('atelier-data-updated', function(e) {
+  if (e.detail && (e.detail.key === 'atelier_admin_products' || e.detail.key === 'atelier_announcements')) {
+    renderProducts();
+  }
+});
+window.addEventListener('atelier-synced', function() { renderProducts(); });
 </script>
 
 <footer>

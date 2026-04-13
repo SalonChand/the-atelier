@@ -452,6 +452,28 @@
       grid.innerHTML = '';
     }
   })();
+
+  // Re-render when Firebase syncs product data
+  function reloadHomeProducts() {
+    var grid = document.getElementById('home-product-grid');
+    if (!grid) return;
+    try {
+      var all = JSON.parse(localStorage.getItem('atelier_admin_products') || '[]').filter(function(p) { return p.status === 'active'; });
+      var show = all.slice(0, 4);
+      if (show.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;"><p style="font-family:Newsreader,serif;font-style:italic;font-size:1.8rem;color:#8a7f73;">Collection coming soon.</p></div>';
+        return;
+      }
+      grid.innerHTML = show.map(function(p) {
+        var sl = p.stock === 0 ? 'Sold Out' : p.stock < 6 ? 'Low Stock' : (p.badge || '');
+        return '<div class="product-card" onclick="window.location.href=\'productDetail.html?id=' + p.id + '\'"><div class="product-card-img"><img src="' + (p.image || '') + '" alt="' + p.name + '" loading="lazy"/>' + (sl ? '<span class="badge">' + sl + '</span>' : '') + '</div><h3>' + p.name + '</h3><p class="sub">' + (p.color || '') + '</p><p class="price">NRs. ' + (p.price||0).toLocaleString() + '</p></div>';
+      }).join('');
+    } catch(e) {}
+  }
+  window.addEventListener('atelier-data-updated', function(e) {
+    if (e.detail && e.detail.key === 'atelier_admin_products') reloadHomeProducts();
+  });
+  window.addEventListener('atelier-synced', reloadHomeProducts);
 </script>
 
 <script>
