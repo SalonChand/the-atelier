@@ -1091,8 +1091,8 @@ updateCanvas();
   // Design position/size state (in UV space 0-1)
   var designState = {
     u: 0.5,    // horizontal center
-    v: 0.45,   // vertical (0=top, 1=bottom) — chest area
-    scale: 0.4, // fraction of texture canvas (0.1 = tiny, 1.0 = full coverage)
+    v: 0.5,    // vertical center
+    scale: 0.25, // smaller default so it appears as a chest print, not full coverage
     placed: false
   };
 
@@ -1143,18 +1143,14 @@ updateCanvas();
   }
 
   function updateDecal() {
-    console.log('[3D Decal] updateDecal called. is3DActive:', is3DActive, 'tshirtModel:', !!tshirtModel, 'ctype:', state.ctype);
     if (!is3DActive || !tshirtModel) return;
     if (state.ctype === 'none') { restoreOriginalMaterials(); return; }
 
     buildDesignImage(function(imgCanvas) {
-      console.log('[3D Decal] buildDesignImage result:', !!imgCanvas);
       if (!imgCanvas) { restoreOriginalMaterials(); return; }
 
       // Composite: fill with garment color, then stamp design at UV position
       designCtx.clearRect(0, 0, 2048, 2048);
-
-      // Fill with garment color as base
       designCtx.fillStyle = state.color;
       designCtx.fillRect(0, 0, 2048, 2048);
 
@@ -1162,7 +1158,6 @@ updateCanvas();
       var sz = designState.scale * 2048;
       var dx = designState.u * 2048 - sz / 2;
       var dy = designState.v * 2048 - sz / 2;
-      console.log('[3D Decal] Stamping at UV:', designState.u.toFixed(2), designState.v.toFixed(2), 'size:', sz.toFixed(0));
       designCtx.drawImage(imgCanvas, dx, dy, sz, sz);
 
       // Create or update Three.js texture
@@ -1172,34 +1167,24 @@ updateCanvas();
         designTexture.wrapS = THREE.ClampToEdgeWrapping;
         designTexture.wrapT = THREE.ClampToEdgeWrapping;
       }
-      designTexture.flipY = false; // GLB models typically have flipY = false
+      designTexture.flipY = false;
       designTexture.needsUpdate = true;
 
-      // Apply to all meshes in the model
-      var meshCount = 0;
+      // Apply to all meshes — clone their own material, just add the map
       tshirtModel.traverse(function(child) {
         if (!child.isMesh) return;
-        meshCount++;
 
-        var hasUV = !!child.geometry.attributes.uv;
-        console.log('[3D Decal] Mesh:', child.name || 'unnamed', 'hasUV:', hasUV, 'matType:', child.material.type);
-
-        // Store original material if not stored
         if (!originalMaterials[child.uuid]) {
           originalMaterials[child.uuid] = child.material.clone();
         }
 
-        // Apply texture - use MeshStandardMaterial for reliable texture mapping
-        var newMat = new THREE.MeshStandardMaterial({
-          map: designTexture,
-          roughness: 0.8,
-          metalness: 0.0,
-          side: THREE.DoubleSide
-        });
+        // Clone the original material to preserve its type and properties
+        var newMat = originalMaterials[child.uuid].clone();
+        newMat.map = designTexture;
+        newMat.color.set(0xffffff); // neutral so texture shows true colors
         newMat.needsUpdate = true;
         child.material = newMat;
       });
-      console.log('[3D Decal] Applied to', meshCount, 'meshes');
     });
   }
 
