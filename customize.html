@@ -861,8 +861,8 @@ updateCanvas();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf8f5f0);
 
-    camera = new THREE.PerspectiveCamera(32, 1, 0.01, 200);
-    camera.position.set(0, 0.15, 4.2);
+    camera = new THREE.PerspectiveCamera(40, 1, 0.01, 200);
+    camera.position.set(0, 0.2, 3.8);
 
     renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -895,7 +895,7 @@ updateCanvas();
     controls.enablePan = false;
     controls.minDistance = 1.5;
     controls.maxDistance = 7;
-    controls.target.set(0, 0.05, 0);
+    controls.target.set(0, 0, 0);
     controls.update();
 
     loader3D = new THREE.GLTFLoader();
@@ -1275,8 +1275,8 @@ updateCanvas();
   // ═══════════════════════════════════════════════════════════════════════
   function setCam(viewName) {
     if (!camera || !controls) return;
-    var d = 4.2;
-    var views = { front:[0,0.15,d], back:[0,0.15,-d], left:[-d,0.15,0], right:[d,0.15,0] };
+    var d = 3.8;
+    var views = { front:[0,0.2,d], back:[0,0.2,-d], left:[-d,0.2,0], right:[d,0.2,0] };
     var p = views[viewName] || views.front;
     var from = camera.position.clone();
     var to = new THREE.Vector3(p[0], p[1], p[2]);
@@ -1285,7 +1285,7 @@ updateCanvas();
       var t = Math.min((performance.now() - t0) / 500, 1);
       t = 1 - Math.pow(1 - t, 3);
       camera.position.lerpVectors(from, to, t);
-      controls.target.set(0, 0.05, 0);
+      controls.target.set(0, 0, 0);
       controls.update();
       if (t < 1) requestAnimationFrame(anim);
     })();
