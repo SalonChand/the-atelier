@@ -16,7 +16,13 @@
   var CONFIG_KEY = 'atelier_sync_config';
 
   function getConfig() {
-    try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}'); } catch(e) { return {}; }
+    try {
+      var cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+      if (cfg.token && cfg.repo && cfg.owner) return cfg;
+    } catch(e) {}
+    // Fallback: check if a global config was set by sync-config.js
+    if (window.ATELIER_SYNC_CONFIG) return window.ATELIER_SYNC_CONFIG;
+    return {};
   }
 
   function isConfigured() {

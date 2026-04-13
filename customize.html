@@ -148,6 +148,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 .success-check { width: 56px; height: 56px; border: 1px solid var(--warm); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin: 0 auto 2rem; }
 </style>
 <link rel="stylesheet" href="mobile-app.css"/>
+<script src="sync-config.js"></script>
 <script src="sync.js" defer></script>
 </head>
 <body>
@@ -810,108 +811,107 @@ updateCanvas();
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════════════════
-     Three.js 3D Design Studio — Complete Solution
-     Handles ALL model coordinate systems via geometry-level centering
-     ═══════════════════════════════════════════════════════════════════════ -->
+<!-- Three.js 3D Design Studio — UV Texture Painting -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function() {
   'use strict';
 
-  // ─── CONFIG ────────────────────────────────────────────────────────────
-  var MODEL_FILES = {
-    tshirt:'tshirt.glb', shirt:'shirt.glb', hoodie:'hoodie.glb',
-    jacket:'jacket.glb', coat:'coat.glb', pant:'pant.glb'
-  };
-  var TARGET_SIZE = 2.0;
-
-  // ─── GLOBALS ───────────────────────────────────────────────────────────
-  var scene, camera, renderer, controls, loader3D;
-  var currentModel = null, currentKey = '';
-  var loadedModels = {}, is3DActive = false;
+  var MODEL_FILES = { tshirt:'tshirt.glb', shirt:'shirt.glb', hoodie:'hoodie.glb', jacket:'jacket.glb', coat:'coat.glb', pant:'pant.glb' };
+  var scene, camera, renderer, controls, currentModel, modelBox;
+  var loader3D, loadedModels = {}, is3DActive = false;
   var viewer3d = document.getElementById('viewer-3d');
   var threeCanvas = document.getElementById('three-canvas');
   var canvas2d = document.getElementById('garment-canvas');
   var loadingEl = document.getElementById('loading-3d');
-  var pluginsReady = false;
 
-  // ─── DECAL STATE ───────────────────────────────────────────────────────
-  var decalMesh = null;
-  var decalState = { side: 'front' };
+  // Design state in UV space
+  var design = {
+    u: 0.5,         // UV center X (0-1)
+    v: 0.4,         // UV center Y (0-1) — upper area = chest
+    scale: 0.62,     // fraction of texture (0.05 = tiny, 1.0 = full)
+    side: 'front'
+  };
   var isDragging = false;
   var raycaster = new THREE.Raycaster();
-  var mouseVec = new THREE.Vector2();
+  var mouse = new THREE.Vector2();
 
-  // ─── LOAD PLUGINS ──────────────────────────────────────────────────────
+  // Texture painting canvas
+  var paintCanvas = document.createElement('canvas');
+  paintCanvas.width = 2048; paintCanvas.height = 2048;
+  var paintCtx = paintCanvas.getContext('2d');
+  var paintTexture = null;
+  var origMaterials = {};
+
+  // Load Three.js plugins
   var s1 = document.createElement('script');
   s1.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
   s1.onload = function() {
     var s2 = document.createElement('script');
     s2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
-    s2.onload = function() { pluginsReady = true; initScene(); };
+    s2.onload = init;
     document.head.appendChild(s2);
   };
   document.head.appendChild(s1);
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // SCENE
-  // ═══════════════════════════════════════════════════════════════════════
-  function initScene() {
+  // ═════════════════════════════════════════════════════════════════════
+  // INIT
+  // ═════════════════════════════════════════════════════════════════════
+  function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf8f5f0);
-
-    camera = new THREE.PerspectiveCamera(40, 1, 0.01, 200);
-    camera.position.set(0, 0.2, 3.8);
+    camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100);
+    camera.position.set(0, 0, 3.5);
 
     renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.2;
 
     // Studio lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    var k = new THREE.DirectionalLight(0xfff8f0, 0.75);
-    k.position.set(3, 4, 4); scene.add(k);
-    var f = new THREE.DirectionalLight(0xf0f0ff, 0.35);
-    f.position.set(-3, 2, 1); scene.add(f);
-    var b = new THREE.DirectionalLight(0xffffff, 0.2);
-    b.position.set(0, 1, -4); scene.add(b);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    var key = new THREE.DirectionalLight(0xfff8f0, 0.8);
+    key.position.set(2, 3, 3); key.castShadow = true; scene.add(key);
+    scene.add(new THREE.DirectionalLight(0xf0f0ff, 0.35)).position.set(-2, 2, 1);
+    scene.add(new THREE.DirectionalLight(0xffffff, 0.2)).position.set(0, 1, -3);
 
-    // Ground
+    // Ground shadow
     var gnd = new THREE.Mesh(
-      new THREE.PlaneGeometry(8, 8),
-      new THREE.MeshStandardMaterial({ color: 0xf0ede8, roughness: 1, metalness: 0 })
+      new THREE.PlaneGeometry(6, 6),
+      new THREE.ShadowMaterial({ opacity: 0.1 })
     );
     gnd.rotation.x = -Math.PI / 2;
-    gnd.position.y = -1.05;
+    gnd.position.y = -0.85;
+    gnd.receiveShadow = true;
     scene.add(gnd);
 
-    // Controls
+    // Orbit controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.07;
+    controls.dampingFactor = 0.08;
     controls.enablePan = false;
-    controls.minDistance = 1.5;
-    controls.maxDistance = 7;
+    controls.minDistance = 1.0;
+    controls.maxDistance = 5;
     controls.target.set(0, 0, 0);
     controls.update();
 
     loader3D = new THREE.GLTFLoader();
 
-    (function renderLoop() {
-      requestAnimationFrame(renderLoop);
-      if (controls) controls.update();
-      if (renderer && scene && camera) renderer.render(scene, camera);
+    // Render loop
+    (function loop() {
+      requestAnimationFrame(loop);
+      controls.update();
+      renderer.render(scene, camera);
     })();
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', resize);
     setupInteraction();
     loadModel(state.garment);
   }
 
-  function handleResize() {
+  function resize() {
     if (!is3DActive || !viewer3d) return;
     var w = viewer3d.clientWidth, h = viewer3d.clientHeight;
     if (w < 1 || h < 1) return;
@@ -925,8 +925,8 @@ updateCanvas();
     viewer3d.style.display = 'block';
     canvas2d.style.display = 'none';
     document.getElementById('canvas-hint').textContent =
-      'Drag to rotate \u00b7 Shift+drag to move design \u00b7 Double-click to place';
-    setTimeout(handleResize, 50);
+      'Drag to rotate · Shift+drag to move design · Double-click to place';
+    setTimeout(resize, 60);
   }
 
   function show2D() {
@@ -938,306 +938,240 @@ updateCanvas();
     updateCanvas();
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // MODEL CENTERING — THE DEFINITIVE APPROACH
-  //
-  // Models have wildly different coordinate systems:
-  //   tshirt: vertices near Z=-1378, ~600 units wide
-  //   coat:   vertices at X=330, Z=-818
-  //   hoodie: vertices near Z=1.3, ~0.5 units wide
-  //   shirt:  vertices at Z=128, ~55 units wide
-  //   pant:   vertices near origin, ~0.9 units wide
-  //
-  // Solution: Use the brute-force wrapper.position correction.
-  // After placing the model in a scaled wrapper group, we simply
-  // measure where the bounding box center ended up and subtract it.
-  // This works 100% of the time regardless of transforms.
-  // ═══════════════════════════════════════════════════════════════════════
-  function centerAndScaleModel(rawScene) {
-    rawScene.updateMatrixWorld(true);
+  // ═════════════════════════════════════════════════════════════════════
+  // MODEL LOADING — wrapper group centering
+  // ═════════════════════════════════════════════════════════════════════
+  function normalizeModel(raw) {
+    // Force update all world matrices first
+    raw.updateMatrixWorld(true);
 
-    // 1. Measure in world space
-    var worldBox = new THREE.Box3().setFromObject(rawScene);
-    var worldCenter = worldBox.getCenter(new THREE.Vector3());
-    var worldSize = worldBox.getSize(new THREE.Vector3());
-    var maxDim = Math.max(worldSize.x, worldSize.y, worldSize.z);
-    if (maxDim === 0) return rawScene;
+    // Get world-space bounding box
+    var box = new THREE.Box3().setFromObject(raw);
+    var center = box.getCenter(new THREE.Vector3());
+    var size = box.getSize(new THREE.Vector3());
+    var maxDim = Math.max(size.x, size.y, size.z);
+    var scale = 1.6 / maxDim;
 
-    var scaleFactor = TARGET_SIZE / maxDim;
+    // Create a pivot group
+    var group = new THREE.Group();
+    
+    // Add model to group, then offset the group's position
+    // to bring the model's world center to origin
+    group.add(raw);
+    
+    // The key fix: offset must account for the raw model's own position
+    // plus where its geometry actually sits in world space
+    var rawWorldPos = new THREE.Vector3();
+    raw.getWorldPosition(rawWorldPos);
+    
+    // Move raw so that the bounding box center lands at group origin
+    raw.position.x += (rawWorldPos.x - center.x);
+    raw.position.y += (rawWorldPos.y - center.y);
+    raw.position.z += (rawWorldPos.z - center.z);
+    
+    // Scale the group
+    group.scale.setScalar(scale);
 
-    // 2. Wrap in a group and scale
-    var wrapper = new THREE.Group();
-    wrapper.add(rawScene);
-    wrapper.scale.setScalar(scaleFactor);
+    // Verify centering worked
+    group.updateMatrixWorld(true);
+    var checkBox = new THREE.Box3().setFromObject(group);
+    var checkCenter = checkBox.getCenter(new THREE.Vector3());
+    console.log('[3D] After centering - center:', checkCenter.x.toFixed(4), checkCenter.y.toFixed(4), checkCenter.z.toFixed(4));
+    
+    // Always correct any remaining offset
+    if (Math.abs(checkCenter.x) > 0.001 || Math.abs(checkCenter.y) > 0.001 || Math.abs(checkCenter.z) > 0.001) {
+      group.position.sub(checkCenter);
+      console.log('[3D] Applied correction:', -checkCenter.x.toFixed(4), -checkCenter.y.toFixed(4), -checkCenter.z.toFixed(4));
+    }
+    
+    // Second verification
+    group.updateMatrixWorld(true);
+    var finalBox = new THREE.Box3().setFromObject(group);
+    var finalCenter = finalBox.getCenter(new THREE.Vector3());
+    var finalSize = finalBox.getSize(new THREE.Vector3());
+    console.log('[3D] Final center:', finalCenter.x.toFixed(4), finalCenter.y.toFixed(4), finalCenter.z.toFixed(4));
+    console.log('[3D] Final size:', finalSize.x.toFixed(4), finalSize.y.toFixed(4), finalSize.z.toFixed(4));
 
-    // 3. After scaling, measure where the center actually is
-    wrapper.updateMatrixWorld(true);
-    var scaledBox = new THREE.Box3().setFromObject(wrapper);
-    var scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-
-    // 4. Shift the wrapper so the center lands at origin
-    wrapper.position.sub(scaledCenter);
-
-    // 5. Verify
-    wrapper.updateMatrixWorld(true);
-    var finalBox = new THREE.Box3().setFromObject(wrapper);
-    var fc = finalBox.getCenter(new THREE.Vector3());
-    var fs = finalBox.getSize(new THREE.Vector3());
-    console.log('[3D] Model centered:', currentKey,
-      'center=(' + fc.x.toFixed(3) + ',' + fc.y.toFixed(3) + ',' + fc.z.toFixed(3) + ')',
-      'size=(' + fs.x.toFixed(3) + ',' + fs.y.toFixed(3) + ',' + fs.z.toFixed(3) + ')');
-
-    wrapper.traverse(function(ch) {
-      if (ch.isMesh) { ch.castShadow = true; ch.receiveShadow = true; }
+    group.traverse(function(ch) {
+      if (ch.isMesh) {
+        ch.castShadow = true;
+        ch.receiveShadow = true;
+      }
     });
-
-    return wrapper;
+    return group;
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // MODEL LOADING
-  // ═══════════════════════════════════════════════════════════════════════
   function loadModel(key) {
-    currentKey = key;
     if (!MODEL_FILES[key]) { show2D(); return; }
-    if (loadedModels[key]) { swapModel(loadedModels[key], key); return; }
+    if (loadedModels[key]) { swapModel(loadedModels[key]); return; }
 
     if (loadingEl) {
       loadingEl.style.display = 'flex';
       var p = loadingEl.querySelector('p');
-      if (p) p.textContent = 'Loading ' + (GARMENT_NAMES[key] || key) + '\u2026';
+      if (p) p.textContent = 'Loading…';
     }
     show3D();
 
-    loader3D.load(
-      MODEL_FILES[key],
+    loader3D.load(MODEL_FILES[key],
       function(gltf) {
-        var centered = centerAndScaleModel(gltf.scene);
-        loadedModels[key] = centered;
-        swapModel(centered, key);
+        var w = normalizeModel(gltf.scene);
+        loadedModels[key] = w;
+        swapModel(w);
       },
       function(prog) {
-        if (prog.total > 0 && loadingEl) {
-          var p = loadingEl.querySelector('p');
+        if (prog.total > 0) {
+          var p = loadingEl ? loadingEl.querySelector('p') : null;
           if (p) p.textContent = 'Loading ' + (GARMENT_NAMES[key] || key) +
-            '\u2026 ' + Math.round(prog.loaded / prog.total * 100) + '%';
+            '… ' + Math.round(prog.loaded / prog.total * 100) + '%';
         }
       },
-      function(err) {
-        console.warn('[3D] Failed:', key, err);
+      function() {
         if (loadingEl) loadingEl.style.display = 'none';
         show2D();
       }
     );
   }
 
-  function swapModel(wrapper, key) {
-    removeDecal();
+  function swapModel(group) {
     if (currentModel) scene.remove(currentModel);
-    currentModel = wrapper;
-    currentKey = key;
+    currentModel = group;
     scene.add(currentModel);
+    modelBox = new THREE.Box3().setFromObject(currentModel);
+
     if (loadingEl) loadingEl.style.display = 'none';
+
+    // Reset paint state
+    origMaterials = {};
+    paintTexture = null;
+
     applyColor(state.color);
-    updateDecal();
+    paintDesign();
     show3D();
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // COLOR
-  // ═══════════════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════════════
+  // COLOR — apply to all meshes
+  // ═════════════════════════════════════════════════════════════════════
   function applyColor(hex) {
     if (!currentModel) return;
-    var color = new THREE.Color(hex);
+    var col = new THREE.Color(hex);
     currentModel.traverse(function(ch) {
       if (!ch.isMesh) return;
-      if (!ch.userData._baseMat) ch.userData._baseMat = ch.material.clone();
-      ch.material = ch.userData._baseMat.clone();
-      ch.material.color.copy(color);
+      if (!ch.userData._origMat) ch.userData._origMat = ch.material.clone();
+      ch.material = ch.userData._origMat.clone();
+      ch.material.color.copy(col);
       ch.material.needsUpdate = true;
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // DECAL SYSTEM — floating plane flush on surface via raycasting
-  //
-  // Why floating plane instead of UV painting?
-  // Models have incompatible UV layouts (shirt UVs are 1.08-2.86,
-  // coat has scattered islands, etc). The decal plane approach works
-  // uniformly for ALL models — it raycasts from outside to find the
-  // exact surface point, then places a textured plane flush against it.
-  // ═══════════════════════════════════════════════════════════════════════
-  function getDecalTexture() {
+  // ═════════════════════════════════════════════════════════════════════
+  // UV TEXTURE PAINTING — design painted directly on mesh surface
+  // ═════════════════════════════════════════════════════════════════════
+  function getDesignImage() {
     var c = document.createElement('canvas');
     c.width = 1024; c.height = 1024;
-    var cx = c.getContext('2d');
-    cx.clearRect(0, 0, 1024, 1024);
+    var ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, 1024, 1024);
+    var ok = false;
 
     if (state.designTab === 'image' && uploadedImg) {
-      var op = parseFloat(document.getElementById('design-opacity') ? document.getElementById('design-opacity').value : 1);
+      var op = parseFloat(document.getElementById('design-opacity')?.value || 1);
       var iw = uploadedImg.width, ih = uploadedImg.height;
-      var fitScale = Math.min(1024 / iw, 1024 / ih);
-      cx.globalAlpha = op;
-      if (state.ctype === 'embroidery') cx.filter = 'saturate(0.7) contrast(1.1)';
-      cx.drawImage(uploadedImg,
-        (1024 - iw * fitScale) / 2, (1024 - ih * fitScale) / 2,
-        iw * fitScale, ih * fitScale);
-      return c;
+      var r = Math.min(960 / iw, 960 / ih);
+      ctx.globalAlpha = op;
+      if (state.ctype === 'embroidery') ctx.filter = 'saturate(0.7) contrast(1.1)';
+      ctx.drawImage(uploadedImg, (1024 - iw * r) / 2, (1024 - ih * r) / 2, iw * r, ih * r);
+      ok = true;
     }
 
     if (state.designTab === 'text' && state.ctype !== 'none') {
-      var txt = document.getElementById('design-text') ? document.getElementById('design-text').value : '';
+      var txt = document.getElementById('design-text')?.value;
       if (txt) {
-        var fs = parseInt((document.getElementById('text-size') ? document.getElementById('text-size').value : 32)) * 6;
-        var tc = document.getElementById('text-color') ? document.getElementById('text-color').value : '#0e0e0d';
-        cx.font = 'bold ' + fs + 'px ' + state.font;
-        cx.fillStyle = tc;
-        cx.textAlign = 'center';
-        cx.textBaseline = 'middle';
-        if (state.ctype === 'embroidery') { cx.shadowColor = tc; cx.shadowBlur = 8; }
-        cx.fillText(txt, 512, 512);
-        return c;
+        var fs = parseInt(document.getElementById('text-size')?.value || 32) * 5;
+        var tc = document.getElementById('text-color')?.value || '#0e0e0d';
+        ctx.font = 'bold ' + fs + 'px ' + state.font;
+        ctx.fillStyle = tc;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if (state.ctype === 'embroidery') { ctx.shadowColor = tc; ctx.shadowBlur = 6; }
+        ctx.fillText(txt, 512, 512);
+        ok = true;
       }
     }
-    return null;
+    return ok ? c : null;
   }
 
-  function removeDecal() {
-    if (decalMesh) {
-      if (decalMesh.parent) decalMesh.parent.remove(decalMesh);
-      if (decalMesh.material.map) decalMesh.material.map.dispose();
-      decalMesh.material.dispose();
-      decalMesh.geometry.dispose();
-      decalMesh = null;
-    }
-  }
-
-  function updateDecal() {
+  function paintDesign() {
     if (!is3DActive || !currentModel) return;
-    if (state.ctype === 'none') { removeDecal(); return; }
 
-    var texCanvas = getDecalTexture();
-    if (!texCanvas) { removeDecal(); return; }
+    // If no design or ctype is none, restore original look
+    if (state.ctype === 'none') { applyColor(state.color); return; }
 
-    // Model bounds
-    var mBox = new THREE.Box3().setFromObject(currentModel);
-    var mSize = mBox.getSize(new THREE.Vector3());
-    var mCenter = mBox.getCenter(new THREE.Vector3());
+    var designImg = getDesignImage();
+    if (!designImg) { applyColor(state.color); return; }
 
-    // Decal size from slider
-    var sliderVal = parseFloat(document.getElementById('design-scale') ? document.getElementById('design-scale').value : 0.5);
-    var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
-    var decalSize = baseSize * (0.2 + sliderVal * 1.6);
+    // Composite the paint canvas: base color + design stamp
+    paintCtx.clearRect(0, 0, 2048, 2048);
 
-    // Raycast direction based on side
-    var rayOrigin = new THREE.Vector3();
-    var rayDir = new THREE.Vector3();
-    var chestY = mCenter.y + mSize.y * 0.15;
+    // Fill with garment color
+    paintCtx.fillStyle = state.color;
+    paintCtx.fillRect(0, 0, 2048, 2048);
 
-    switch (decalState.side) {
-      case 'front':
-        rayOrigin.set(mCenter.x, chestY, mCenter.z + mSize.z * 3);
-        rayDir.set(0, 0, -1);
-        break;
-      case 'back':
-        rayOrigin.set(mCenter.x, chestY, mCenter.z - mSize.z * 3);
-        rayDir.set(0, 0, 1);
-        break;
-      case 'left':
-        rayOrigin.set(mCenter.x - mSize.x * 3, chestY, mCenter.z);
-        rayDir.set(1, 0, 0);
-        break;
-      case 'right':
-        rayOrigin.set(mCenter.x + mSize.x * 3, chestY, mCenter.z);
-        rayDir.set(-1, 0, 0);
-        break;
+    // Stamp the design at UV position & scale
+    var sz = design.scale * 2048;
+    var dx = design.u * 2048 - sz / 2;
+    var dy = (1.0 - design.v) * 2048 - sz / 2; // flip V for canvas Y
+    paintCtx.drawImage(designImg, dx, dy, sz, sz);
+
+    // Create or update texture
+    if (!paintTexture) {
+      paintTexture = new THREE.CanvasTexture(paintCanvas);
+      paintTexture.encoding = THREE.sRGBEncoding;
+      paintTexture.flipY = false;
+      paintTexture.wrapS = THREE.ClampToEdgeWrapping;
+      paintTexture.wrapT = THREE.ClampToEdgeWrapping;
     }
+    paintTexture.needsUpdate = true;
 
-    raycaster.set(rayOrigin, rayDir.normalize());
-    var meshes = [];
-    currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh) meshes.push(c); });
-    var hits = raycaster.intersectObjects(meshes, true);
-
-    var surfacePoint, surfaceNormal;
-    if (hits.length > 0) {
-      surfacePoint = hits[0].point.clone();
-      surfaceNormal = hits[0].face.normal.clone();
-      surfaceNormal.transformDirection(hits[0].object.matrixWorld);
-    } else {
-      // Fallback
-      surfacePoint = new THREE.Vector3(mCenter.x, chestY, mCenter.z + mSize.z * 0.5);
-      surfaceNormal = new THREE.Vector3(0, 0, 1);
-      if (decalState.side === 'back') { surfacePoint.z = mCenter.z - mSize.z * 0.5; surfaceNormal.set(0, 0, -1); }
-      if (decalState.side === 'left') { surfacePoint.set(mCenter.x - mSize.x * 0.5, chestY, mCenter.z); surfaceNormal.set(-1, 0, 0); }
-      if (decalState.side === 'right') { surfacePoint.set(mCenter.x + mSize.x * 0.5, chestY, mCenter.z); surfaceNormal.set(1, 0, 0); }
-    }
-
-    // Create texture
-    var texture = new THREE.CanvasTexture(texCanvas);
-    texture.encoding = THREE.sRGBEncoding;
-
-    // Position helper: convert world point + offset to model-local space
-    var offset = surfaceNormal.clone().multiplyScalar(0.02);
-    var localPos = currentModel.worldToLocal(surfacePoint.clone().add(offset));
-    var lookTarget = currentModel.worldToLocal(surfacePoint.clone().add(surfaceNormal));
-
-    if (decalMesh) {
-      // Update existing decal
-      if (decalMesh.material.map) decalMesh.material.map.dispose();
-      decalMesh.material.map = texture;
-      decalMesh.material.needsUpdate = true;
-      decalMesh.scale.set(decalSize, decalSize, 1);
-      decalMesh.position.copy(localPos);
-      decalMesh.lookAt(lookTarget);
-    } else {
-      // Create new decal
-      var geom = new THREE.PlaneGeometry(1, 1);
-      var mat = new THREE.MeshBasicMaterial({
-        map: texture, transparent: true, depthWrite: false,
-        side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1
-      });
-      decalMesh = new THREE.Mesh(geom, mat);
-      decalMesh.renderOrder = 999;
-      decalMesh.scale.set(decalSize, decalSize, 1);
-      decalMesh.position.copy(localPos);
-      decalMesh.lookAt(lookTarget);
-      currentModel.add(decalMesh);
-    }
+    // Apply to all meshes
+    currentModel.traverse(function(ch) {
+      if (!ch.isMesh) return;
+      if (!origMaterials[ch.uuid]) {
+        origMaterials[ch.uuid] = ch.material.clone();
+      }
+      var mat = origMaterials[ch.uuid].clone();
+      mat.map = paintTexture;
+      mat.color.set(0xffffff); // neutral base so texture shows true
+      mat.needsUpdate = true;
+      ch.material = mat;
+    });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // INTERACTION
-  // ═══════════════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════════════
+  // INTERACTION — Shift+drag to move, double-click to place
+  // ═════════════════════════════════════════════════════════════════════
   function setupInteraction() {
     var el = threeCanvas;
 
-    function rayHit(e) {
-      if (!currentModel) return null;
+    function hitTest(e) {
       var rect = el.getBoundingClientRect();
-      mouseVec.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseVec.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouseVec, camera);
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
       var meshes = [];
-      currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh) meshes.push(c); });
-      return raycaster.intersectObjects(meshes, true)[0] || null;
+      if (currentModel) currentModel.traverse(function(c) { if (c.isMesh) meshes.push(c); });
+      var hits = raycaster.intersectObjects(meshes, true);
+      return hits.length > 0 ? hits[0] : null;
     }
 
-    function moveDecalTo(hit) {
-      if (!hit || !decalMesh || !currentModel) return;
-      var pt = hit.point.clone();
-      var nm = hit.face.normal.clone();
-      nm.transformDirection(hit.object.matrixWorld);
-      var off = nm.clone().multiplyScalar(0.02);
-      var lp = currentModel.worldToLocal(pt.clone().add(off));
-      decalMesh.position.copy(lp);
-      var lt = currentModel.worldToLocal(pt.clone().add(nm));
-      decalMesh.lookAt(lt);
-    }
-
+    // Shift+drag to move design
     el.addEventListener('pointerdown', function(e) {
-      if (!is3DActive || !currentModel || !e.shiftKey || !decalMesh) return;
-      var hit = rayHit(e);
-      if (hit) {
+      if (!is3DActive || !currentModel || !e.shiftKey) return;
+      var hasD = (state.designTab === 'image' && uploadedImg) ||
+                 (state.designTab === 'text' && document.getElementById('design-text')?.value);
+      if (!hasD || state.ctype === 'none') return;
+      var h = hitTest(e);
+      if (h && h.uv) {
         isDragging = true;
         controls.enabled = false;
         el.style.cursor = 'grabbing';
@@ -1247,133 +1181,166 @@ updateCanvas();
 
     el.addEventListener('pointermove', function(e) {
       if (!isDragging) {
-        el.style.cursor = (e.shiftKey && is3DActive && decalMesh && rayHit(e)) ? 'grab' : '';
+        // Cursor hint
+        if (e.shiftKey && is3DActive) {
+          var h = hitTest(e);
+          el.style.cursor = h ? 'grab' : '';
+        } else {
+          el.style.cursor = '';
+        }
         return;
       }
-      var hit = rayHit(e);
-      if (hit) moveDecalTo(hit);
+      var h = hitTest(e);
+      if (h && h.uv) {
+        design.u = h.uv.x;
+        design.v = h.uv.y;
+        paintDesign();
+      }
     });
 
     function endDrag() {
-      if (isDragging) { isDragging = false; controls.enabled = true; el.style.cursor = ''; }
+      if (isDragging) {
+        isDragging = false;
+        controls.enabled = true;
+        el.style.cursor = '';
+      }
     }
     el.addEventListener('pointerup', endDrag);
     el.addEventListener('pointerleave', endDrag);
 
+    // Double-click to place
     el.addEventListener('dblclick', function(e) {
-      if (!is3DActive || !currentModel || state.ctype === 'none' || !decalMesh) return;
-      var hasDesign = (state.designTab === 'image' && uploadedImg) ||
-                      (state.designTab === 'text' && document.getElementById('design-text') && document.getElementById('design-text').value);
-      if (!hasDesign) return;
-      var hit = rayHit(e);
-      if (hit) moveDecalTo(hit);
+      if (!is3DActive || !currentModel || state.ctype === 'none') return;
+      var hasD = (state.designTab === 'image' && uploadedImg) ||
+                 (state.designTab === 'text' && document.getElementById('design-text')?.value);
+      if (!hasD) return;
+      var h = hitTest(e);
+      if (h && h.uv) {
+        design.u = h.uv.x;
+        design.v = h.uv.y;
+        paintDesign();
+      }
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════════════
   // CAMERA VIEWS
-  // ═══════════════════════════════════════════════════════════════════════
-  function setCam(viewName) {
+  // ═════════════════════════════════════════════════════════════════════
+  function setCam(v) {
     if (!camera || !controls) return;
-    var d = 3.8;
-    var views = { front:[0,0.2,d], back:[0,0.2,-d], left:[-d,0.2,0], right:[d,0.2,0] };
-    var p = views[viewName] || views.front;
-    var from = camera.position.clone();
-    var to = new THREE.Vector3(p[0], p[1], p[2]);
-    var t0 = performance.now();
+    var positions = {
+      front: [0, 0, 3.5],
+      back:  [0, 0, -3.5],
+      left:  [-3.5, 0, 0],
+      right: [3.5, 0, 0]
+    };
+    var p = positions[v] || positions.front;
+    var startPos = camera.position.clone();
+    var endPos = new THREE.Vector3(p[0], p[1], p[2]);
+    var t0 = Date.now();
     (function anim() {
-      var t = Math.min((performance.now() - t0) / 500, 1);
-      t = 1 - Math.pow(1 - t, 3);
-      camera.position.lerpVectors(from, to, t);
+      var t = Math.min((Date.now() - t0) / 500, 1);
+      t = 1 - Math.pow(1 - t, 3); // ease out
+      camera.position.lerpVectors(startPos, endPos, t);
       controls.target.set(0, 0, 0);
       controls.update();
       if (t < 1) requestAnimationFrame(anim);
     })();
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // UI OVERRIDES
-  // ═══════════════════════════════════════════════════════════════════════
-  var _origSelectGarment = window.selectGarment;
-  window.selectGarment = function(g, btn) {
-    _origSelectGarment(g, btn);
-    if (pluginsReady && MODEL_FILES[g]) loadModel(g);
-    else show2D();
+  // ═════════════════════════════════════════════════════════════════════
+  // UI OVERRIDES — connect all controls
+  // ═════════════════════════════════════════════════════════════════════
+  var _g = window.selectGarment;
+  window.selectGarment = function(g, b) {
+    _g(g, b);
+    MODEL_FILES[g] ? loadModel(g) : show2D();
   };
 
-  var _origSelectColor = window.selectColor;
-  window.selectColor = function(c, dot) {
-    _origSelectColor(c, dot);
-    if (is3DActive) { applyColor(state.color); updateDecal(); }
+  var _c = window.selectColor;
+  window.selectColor = function(c, d) {
+    _c(c, d);
+    if (is3DActive) paintDesign();
   };
 
-  var _origSetView = window.setView;
-  window.setView = function(v, btn) {
-    _origSetView(v, btn);
+  var _v = window.setView;
+  window.setView = function(v, b) {
+    _v(v, b);
     if (is3DActive) setCam(v);
   };
 
-  var _origSelectPlacement = window.selectPlacement;
-  window.selectPlacement = function(p, btn) {
-    _origSelectPlacement(p, btn);
+  var _p = window.selectPlacement;
+  window.selectPlacement = function(p, b) {
+    _p(p, b);
     if (!is3DActive) return;
-    var sideMap = {
-      'chest-left':'front','chest-center':'front','chest-right':'front',
-      'back-center':'back','sleeve-left':'left','sleeve-right':'right'
+    // Map placements to UV positions
+    var map = {
+      'chest-left':   { u: 0.35, v: 0.55 },
+      'chest-center': { u: 0.50, v: 0.55 },
+      'chest-right':  { u: 0.65, v: 0.55 },
+      'back-center':  { u: 0.50, v: 0.55 },
+      'sleeve-left':  { u: 0.15, v: 0.60 },
+      'sleeve-right': { u: 0.85, v: 0.60 }
     };
-    decalState.side = sideMap[p] || 'front';
-    updateDecal();
-    setCam(decalState.side);
+    var uv = map[p];
+    if (uv) { design.u = uv.u; design.v = uv.v; }
+    design.side = (p === 'back-center') ? 'back' : 'front';
+    paintDesign();
   };
 
-  var _origHandleImageUpload = window.handleImageUpload;
+  var _u = window.handleImageUpload;
   window.handleImageUpload = function(e) {
-    _origHandleImageUpload(e);
-    setTimeout(function() { if (is3DActive) updateDecal(); }, 300);
+    _u(e);
+    setTimeout(function() { if (is3DActive) paintDesign(); }, 300);
   };
 
-  var _origClearDesign = window.clearDesign;
+  var _d = window.clearDesign;
   window.clearDesign = function() {
-    _origClearDesign();
-    if (is3DActive) removeDecal();
+    _d();
+    if (is3DActive) applyColor(state.color);
   };
 
-  // Sliders & inputs
-  var _el;
-  _el = document.getElementById('design-scale');
-  if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
-  _el = document.getElementById('design-opacity');
-  if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
-  _el = document.getElementById('design-text');
-  if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
-  _el = document.getElementById('text-size');
-  if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
-  _el = document.getElementById('text-color');
-  if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
+  // Sliders
+  var el;
+  if (el = document.getElementById('design-scale')) {
+    el.addEventListener('input', function() {
+      if (!is3DActive) return;
+      design.scale = 0.05 + parseFloat(this.value) * 0.95; // 0.05 to 1.0 (full coverage)
+      paintDesign();
+    });
+  }
+  if (el = document.getElementById('design-opacity'))
+    el.addEventListener('input', function() { if (is3DActive) paintDesign(); });
+  if (el = document.getElementById('design-text'))
+    el.addEventListener('input', function() { if (is3DActive) paintDesign(); });
+  if (el = document.getElementById('text-size'))
+    el.addEventListener('input', function() { if (is3DActive) paintDesign(); });
+  if (el = document.getElementById('text-color'))
+    el.addEventListener('input', function() { if (is3DActive) paintDesign(); });
 
-  var _origSwitchDesignTab = window.switchDesignTab;
-  window.switchDesignTab = function(tab) { _origSwitchDesignTab(tab); if (is3DActive) updateDecal(); };
+  var _t = window.switchDesignTab;
+  window.switchDesignTab = function(tab) { _t(tab); if (is3DActive) paintDesign(); };
 
-  var _origSelectCtype = window.selectCtype;
-  window.selectCtype = function(t, btn) {
-    _origSelectCtype(t, btn);
-    if (is3DActive) { t === 'none' ? removeDecal() : updateDecal(); }
+  var _ct = window.selectCtype;
+  window.selectCtype = function(t, b) {
+    _ct(t, b);
+    if (is3DActive) { t === 'none' ? applyColor(state.color) : paintDesign(); }
   };
 
-  var _origSelectFont = window.selectFont;
-  window.selectFont = function(f, btn) { _origSelectFont(f, btn); if (is3DActive) updateDecal(); };
+  var _f = window.selectFont;
+  window.selectFont = function(f, b) { _f(f, b); if (is3DActive) paintDesign(); };
 
-  var _origPlaceCustomOrder = window.placeCustomOrder;
+  // Order capture
+  var _o = window.placeCustomOrder;
   window.placeCustomOrder = function() {
     if (is3DActive && renderer) {
       renderer.render(scene, camera);
-      var saved = window.canvas;
+      var oc = window.canvas;
       window.canvas = renderer.domElement;
-      _origPlaceCustomOrder();
-      window.canvas = saved;
-    } else _origPlaceCustomOrder();
+      _o();
+      window.canvas = oc;
+    } else _o();
   };
-
 })();
 </script>
 <script src="mobile-app.js"></script>
