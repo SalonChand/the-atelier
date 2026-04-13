@@ -834,7 +834,7 @@ updateCanvas();
   var loadingEl = document.getElementById('loading-3d');
 
   // Decal state
-  var decal = { size: 0.55, posY: 0, side: 'front' };
+  var decal = { size: 0.8, posY: 0, side: 'front' };
 
   // ── LOAD THREE.JS EXTENSIONS THEN INIT ────────────────────────────────
   var s1 = document.createElement('script');
@@ -1086,24 +1086,30 @@ updateCanvas();
     // Raycast from outside to find exact surface position
     var origin = new THREE.Vector3();
     var dir = new THREE.Vector3();
-    var targetY = bCenter.y + decal.posY;
+    
+    // Chest = upper 30% of model height
+    var chestY = bCenter.y + bSize.y * 0.2 + decal.posY;
 
     var isFront = (decal.side === 'front');
     var isBack = (decal.side === 'back');
     var isLeft = (decal.side === 'left');
     var isRight = (decal.side === 'right');
 
+    // Cast ray from far away toward the model center
+    var farDist = Math.max(bSize.x, bSize.z) * 5;
+
     if (isBack) {
-      origin.set(bCenter.x, targetY, bCenter.z - bSize.z * 3);
+      origin.set(bCenter.x, chestY, bCenter.z - farDist);
       dir.set(0, 0, 1);
     } else if (isLeft) {
-      origin.set(bCenter.x - bSize.x * 3, targetY, bCenter.z);
+      origin.set(bCenter.x - farDist, chestY, bCenter.z);
       dir.set(1, 0, 0);
     } else if (isRight) {
-      origin.set(bCenter.x + bSize.x * 3, targetY, bCenter.z);
+      origin.set(bCenter.x + farDist, chestY, bCenter.z);
       dir.set(-1, 0, 0);
     } else {
-      origin.set(bCenter.x, targetY, bCenter.z + bSize.z * 3);
+      // Front — default
+      origin.set(bCenter.x, chestY, bCenter.z + farDist);
       dir.set(0, 0, -1);
     }
 
@@ -1115,7 +1121,7 @@ updateCanvas();
     if (hits.length > 0) {
       var pt = hits[0].point.clone();
       var nm = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
-      pt.add(nm.clone().multiplyScalar(0.005)); // tiny offset to prevent z-fighting
+      pt.add(nm.clone().multiplyScalar(0.02)); // offset to sit just in front of fabric
       decalMesh.position.copy(pt);
       // Orient to face outward
       decalMesh.lookAt(pt.clone().add(nm));
@@ -1123,7 +1129,7 @@ updateCanvas();
       // Fallback
       var zOff = isFront ? bSize.z * 0.48 : isBack ? -bSize.z * 0.48 : 0;
       var xOff = isLeft ? -bSize.x * 0.48 : isRight ? bSize.x * 0.48 : 0;
-      decalMesh.position.set(bCenter.x + xOff, targetY, bCenter.z + zOff);
+      decalMesh.position.set(bCenter.x + xOff, chestY, bCenter.z + zOff);
       if (isBack) decalMesh.rotation.y = Math.PI;
       if (isLeft) decalMesh.rotation.y = Math.PI / 2;
       if (isRight) decalMesh.rotation.y = -Math.PI / 2;
