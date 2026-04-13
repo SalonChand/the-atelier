@@ -131,6 +131,84 @@
     align-items: center; justify-content: center; border-radius: 2px;
   }
   @media (max-width: 900px) { .mobile-toggle { display: flex; } .dashboard-main { padding-top: 4rem; } }
+
+  /* ── MOBILE DASHBOARD FIXES ──────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .dashboard-main { padding: 4rem 1rem 2rem; }
+    .topbar { flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .page-title { font-size: 1.6rem; }
+    .topbar-right { width: 100%; }
+    .date-badge { font-size: 0.55rem; padding: 0.3rem 0.6rem; }
+
+    /* KPI Cards */
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .kpi-card { padding: 1rem; text-align: center; }
+    .kpi-label { font-size: 0.5rem; letter-spacing: 0.12em; margin-bottom: 0.3rem; }
+    .kpi-value { font-size: 1.5rem; }
+    .kpi-change { font-size: 0.55rem; }
+
+    /* Mini Stats (orders page) */
+    .mini-stats { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+    .mini-stat { padding: 0.75rem 0.5rem; }
+    .mini-stat-val { font-size: 1.3rem; }
+    .mini-stat-label { font-size: 0.45rem; letter-spacing: 0.1em; line-height: 1.4; }
+
+    /* Charts */
+    .charts-grid { gap: 1rem; margin-bottom: 1.5rem; }
+    .chart-card { padding: 1rem; }
+    .chart-title { font-size: 0.58rem; margin-bottom: 1rem; }
+    canvas { max-height: 200px; }
+
+    /* Tables */
+    .table-card { margin-bottom: 1.5rem; }
+    .table-header { padding: 1rem; flex-direction: column; align-items: stretch; gap: 0.5rem; }
+    .table-title { font-size: 0.6rem; }
+    .table-actions { flex-direction: column; }
+    .table-search { width: 100%; }
+    thead th { padding: 0.5rem 0.75rem; font-size: 0.45rem; letter-spacing: 0.1em; white-space: nowrap; }
+    tbody td { padding: 0.6rem 0.75rem; font-size: 0.65rem; }
+    .table-scroll { -webkit-overflow-scrolling: touch; }
+
+    /* Buttons */
+    .btn-primary, .btn-secondary, .btn-danger { font-size: 0.55rem; padding: 0.45rem 0.75rem; width: 100%; text-align: center; }
+
+    /* Modal */
+    .modal { padding: 1.5rem; width: 95%; }
+    .modal-title { font-size: 1.3rem; margin-bottom: 1.25rem; }
+    .form-row { grid-template-columns: 1fr; }
+
+    /* Bottom grid */
+    .bottom-grid { gap: 1rem; }
+    .top-product-item { grid-template-columns: 1.5rem 1fr auto; gap: 0.5rem; padding: 0.6rem 0; }
+    .tp-rank { font-size: 1.1rem; }
+    .tp-name p { font-size: 0.7rem; }
+    .tp-bar-wrap { display: none; }
+    .activity-item { gap: 0.5rem; padding: 0.6rem 0; }
+    .activity-text p { font-size: 0.68rem; }
+
+    /* Filter selects */
+    .filter-select { font-size: 0.65rem; padding: 0.4rem 0.5rem; width: 100%; }
+
+    /* Pagination */
+    .pagination { padding: 0.75rem 1rem; flex-wrap: wrap; justify-content: center; }
+    .page-info { width: 100%; text-align: center; margin-bottom: 0.5rem; }
+
+    /* Toast */
+    .toast { left: 1rem; right: 1rem; bottom: 1rem; max-width: none; }
+
+    /* Stock bar */
+    .stock-bar-wrap { width: 50px; }
+  }
+
+  @media (max-width: 400px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .kpi-card { padding: 0.75rem; }
+    .kpi-value { font-size: 1.3rem; }
+    .mini-stats { grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+    .mini-stat-val { font-size: 1.1rem; }
+    .mini-stat-label { font-size: 0.42rem; }
+    .dashboard-main { padding: 3.5rem 0.75rem 1.5rem; }
+  }
   .sidebar-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 9;
   }
