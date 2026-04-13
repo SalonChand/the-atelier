@@ -1143,10 +1143,12 @@ updateCanvas();
   }
 
   function updateDecal() {
+    console.log('[3D Decal] updateDecal called. is3DActive:', is3DActive, 'tshirtModel:', !!tshirtModel, 'ctype:', state.ctype);
     if (!is3DActive || !tshirtModel) return;
     if (state.ctype === 'none') { restoreOriginalMaterials(); return; }
 
     buildDesignImage(function(imgCanvas) {
+      console.log('[3D Decal] buildDesignImage result:', !!imgCanvas);
       if (!imgCanvas) { restoreOriginalMaterials(); return; }
 
       // Composite: fill with garment color, then stamp design at UV position
@@ -1160,34 +1162,44 @@ updateCanvas();
       var sz = designState.scale * 2048;
       var dx = designState.u * 2048 - sz / 2;
       var dy = designState.v * 2048 - sz / 2;
+      console.log('[3D Decal] Stamping at UV:', designState.u.toFixed(2), designState.v.toFixed(2), 'size:', sz.toFixed(0));
       designCtx.drawImage(imgCanvas, dx, dy, sz, sz);
 
       // Create or update Three.js texture
       if (!designTexture) {
         designTexture = new THREE.CanvasTexture(designCanvas);
         designTexture.encoding = THREE.sRGBEncoding;
-        designTexture.flipY = true;
         designTexture.wrapS = THREE.ClampToEdgeWrapping;
         designTexture.wrapT = THREE.ClampToEdgeWrapping;
       }
+      designTexture.flipY = false; // GLB models typically have flipY = false
       designTexture.needsUpdate = true;
 
       // Apply to all meshes in the model
+      var meshCount = 0;
       tshirtModel.traverse(function(child) {
         if (!child.isMesh) return;
+        meshCount++;
+
+        var hasUV = !!child.geometry.attributes.uv;
+        console.log('[3D Decal] Mesh:', child.name || 'unnamed', 'hasUV:', hasUV, 'matType:', child.material.type);
 
         // Store original material if not stored
         if (!originalMaterials[child.uuid]) {
           originalMaterials[child.uuid] = child.material.clone();
         }
 
-        // Create new material with the design texture as the map
-        var newMat = child.material.clone();
-        newMat.map = designTexture;
-        newMat.color.set(0xffffff); // white base so texture color shows true
+        // Apply texture - use MeshStandardMaterial for reliable texture mapping
+        var newMat = new THREE.MeshStandardMaterial({
+          map: designTexture,
+          roughness: 0.8,
+          metalness: 0.0,
+          side: THREE.DoubleSide
+        });
         newMat.needsUpdate = true;
         child.material = newMat;
       });
+      console.log('[3D Decal] Applied to', meshCount, 'meshes');
     });
   }
 
