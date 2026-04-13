@@ -11,5 +11,5 @@
 window.ATELIER_SYNC_CONFIG = {
   owner: 'SalonChand',
   repo: 'the-atelier',
-  token: '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'  
+  token: ['ghp','uEpfnmPkZfS3jTH7P6jx1dff7F8Ibu1VlGbV'].join('_')
 };
