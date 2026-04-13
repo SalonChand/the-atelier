@@ -1,7 +1,19 @@
 {
   "orders": [],
   "customers": [],
-  "inquiries": [],
+  "inquiries": [
+    {
+      "id": "INQ-1776103705865",
+      "name": "Salon Sodari",
+      "email": "salonsodari05@gmail.com",
+      "subject": "Order Enquiry",
+      "orderRef": "",
+      "message": "hii",
+      "date": "13 Apr 2026",
+      "time": "23:53",
+      "status": "unread"
+    }
+  ],
   "custom_orders": [],
   "products": [],
   "inventory": [],
@@ -17,5 +29,5 @@
     }
   ],
   "payment_settings": {},
-  "_lastUpdated": "2026-04-13T18:08:15.111Z"
+  "_lastUpdated": "2026-04-13T18:08:27.868Z"
 }
