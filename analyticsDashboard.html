@@ -359,7 +359,7 @@
         <button class="btn-primary" onclick="openProductModal()">+ Add Product</button>
       </div>
     </div>
-    <div class="table-scroll"><table><thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Color</th><th onclick="sortTable('products','price')">Price ↕</th><th onclick="sortTable('products','stock')">Stock ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="products-tbody"></tbody></table>
+    <div class="table-scroll"><table><thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Color</th><th onclick="sortTable('products','price')">Price ↕</th><th onclick="sortTable('products','stock')">Stock ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="products-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -509,8 +509,7 @@
         <input class="table-search" placeholder="Search inquiries..." id="inq-search" oninput="renderInquiriesTable()"/>
       </div>
     </div>
-    <div class="table-scroll">
-    <table>
+    <div class="table-scroll"><table>
       <thead><tr>
         <th></th>
         <th onclick="sortInquiries('name')">Name ↕</th>
@@ -523,8 +522,7 @@
         <th>Actions</th>
       </tr></thead>
       <tbody id="inquiries-tbody"></tbody>
-    </table>
-    </div>
+    </table></div>
     <div class="pagination" id="inq-pagination"></div>
   </div>
 </div>
@@ -1978,7 +1976,7 @@ function productLookup() {
           <th style="padding:0.6rem 1.5rem;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;text-align:left;border-bottom:1px solid rgba(200,184,154,0.2);">Action</th>
         </tr></thead>
         <tbody>${rows}</tbody>
-      </table></div>
+      </table>
     </div>`;
 }
 
