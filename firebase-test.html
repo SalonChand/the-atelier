@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Firebase Test</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+</head>
+<body style="font-family:sans-serif;padding:2rem;max-width:500px;margin:0 auto;">
+<h2>Firebase Connection Test</h2>
+<div id="status" style="padding:1rem;background:#f0f0f0;margin:1rem 0;">Loading...</div>
+<button id="test-btn" onclick="testWrite()" style="padding:1rem 2rem;font-size:1rem;cursor:pointer;">Write Test Data</button>
+<div id="result" style="padding:1rem;margin:1rem 0;"></div>
+
+<script>
+var statusEl = document.getElementById('status');
+var resultEl = document.getElementById('result');
+
+try {
+  statusEl.textContent = '1. Firebase SDK loaded: ' + (typeof firebase !== 'undefined');
+  
+  if (typeof firebase === 'undefined') {
+    statusEl.innerHTML = '<b style="color:red">FAILED: Firebase SDK did not load!</b><br>The gstatic.com CDN might be blocked on this device.';
+  } else {
+    var app = firebase.initializeApp({
+      apiKey: "AIzaSyCqDm6B0JoILcHHFqO6w2El64UhVS5WgDs",
+      authDomain: "the-atelier-ce832.firebaseapp.com",
+      databaseURL: "https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "the-atelier-ce832",
+      storageBucket: "the-atelier-ce832.firebasestorage.app",
+      messagingSenderId: "119477694873",
+      appId: "1:119477694873:web:827bc0b07f034b47b7a308"
+    });
+    var db = firebase.database();
+    statusEl.innerHTML = '<b style="color:green">Firebase SDK loaded and initialized!</b>';
+    
+    // Try reading
+    db.ref('inquiries').once('value', function(snap) {
+      var data = snap.val();
+      resultEl.innerHTML = '<b>Current inquiries in Firebase:</b> ' + (data ? Object.keys(data).length : 0) + ' entries';
+    });
+  }
+} catch(e) {
+  statusEl.innerHTML = '<b style="color:red">ERROR: ' + e.message + '</b>';
+}
+
+function testWrite() {
+  if (typeof firebase === 'undefined') { resultEl.textContent = 'Firebase not loaded!'; return; }
+  var db = firebase.database();
+  var testInquiry = {
+    id: 'TEST-' + Date.now(),
+    name: 'Phone Test',
+    email: 'phone@test.com',
+    subject: 'Test from phone',
+    message: 'Testing if Firebase writes work from this device',
+    date: new Date().toLocaleDateString(),
+    time: new Date().toLocaleTimeString(),
+    status: 'unread'
+  };
+  
+  // Read current inquiries, add new one, write back
+  db.ref('inquiries').once('value', function(snap) {
+    var current = snap.val() || [];
+    if (!Array.isArray(current)) current = Object.values(current);
+    current.unshift(testInquiry);
+    db.ref('inquiries').set(current).then(function() {
+      resultEl.innerHTML = '<b style="color:green">SUCCESS! Test inquiry written to Firebase.</b><br>Check Firebase console now.';
+    }).catch(function(err) {
+      resultEl.innerHTML = '<b style="color:red">WRITE FAILED: ' + err.message + '</b>';
+    });
+  });
+}
+</script>
+</body>
+</html>
