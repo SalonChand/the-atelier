@@ -52,6 +52,50 @@
   var isReady = false;
   var _suppressSync = false; // prevent write loops
   var _origSetItem = localStorage.setItem.bind(localStorage);
+  var _pendingWrites = []; // queue writes that happen before Firebase is ready
+
+  // ── OVERRIDE LOCALSTORAGE IMMEDIATELY ──────────────────────────────────
+  // This must happen BEFORE Firebase loads so we catch ALL writes,
+  // even if the user submits a form before Firebase SDK finishes loading.
+  localStorage.setItem = function(key, value) {
+    // Always write to localStorage first
+    _origSetItem(key, value);
+
+    // If this is a synced key and not triggered by a Firebase listener
+    if (SYNC_KEYS[key] && !_suppressSync) {
+      if (isReady && db) {
+        // Firebase is ready — write directly
+        var fbPath = SYNC_KEYS[key];
+        try {
+          db.ref(fbPath).set(JSON.parse(value));
+        } catch(e) {
+          db.ref(fbPath).set(value);
+        }
+      } else {
+        // Firebase not ready yet — queue the write
+        _pendingWrites.push({ key: key, value: value });
+        console.log('[Firebase] Queued write for:', key);
+      }
+    }
+  };
+
+  // Flush queued writes once Firebase connects
+  function flushPendingWrites() {
+    if (_pendingWrites.length === 0) return;
+    console.log('[Firebase] Flushing', _pendingWrites.length, 'queued writes');
+    for (var i = 0; i < _pendingWrites.length; i++) {
+      var item = _pendingWrites[i];
+      var fbPath = SYNC_KEYS[item.key];
+      if (fbPath) {
+        try {
+          db.ref(fbPath).set(JSON.parse(item.value));
+        } catch(e) {
+          db.ref(fbPath).set(item.value);
+        }
+      }
+    }
+    _pendingWrites = [];
+  }
 
   // ── LOAD FIREBASE SDK (CDN — no build tools needed) ────────────────────
   function loadFirebase(callback) {
@@ -85,11 +129,10 @@
       setupListeners();
 
       // Do initial push of any existing localStorage data to Firebase
-      // (only if Firebase paths are empty — don't overwrite existing data)
       initialSync();
 
-      // Override localStorage.setItem to auto-sync writes
-      overrideLocalStorage();
+      // Flush any writes that happened before Firebase was ready
+      flushPendingWrites();
 
     } catch(e) {
       console.error('[Firebase] Init error:', e);
@@ -160,26 +203,7 @@
     });
   }
 
-  // ── OVERRIDE LOCALSTORAGE ──────────────────────────────────────────────
-  // Intercept writes to shared keys and push to Firebase
-  function overrideLocalStorage() {
-    localStorage.setItem = function(key, value) {
-      // Always write to localStorage first
-      _origSetItem(key, value);
-
-      // If this is a synced key and not triggered by a Firebase listener
-      if (SYNC_KEYS[key] && !_suppressSync && isReady) {
-        var fbPath = SYNC_KEYS[key];
-        try {
-          var parsed = JSON.parse(value);
-          db.ref(fbPath).set(parsed);
-        } catch(e) {
-          // Store as string if not valid JSON
-          db.ref(fbPath).set(value);
-        }
-      }
-    };
-  }
+  // (localStorage override is now at the top of the IIFE)
 
   // ── EXPOSE GLOBAL API ─────────────────────────────────────────────────
   window.AtelierSync = {
