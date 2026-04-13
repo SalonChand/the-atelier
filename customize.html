@@ -326,7 +326,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
         <img id="preview-thumb" src="" alt="Preview"/>
         <div id="img-controls" style="display:none;margin-top:0.75rem;">
           <label style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Design Size</label>
-          <input type="range" id="design-scale" min="0.1" max="1" step="0.01" value="0.35" style="width:100%;" oninput="updateCanvas()"/>
+          <input type="range" id="design-scale" min="0.1" max="1" step="0.01" value="0.65" style="width:100%;" oninput="updateCanvas()"/>
           <label style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-top:0.6rem;margin-bottom:0.4rem;">Opacity</label>
           <input type="range" id="design-opacity" min="0.1" max="1" step="0.05" value="1" style="width:100%;" oninput="updateCanvas()"/>
           <button onclick="clearDesign()" style="margin-top:0.75rem;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;background:none;border:1px solid rgba(200,184,154,0.4);padding:0.35rem 0.75rem;cursor:pointer;color:#8a7f73;font-family:'Jost';">Remove Image</button>
@@ -823,7 +823,7 @@ updateCanvas();
   var threeCanvas = document.getElementById('three-canvas');
   var canvas2d = document.getElementById('garment-canvas');
   var loadingEl = document.getElementById('loading-3d');
-  var D = { size: 0.7, worldPos: null, worldNormal: null, side: 'front' };
+  var D = { size: 1.66, worldPos: null, worldNormal: null, side: 'front' };
   var isDragging = false;
   var raycaster = new THREE.Raycaster();
   var mouse = new THREE.Vector2();
