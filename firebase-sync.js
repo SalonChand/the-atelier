@@ -4,14 +4,8 @@
    Replaces the old GitHub-based sync. Uses Firebase Realtime Database
    for instant cross-device data synchronization.
    
-   How it works:
-   - Shared data (orders, inquiries, customers, etc.) is stored in Firebase
-   - localStorage is used as a fast local cache
-   - When any page writes to localStorage with a shared key,
-     the data is also pushed to Firebase
-   - Firebase listeners update localStorage in real-time when
-     data changes on another device
-   - Cart data stays local (per-browser) — not synced
+   REQUIRES: firebase-app-compat.js and firebase-database-compat.js
+   to be loaded BEFORE this script via <script> tags in the HTML.
    ═══════════════════════════════════════════════════════════════════════════ */
 (function() {
   'use strict';
@@ -27,7 +21,7 @@
     appId: "1:119477694873:web:827bc0b07f034b47b7a308"
   };
 
-  // ── KEY MAPPING: localStorage key → Firebase path ──────────────────────
+  // ── KEY MAPPING ────────────────────────────────────────────────────────
   var SYNC_KEYS = {
     'atelier_admin_orders':    'orders',
     'atelier_admin_customers': 'customers',
@@ -42,217 +36,138 @@
     'atelier_admins':          'admins',
     'atelier_payment_settings':'payment_settings'
   };
-
-  // Reverse map: Firebase path → localStorage key
   var PATH_TO_KEY = {};
   for (var k in SYNC_KEYS) { PATH_TO_KEY[SYNC_KEYS[k]] = k; }
 
   // ── STATE ──────────────────────────────────────────────────────────────
   var db = null;
   var isReady = false;
-  var _suppressSync = false; // prevent write loops
+  var _suppressSync = false;
   var _origSetItem = localStorage.setItem.bind(localStorage);
-  var _pendingWrites = []; // queue writes that happen before Firebase is ready
+  var _pendingWrites = [];
 
   // ── OVERRIDE LOCALSTORAGE IMMEDIATELY ──────────────────────────────────
-  // This must happen BEFORE Firebase loads so we catch ALL writes,
-  // even if the user submits a form before Firebase SDK finishes loading.
   localStorage.setItem = function(key, value) {
-    // Always write to localStorage first
     _origSetItem(key, value);
-
-    // If this is a synced key and not triggered by a Firebase listener
     if (SYNC_KEYS[key] && !_suppressSync) {
       if (isReady && db) {
-        // Firebase is ready — write directly
-        var fbPath = SYNC_KEYS[key];
-        try {
-          db.ref(fbPath).set(JSON.parse(value));
-        } catch(e) {
-          db.ref(fbPath).set(value);
-        }
+        try { db.ref(SYNC_KEYS[key]).set(JSON.parse(value)); }
+        catch(e) { db.ref(SYNC_KEYS[key]).set(value); }
       } else {
-        // Firebase not ready yet — queue the write
         _pendingWrites.push({ key: key, value: value });
-        console.log('[Firebase] Queued write for:', key);
       }
     }
   };
 
-  // Flush queued writes once Firebase connects
   function flushPendingWrites() {
     if (_pendingWrites.length === 0) return;
-    console.log('[Firebase] Flushing', _pendingWrites.length, 'queued writes');
     for (var i = 0; i < _pendingWrites.length; i++) {
       var item = _pendingWrites[i];
       var fbPath = SYNC_KEYS[item.key];
       if (fbPath) {
-        try {
-          db.ref(fbPath).set(JSON.parse(item.value));
-        } catch(e) {
-          db.ref(fbPath).set(item.value);
-        }
+        try { db.ref(fbPath).set(JSON.parse(item.value)); }
+        catch(e) { db.ref(fbPath).set(item.value); }
       }
     }
     _pendingWrites = [];
   }
 
-  // ── LOAD FIREBASE SDK (CDN — no build tools needed) ────────────────────
-  function loadFirebase(callback) {
-    // Firebase App
-    var s1 = document.createElement('script');
-    s1.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js';
-    s1.onload = function() {
-      // Firebase Realtime Database
-      var s2 = document.createElement('script');
-      s2.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js';
-      s2.onload = function() {
-        callback();
-      };
-      s2.onerror = function() { console.warn('[Firebase] Failed to load database SDK'); };
-      document.head.appendChild(s2);
-    };
-    s1.onerror = function() { console.warn('[Firebase] Failed to load app SDK'); };
-    document.head.appendChild(s1);
-  }
-
-  // ── INITIALIZE ─────────────────────────────────────────────────────────
-  function initFirebase() {
+  // ── INIT (called when Firebase SDK is available) ───────────────────────
+  function init() {
+    if (typeof firebase === 'undefined') {
+      console.warn('[Firebase] SDK not loaded');
+      return;
+    }
     try {
-      // Initialize Firebase
-      var app = firebase.initializeApp(FIREBASE_CONFIG);
+      if (!firebase.apps.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+      }
       db = firebase.database();
       isReady = true;
       console.log('[Firebase] Connected');
-
-      // Set up real-time listeners for all synced keys
       setupListeners();
-
-      // Do initial push of any existing localStorage data to Firebase
       initialSync();
-
-      // Flush any writes that happened before Firebase was ready
       flushPendingWrites();
-
     } catch(e) {
       console.error('[Firebase] Init error:', e);
     }
   }
 
   // ── REAL-TIME LISTENERS ────────────────────────────────────────────────
-  // When data changes in Firebase (from any device), update localStorage
   function setupListeners() {
     for (var lsKey in SYNC_KEYS) {
       (function(localKey, fbPath) {
         db.ref(fbPath).on('value', function(snapshot) {
           var val = snapshot.val();
           if (val === null || val === undefined) return;
-
-          // Suppress the localStorage override from pushing this back to Firebase
           _suppressSync = true;
           try {
-            var jsonVal = typeof val === 'string' ? val : JSON.stringify(val);
-            _origSetItem(localKey, jsonVal);
-          } catch(e) {
-            console.warn('[Firebase] Failed to cache', localKey, e);
-          }
+            _origSetItem(localKey, typeof val === 'string' ? val : JSON.stringify(val));
+          } catch(e) {}
           _suppressSync = false;
-
-          // Notify the page that data has been updated
-          window.dispatchEvent(new CustomEvent('atelier-data-updated', {
-            detail: { key: localKey, path: fbPath }
-          }));
+          window.dispatchEvent(new CustomEvent('atelier-data-updated', { detail: { key: localKey } }));
         });
       })(lsKey, SYNC_KEYS[lsKey]);
     }
   }
 
   // ── INITIAL SYNC ───────────────────────────────────────────────────────
-  // Push existing localStorage data to Firebase if Firebase is empty
   function initialSync() {
     for (var lsKey in SYNC_KEYS) {
       (function(localKey, fbPath) {
         var localData = localStorage.getItem(localKey);
         if (!localData) return;
-
-        // Check if Firebase already has data for this path
         db.ref(fbPath).once('value', function(snapshot) {
           if (snapshot.val() === null) {
-            // Firebase is empty for this path — push local data
-            try {
-              var parsed = JSON.parse(localData);
-              db.ref(fbPath).set(parsed);
-              console.log('[Firebase] Seeded:', fbPath);
-            } catch(e) {
-              // Not valid JSON, store as-is
-              db.ref(fbPath).set(localData);
-            }
+            try { db.ref(fbPath).set(JSON.parse(localData)); }
+            catch(e) { db.ref(fbPath).set(localData); }
           }
         });
       })(lsKey, SYNC_KEYS[lsKey]);
     }
-
-    // Seed default admin if admins path is empty
     db.ref('admins').once('value', function(snapshot) {
       if (snapshot.val() === null) {
-        db.ref('admins').set([
-          { email: 'admin@theatelier.com', password: 'atelier2025', role: 'superadmin' }
-        ]);
-        console.log('[Firebase] Seeded default admin');
+        db.ref('admins').set([{ email:'admin@theatelier.com', password:'atelier2025', role:'superadmin' }]);
       }
     });
   }
 
-  // (localStorage override is now at the top of the IIFE)
-
-  // ── EXPOSE GLOBAL API ─────────────────────────────────────────────────
+  // ── GLOBAL API ─────────────────────────────────────────────────────────
   window.AtelierSync = {
     isConfigured: function() { return isReady; },
-    push: function(callback) {
-      // Push all synced localStorage data to Firebase
-      if (!isReady) { if (callback) callback(false); return; }
-      var promises = [];
-      for (var lsKey in SYNC_KEYS) {
-        var raw = localStorage.getItem(lsKey);
-        if (raw) {
-          try {
-            var parsed = JSON.parse(raw);
-            db.ref(SYNC_KEYS[lsKey]).set(parsed);
-          } catch(e) {
-            db.ref(SYNC_KEYS[lsKey]).set(raw);
-          }
-        }
+    push: function(cb) {
+      if (!isReady) { if (cb) cb(false); return; }
+      for (var k in SYNC_KEYS) {
+        var raw = localStorage.getItem(k);
+        if (raw) { try { db.ref(SYNC_KEYS[k]).set(JSON.parse(raw)); } catch(e) { db.ref(SYNC_KEYS[k]).set(raw); } }
       }
-      console.log('[Firebase] Force pushed all data');
-      if (callback) callback(true);
+      if (cb) cb(true);
     },
-    pull: function(callback) {
-      // Pull all data from Firebase to localStorage
-      if (!isReady) { if (callback) callback(false); return; }
-      db.ref().once('value', function(snapshot) {
-        var data = snapshot.val() || {};
+    pull: function(cb) {
+      if (!isReady) { if (cb) cb(false); return; }
+      db.ref().once('value', function(snap) {
+        var data = snap.val() || {};
         _suppressSync = true;
-        for (var fbPath in PATH_TO_KEY) {
-          if (data[fbPath] !== undefined && data[fbPath] !== null) {
-            var val = typeof data[fbPath] === 'string' ? data[fbPath] : JSON.stringify(data[fbPath]);
-            _origSetItem(PATH_TO_KEY[fbPath], val);
-          }
+        for (var p in PATH_TO_KEY) {
+          if (data[p] != null) _origSetItem(PATH_TO_KEY[p], typeof data[p] === 'string' ? data[p] : JSON.stringify(data[p]));
         }
         _suppressSync = false;
-        console.log('[Firebase] Force pulled all data');
         window.dispatchEvent(new Event('atelier-synced'));
-        if (callback) callback(true);
+        if (cb) cb(true);
       });
     },
     getConfig: function() { return FIREBASE_CONFIG; },
-    disconnect: function() {
-      if (db) { firebase.database().goOffline(); }
-      console.log('[Firebase] Disconnected');
-    },
+    disconnect: function() { if (db) firebase.database().goOffline(); },
     forcePush: function() { window.AtelierSync.push(); }
   };
 
-  // ── BOOT ───────────────────────────────────────────────────────────────
-  loadFirebase(initFirebase);
+  // ── BOOT — try immediately, or wait for DOMContentLoaded ──────────────
+  if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+    init();
+  } else {
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(init, 100);
+    });
+  }
 
 })();
