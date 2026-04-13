@@ -941,16 +941,45 @@ updateCanvas();
   // MODEL LOADING — wrapper group centering
   // ═════════════════════════════════════════════════════════════════════
   function normalizeModel(raw) {
+    // Force update all world matrices first
+    raw.updateMatrixWorld(true);
+
+    // Get world-space bounding box
     var box = new THREE.Box3().setFromObject(raw);
     var center = box.getCenter(new THREE.Vector3());
     var size = box.getSize(new THREE.Vector3());
     var maxDim = Math.max(size.x, size.y, size.z);
+    var scale = 1.6 / maxDim;
 
-    // Wrapper group for clean transforms
+    // Create a pivot group
     var group = new THREE.Group();
+    
+    // Add model to group, then offset the group's position
+    // to bring the model's world center to origin
     group.add(raw);
-    raw.position.sub(center); // center in group
-    group.scale.setScalar(1.6 / maxDim); // normalize to 1.6 units
+    
+    // The key fix: offset must account for the raw model's own position
+    // plus where its geometry actually sits in world space
+    var rawWorldPos = new THREE.Vector3();
+    raw.getWorldPosition(rawWorldPos);
+    
+    // Move raw so that the bounding box center lands at group origin
+    raw.position.x += (rawWorldPos.x - center.x);
+    raw.position.y += (rawWorldPos.y - center.y);
+    raw.position.z += (rawWorldPos.z - center.z);
+    
+    // Scale the group
+    group.scale.setScalar(scale);
+
+    // Verify centering worked
+    group.updateMatrixWorld(true);
+    var checkBox = new THREE.Box3().setFromObject(group);
+    var checkCenter = checkBox.getCenter(new THREE.Vector3());
+    
+    // If still off-center, brute force fix
+    if (Math.abs(checkCenter.x) > 0.1 || Math.abs(checkCenter.y) > 0.1 || Math.abs(checkCenter.z) > 0.1) {
+      group.position.sub(checkCenter);
+    }
 
     group.traverse(function(ch) {
       if (ch.isMesh) {
