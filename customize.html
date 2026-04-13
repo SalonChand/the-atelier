@@ -809,43 +809,41 @@ function placeCustomOrder() {
 updateCanvas();
 </script>
 
-<!-- Three.js 3D Viewer -->
+
+<!-- Three.js 3D Viewer — Final Complete Solution -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function() {
   'use strict';
 
-  var MODEL_FILES = {
-    tshirt:'tshirt.glb', shirt:'shirt.glb', hoodie:'hoodie.glb',
-    jacket:'jacket.glb', coat:'coat.glb', pant:'pant.glb'
-  };
-
+  var MODEL_FILES = { tshirt:'tshirt.glb', shirt:'shirt.glb', hoodie:'hoodie.glb', jacket:'jacket.glb', coat:'coat.glb', pant:'pant.glb' };
   var scene, camera, renderer, controls, currentModel, modelBox;
-  var loader3D = null, loadedModels = {}, is3DActive = false, decalMesh = null;
+  var loader3D, loadedModels = {}, is3DActive = false, decalMesh = null;
   var viewer3d = document.getElementById('viewer-3d');
   var threeCanvas = document.getElementById('three-canvas');
   var canvas2d = document.getElementById('garment-canvas');
   var loadingEl = document.getElementById('loading-3d');
-  var decal = { size: 0.5, posY: 0.15, side: 'front' };
+  var D = { size: 0.7, worldPos: null, worldNormal: null, side: 'front' };
+  var isDragging = false;
+  var raycaster = new THREE.Raycaster();
+  var mouse = new THREE.Vector2();
 
-  // Load Three.js plugins then init
+  // Load plugins then init
   var s1 = document.createElement('script');
   s1.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
   s1.onload = function() {
     var s2 = document.createElement('script');
     s2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
-    s2.onload = init3D;
+    s2.onload = init;
     document.head.appendChild(s2);
   };
   document.head.appendChild(s1);
 
-  function init3D() {
+  function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf8f5f0);
-
     camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100);
     camera.position.set(0, 0.15, 2.8);
-
     renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
@@ -853,32 +851,23 @@ updateCanvas();
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.3;
 
-    // Studio lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.55));
     var k = new THREE.DirectionalLight(0xfff8f0, 0.85); k.position.set(2, 4, 3); k.castShadow = true; scene.add(k);
-    var f = new THREE.DirectionalLight(0xf0f0ff, 0.4); f.position.set(-2, 3, 1); scene.add(f);
-    var r = new THREE.DirectionalLight(0xffffff, 0.25); r.position.set(0, 1, -3); scene.add(r);
+    scene.add(new THREE.DirectionalLight(0xf0f0ff, 0.4)).position.set(-2, 3, 1);
+    scene.add(new THREE.DirectionalLight(0xffffff, 0.25)).position.set(0, 1, -3);
 
-    // Ground shadow plane
     var gnd = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.ShadowMaterial({ opacity: 0.12 }));
-    gnd.rotation.x = -Math.PI / 2; gnd.position.y = -0.9; gnd.receiveShadow = true; scene.add(gnd);
+    gnd.rotation.x = -Math.PI / 2; gnd.position.y = -1.0; gnd.receiveShadow = true; scene.add(gnd);
 
-    // Orbit controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.enablePan = false;
-    controls.minDistance = 1.2;
-    controls.maxDistance = 5;
-    controls.target.set(0, 0, 0);
-    controls.update();
+    controls.enableDamping = true; controls.dampingFactor = 0.08;
+    controls.enablePan = false; controls.minDistance = 1.2; controls.maxDistance = 5;
+    controls.target.set(0, 0, 0); controls.update();
 
     loader3D = new THREE.GLTFLoader();
-
-    // Animate
     (function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
     window.addEventListener('resize', resize);
-
+    setupDrag();
     loadModel(state.garment);
   }
 
@@ -886,93 +875,50 @@ updateCanvas();
     if (!is3DActive || !viewer3d) return;
     var w = viewer3d.clientWidth, h = viewer3d.clientHeight;
     if (w < 1 || h < 1) return;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
+    camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
   }
-
   function show3D() {
-    is3DActive = true;
-    viewer3d.style.display = 'block';
-    canvas2d.style.display = 'none';
-    document.getElementById('canvas-hint').textContent = 'Drag to rotate · Scroll to zoom · Use sliders to adjust design';
+    is3DActive = true; viewer3d.style.display = 'block'; canvas2d.style.display = 'none';
+    document.getElementById('canvas-hint').textContent = 'Drag to rotate · Hold Shift+drag to move design · Scroll to zoom';
     setTimeout(resize, 50);
   }
   function show2D() {
-    is3DActive = false;
-    viewer3d.style.display = 'none';
-    canvas2d.style.display = 'block';
-    document.getElementById('canvas-hint').textContent = 'Upload an image or enter text to preview';
+    is3DActive = false; viewer3d.style.display = 'none'; canvas2d.style.display = 'block';
+    document.getElementById('canvas-hint').textContent = 'Upload an image or text to preview';
     updateCanvas();
   }
 
-  // ── MODEL LOADING — proper centering regardless of original coords ────
+  // ── MODEL LOADING ─────────────────────────────────────────────────────
   function normalizeModel(m) {
-    // Step 1: compute world-space bounding box
     var box = new THREE.Box3().setFromObject(m);
-    var center = box.getCenter(new THREE.Vector3());
-    var size = box.getSize(new THREE.Vector3());
-    var maxDim = Math.max(size.x, size.y, size.z);
-
-    // Step 2: create a wrapper group
+    var c = box.getCenter(new THREE.Vector3());
+    var s = box.getSize(new THREE.Vector3());
     var wrapper = new THREE.Group();
     wrapper.add(m);
-
-    // Step 3: move model so its center is at origin
-    m.position.sub(center);
-
-    // Step 4: scale wrapper so the model fits in a ~1.6 unit box
-    var sc = 1.6 / maxDim;
-    wrapper.scale.setScalar(sc);
-
-    // Enable shadows
-    wrapper.traverse(function(ch) {
-      if (ch.isMesh) { ch.castShadow = true; ch.receiveShadow = true; }
-    });
-
+    m.position.sub(c);
+    wrapper.scale.setScalar(1.6 / Math.max(s.x, s.y, s.z));
+    wrapper.traverse(function(ch) { if (ch.isMesh) { ch.castShadow = true; ch.receiveShadow = true; } });
     return wrapper;
   }
-
   function loadModel(key) {
-    var file = MODEL_FILES[key];
-    if (!file) { show2D(); return; }
-
+    if (!MODEL_FILES[key]) { show2D(); return; }
     if (loadedModels[key]) { swapModel(loadedModels[key]); return; }
-
-    if (loadingEl) {
-      loadingEl.style.display = 'flex';
-      var p = loadingEl.querySelector('p');
-      if (p) p.textContent = 'Loading 3D Model…';
-    }
+    if (loadingEl) { loadingEl.style.display = 'flex'; var p = loadingEl.querySelector('p'); if (p) p.textContent = 'Loading…'; }
     show3D();
-
-    loader3D.load(file,
-      function(gltf) {
-        var wrapper = normalizeModel(gltf.scene);
-        loadedModels[key] = wrapper;
-        swapModel(wrapper);
-      },
-      function(prog) {
-        if (prog.total > 0) {
-          var pct = Math.round(prog.loaded / prog.total * 100);
-          var p = loadingEl ? loadingEl.querySelector('p') : null;
-          if (p) p.textContent = 'Loading ' + (GARMENT_NAMES[key] || key) + '… ' + pct + '%';
-        }
-      },
+    loader3D.load(MODEL_FILES[key],
+      function(gltf) { var w = normalizeModel(gltf.scene); loadedModels[key] = w; swapModel(w); },
+      function(prog) { if (prog.total > 0) { var p = loadingEl?.querySelector('p'); if (p) p.textContent = 'Loading ' + (GARMENT_NAMES[key]||key) + '… ' + Math.round(prog.loaded/prog.total*100) + '%'; } },
       function() { if (loadingEl) loadingEl.style.display = 'none'; show2D(); }
     );
   }
-
-  function swapModel(wrapper) {
+  function swapModel(w) {
     if (currentModel) scene.remove(currentModel);
-    currentModel = wrapper;
-    scene.add(currentModel);
+    currentModel = w; scene.add(currentModel);
     modelBox = new THREE.Box3().setFromObject(currentModel);
     if (loadingEl) loadingEl.style.display = 'none';
     applyColor(state.color);
-    removeDecal();
-    placeDecal();
-    show3D();
+    D.worldPos = null; D.worldNormal = null;
+    removeDecal(); autoPlace(); show3D();
   }
 
   // ── COLOR ─────────────────────────────────────────────────────────────
@@ -981,174 +927,148 @@ updateCanvas();
     var col = new THREE.Color(hex);
     currentModel.traverse(function(ch) {
       if (!ch.isMesh) return;
-      if (!ch.userData._origMat) ch.userData._origMat = ch.material.clone();
-      ch.material = ch.userData._origMat.clone();
-      ch.material.color.copy(col);
-      ch.material.needsUpdate = true;
+      if (!ch.userData._o) ch.userData._o = ch.material.clone();
+      ch.material = ch.userData._o.clone();
+      ch.material.color.copy(col); ch.material.needsUpdate = true;
     });
   }
 
   // ── DECAL ─────────────────────────────────────────────────────────────
   function removeDecal() {
-    if (decalMesh) {
-      if (decalMesh.parent) decalMesh.parent.remove(decalMesh);
-      decalMesh.geometry.dispose();
-      decalMesh.material.dispose();
-      if (decalMesh.material.map) decalMesh.material.map.dispose();
-      decalMesh = null;
-    }
+    if (!decalMesh) return;
+    if (decalMesh.parent) decalMesh.parent.remove(decalMesh);
+    decalMesh.geometry.dispose(); decalMesh.material.dispose();
+    if (decalMesh.material.map) decalMesh.material.map.dispose();
+    decalMesh = null;
   }
-
-  function makeDesignTexture() {
+  function makeTex() {
     var c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
-    var ctx = c.getContext('2d'); ctx.clearRect(0, 0, 1024, 1024);
-    var ok = false;
+    var x = c.getContext('2d'); x.clearRect(0, 0, 1024, 1024); var ok = false;
     if (state.designTab === 'image' && uploadedImg) {
       var op = parseFloat(document.getElementById('design-opacity')?.value || 1);
-      var iw = uploadedImg.width, ih = uploadedImg.height;
-      var r = Math.min(960 / iw, 960 / ih);
-      ctx.globalAlpha = op;
-      if (state.ctype === 'embroidery') ctx.filter = 'saturate(0.7) contrast(1.1)';
-      ctx.drawImage(uploadedImg, (1024 - iw * r) / 2, (1024 - ih * r) / 2, iw * r, ih * r);
-      ok = true;
+      var iw = uploadedImg.width, ih = uploadedImg.height, r = Math.min(960/iw, 960/ih);
+      x.globalAlpha = op;
+      if (state.ctype === 'embroidery') x.filter = 'saturate(0.7) contrast(1.1)';
+      x.drawImage(uploadedImg, (1024-iw*r)/2, (1024-ih*r)/2, iw*r, ih*r); ok = true;
     }
     if (state.designTab === 'text' && state.ctype !== 'none') {
-      var txt = document.getElementById('design-text')?.value || '';
+      var txt = document.getElementById('design-text')?.value;
       if (txt) {
-        var fs = parseInt(document.getElementById('text-size')?.value || 32) * 5;
-        var tc = document.getElementById('text-color')?.value || '#0e0e0d';
-        ctx.font = 'bold ' + fs + 'px ' + state.font;
-        ctx.fillStyle = tc; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        if (state.ctype === 'embroidery') { ctx.shadowColor = tc; ctx.shadowBlur = 6; }
-        ctx.fillText(txt, 512, 512);
-        ok = true;
+        var fs = parseInt(document.getElementById('text-size')?.value||32)*5;
+        var tc = document.getElementById('text-color')?.value||'#0e0e0d';
+        x.font = 'bold '+fs+'px '+state.font; x.fillStyle = tc;
+        x.textAlign = 'center'; x.textBaseline = 'middle';
+        if (state.ctype === 'embroidery') { x.shadowColor = tc; x.shadowBlur = 6; }
+        x.fillText(txt, 512, 512); ok = true;
       }
     }
     return ok ? c : null;
   }
+  function getMeshes() { var a = []; if (currentModel) currentModel.traverse(function(c) { if (c.isMesh) a.push(c); }); return a; }
+
+  function autoPlace() {
+    if (!currentModel || !modelBox) return;
+    var bs = modelBox.getSize(new THREE.Vector3());
+    var bc = modelBox.getCenter(new THREE.Vector3());
+    var dist = Math.max(bs.x, bs.z) * 4;
+    var ty = bc.y + bs.y * 0.12;
+    var o, d;
+    if (D.side === 'back') { o = new THREE.Vector3(bc.x, ty, bc.z - dist); d = new THREE.Vector3(0,0,1); }
+    else if (D.side === 'left') { o = new THREE.Vector3(bc.x - dist, ty, bc.z); d = new THREE.Vector3(1,0,0); }
+    else if (D.side === 'right') { o = new THREE.Vector3(bc.x + dist, ty, bc.z); d = new THREE.Vector3(-1,0,0); }
+    else { o = new THREE.Vector3(bc.x, ty, bc.z + dist); d = new THREE.Vector3(0,0,-1); }
+    raycaster.set(o, d.normalize());
+    var hits = raycaster.intersectObjects(getMeshes(), true);
+    if (hits.length > 0) {
+      D.worldPos = hits[0].point.clone();
+      D.worldNormal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
+    } else {
+      var zz = D.side==='back' ? -bs.z*0.48 : bs.z*0.48;
+      D.worldPos = new THREE.Vector3(bc.x, ty, bc.z + zz);
+      D.worldNormal = new THREE.Vector3(0, 0, D.side==='back' ? -1 : 1);
+    }
+    placeDecal();
+  }
 
   function placeDecal() {
     removeDecal();
-    if (!is3DActive || !currentModel || state.ctype === 'none') return;
-    var imgC = makeDesignTexture();
-    if (!imgC) return;
-
-    var tex = new THREE.CanvasTexture(imgC);
-    tex.encoding = THREE.sRGBEncoding;
-
-    // Model is normalized: centered at origin, fits in ~1.6 units
-    // So bounding box is roughly (-0.8, -0.8, -0.8) to (0.8, 0.8, 0.8)
-    var box = modelBox || new THREE.Box3().setFromObject(currentModel);
-    var bSize = box.getSize(new THREE.Vector3());
-    var bCenter = box.getCenter(new THREE.Vector3());
-
-    var planeSize = bSize.x * decal.size;
-    var geo = new THREE.PlaneGeometry(planeSize, planeSize);
-    var mat = new THREE.MeshBasicMaterial({
-      map: tex, transparent: true, depthWrite: false,
-      polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
-      side: THREE.DoubleSide
-    });
+    if (!is3DActive || !currentModel || state.ctype === 'none' || !D.worldPos || !D.worldNormal) return;
+    var imgC = makeTex(); if (!imgC) return;
+    var tex = new THREE.CanvasTexture(imgC); tex.encoding = THREE.sRGBEncoding;
+    var bs = modelBox ? modelBox.getSize(new THREE.Vector3()) : new THREE.Vector3(1,1,1);
+    var sz = Math.max(bs.x, bs.y) * D.size;
+    var geo = new THREE.PlaneGeometry(sz, sz);
+    var mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, side: THREE.DoubleSide });
     decalMesh = new THREE.Mesh(geo, mat);
+    var pos = D.worldPos.clone().add(D.worldNormal.clone().multiplyScalar(0.012));
+    decalMesh.position.copy(pos);
+    decalMesh.lookAt(pos.clone().add(D.worldNormal));
+    currentModel.attach(decalMesh);
+  }
 
-    // Raycast to find surface
-    var origin = new THREE.Vector3();
-    var dir = new THREE.Vector3();
-    var targetY = bCenter.y + bSize.y * decal.posY;
-    var dist = Math.max(bSize.x, bSize.z) * 3;
-
-    if (decal.side === 'back') { origin.set(bCenter.x, targetY, bCenter.z - dist); dir.set(0, 0, 1); }
-    else if (decal.side === 'left') { origin.set(bCenter.x - dist, targetY, bCenter.z); dir.set(1, 0, 0); }
-    else if (decal.side === 'right') { origin.set(bCenter.x + dist, targetY, bCenter.z); dir.set(-1, 0, 0); }
-    else { origin.set(bCenter.x, targetY, bCenter.z + dist); dir.set(0, 0, -1); }
-
-    var rc = new THREE.Raycaster(origin, dir.normalize());
-    var meshes = []; currentModel.traverse(function(ch) { if (ch.isMesh) meshes.push(ch); });
-    var hits = rc.intersectObjects(meshes, true);
-
-    if (hits.length > 0) {
-      var pt = hits[0].point.clone();
-      var nm = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
-      pt.add(nm.clone().multiplyScalar(0.015));
-      decalMesh.position.copy(pt);
-      decalMesh.lookAt(pt.clone().add(nm));
-    } else {
-      // Fallback: place in front/back of model
-      var z = (decal.side === 'back') ? bCenter.z - bSize.z * 0.5 : bCenter.z + bSize.z * 0.5;
-      var x = (decal.side === 'left') ? bCenter.x - bSize.x * 0.5 : (decal.side === 'right') ? bCenter.x + bSize.x * 0.5 : bCenter.x;
-      decalMesh.position.set(x, targetY, z);
-      if (decal.side === 'back') decalMesh.rotation.y = Math.PI;
-      if (decal.side === 'left') decalMesh.rotation.y = Math.PI * 0.5;
-      if (decal.side === 'right') decalMesh.rotation.y = -Math.PI * 0.5;
+  // ── DRAG TO MOVE (Shift + drag) ───────────────────────────────────────
+  function setupDrag() {
+    var el = threeCanvas;
+    function hitTest(e) {
+      var r = el.getBoundingClientRect();
+      mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+      mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      var h = raycaster.intersectObjects(getMeshes(), true);
+      return h.length > 0 ? h[0] : null;
     }
-
-    // Add as child so it rotates with model
-    var wp = decalMesh.position.clone();
-    var wq = decalMesh.quaternion.clone();
-    currentModel.add(decalMesh);
-    currentModel.worldToLocal(wp);
-    decalMesh.position.copy(wp);
-    var mqi = currentModel.quaternion.clone().invert();
-    decalMesh.quaternion.premultiply(mqi);
+    el.addEventListener('pointerdown', function(e) {
+      if (!is3DActive || !currentModel || !e.shiftKey) return;
+      var hasD = (state.designTab === 'image' && uploadedImg) || (state.designTab === 'text' && document.getElementById('design-text')?.value);
+      if (!hasD || state.ctype === 'none') return;
+      if (hitTest(e)) { isDragging = true; controls.enabled = false; el.style.cursor = 'grabbing'; e.preventDefault(); }
+    });
+    el.addEventListener('pointermove', function(e) {
+      if (!isDragging) { el.style.cursor = (e.shiftKey && is3DActive && hitTest(e)) ? 'grab' : ''; return; }
+      var h = hitTest(e);
+      if (h) {
+        D.worldPos = h.point.clone();
+        D.worldNormal = h.face.normal.clone().transformDirection(h.object.matrixWorld).normalize();
+        placeDecal();
+      }
+    });
+    function endDrag() { if (isDragging) { isDragging = false; controls.enabled = true; el.style.cursor = ''; } }
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointerleave', endDrag);
+    el.addEventListener('dblclick', function(e) {
+      if (!is3DActive || !currentModel || state.ctype === 'none') return;
+      var hasD = (state.designTab === 'image' && uploadedImg) || (state.designTab === 'text' && document.getElementById('design-text')?.value);
+      if (!hasD) return;
+      var h = hitTest(e);
+      if (h) { D.worldPos = h.point.clone(); D.worldNormal = h.face.normal.clone().transformDirection(h.object.matrixWorld).normalize(); placeDecal(); }
+    });
   }
 
   // ── CAMERA ────────────────────────────────────────────────────────────
-  function setCameraView(v) {
+  function setCam(v) {
     if (!camera || !controls) return;
-    var p = { front: [0, 0.15, 2.8], back: [0, 0.15, -2.8], left: [-2.8, 0.15, 0], right: [2.8, 0.15, 0] }[v] || [0, 0.15, 2.8];
-    var startPos = camera.position.clone(), endPos = new THREE.Vector3(p[0], p[1], p[2]), t0 = Date.now();
-    (function a() {
-      var t = Math.min((Date.now() - t0) / 500, 1); t = 1 - Math.pow(1 - t, 3);
-      camera.position.lerpVectors(startPos, endPos, t);
-      controls.target.set(0, 0, 0); controls.update();
-      if (t < 1) requestAnimationFrame(a);
-    })();
+    var p = {front:[0,0.15,2.8],back:[0,0.15,-2.8],left:[-2.8,0.15,0],right:[2.8,0.15,0]}[v]||[0,0.15,2.8];
+    var s = camera.position.clone(), e = new THREE.Vector3(p[0],p[1],p[2]), t0 = Date.now();
+    (function a(){var t=Math.min((Date.now()-t0)/500,1);t=1-Math.pow(1-t,3);camera.position.lerpVectors(s,e,t);controls.target.set(0,0,0);controls.update();if(t<1)requestAnimationFrame(a);})();
   }
 
-  // ── UI OVERRIDES ──────────────────────────────────────────────────────
-  var _oG = window.selectGarment;
-  window.selectGarment = function(g, btn) { _oG(g, btn); MODEL_FILES[g] ? loadModel(g) : show2D(); };
-
-  var _oC = window.selectColor;
-  window.selectColor = function(c, dot) { _oC(c, dot); if (is3DActive) { applyColor(c); placeDecal(); } };
-
-  var _oV = window.setView;
-  window.setView = function(v, btn) { _oV(v, btn); if (is3DActive) setCameraView(v); };
-
-  var _oP = window.selectPlacement;
-  window.selectPlacement = function(p, btn) {
-    _oP(p, btn); if (!is3DActive) return;
-    decal.side = p === 'back-center' ? 'back' : p === 'sleeve-left' ? 'left' : p === 'sleeve-right' ? 'right' : 'front';
-    decal.posY = 0.15; placeDecal();
-  };
-
-  var _oU = window.handleImageUpload;
-  window.handleImageUpload = function(e) { _oU(e); setTimeout(function() { if (is3DActive) placeDecal(); }, 300); };
-
-  var _oD = window.clearDesign;
-  window.clearDesign = function() { _oD(); removeDecal(); };
-
-  var el; 
-  if (el = document.getElementById('design-text')) el.addEventListener('input', function() { if (is3DActive) placeDecal(); });
-  if (el = document.getElementById('design-opacity')) el.addEventListener('input', function() { if (is3DActive) placeDecal(); });
-  if (el = document.getElementById('text-size')) el.addEventListener('input', function() { if (is3DActive) placeDecal(); });
-  if (el = document.getElementById('text-color')) el.addEventListener('input', function() { if (is3DActive) placeDecal(); });
-  if (el = document.getElementById('design-scale')) el.addEventListener('input', function() {
-    if (!is3DActive) return; decal.size = 0.15 + parseFloat(this.value) * 1.35; placeDecal();
-  });
-
-  var _oT = window.switchDesignTab;
-  window.switchDesignTab = function(tab) { _oT(tab); if (is3DActive) placeDecal(); };
-  var _oCt = window.selectCtype;
-  window.selectCtype = function(t, btn) { _oCt(t, btn); if (is3DActive) placeDecal(); };
-  var _oF = window.selectFont;
-  window.selectFont = function(f, btn) { _oF(f, btn); if (is3DActive) placeDecal(); };
-
-  var _oO = window.placeCustomOrder;
-  window.placeCustomOrder = function() {
-    if (is3DActive && renderer) { renderer.render(scene, camera); var o = window.canvas; window.canvas = renderer.domElement; _oO(); window.canvas = o; }
-    else _oO();
-  };
+  // ── OVERRIDES ─────────────────────────────────────────────────────────
+  var _g=window.selectGarment; window.selectGarment=function(g,b){_g(g,b);MODEL_FILES[g]?loadModel(g):show2D();};
+  var _c=window.selectColor; window.selectColor=function(c,d){_c(c,d);if(is3DActive){applyColor(c);placeDecal();}};
+  var _v=window.setView; window.setView=function(v,b){_v(v,b);if(is3DActive)setCam(v);};
+  var _p=window.selectPlacement; window.selectPlacement=function(p,b){_p(p,b);if(!is3DActive)return;D.side=p==='back-center'?'back':p==='sleeve-left'?'left':p==='sleeve-right'?'right':'front';D.worldPos=null;autoPlace();};
+  var _u=window.handleImageUpload; window.handleImageUpload=function(e){_u(e);setTimeout(function(){if(is3DActive){if(!D.worldPos)autoPlace();else placeDecal();}},300);};
+  var _d=window.clearDesign; window.clearDesign=function(){_d();removeDecal();};
+  var e;
+  if(e=document.getElementById('design-scale'))e.addEventListener('input',function(){if(!is3DActive)return;D.size=0.1+parseFloat(this.value)*2.4;placeDecal();});
+  if(e=document.getElementById('design-opacity'))e.addEventListener('input',function(){if(is3DActive)placeDecal();});
+  if(e=document.getElementById('design-text'))e.addEventListener('input',function(){if(is3DActive){if(!D.worldPos)autoPlace();else placeDecal();}});
+  if(e=document.getElementById('text-size'))e.addEventListener('input',function(){if(is3DActive)placeDecal();});
+  if(e=document.getElementById('text-color'))e.addEventListener('input',function(){if(is3DActive)placeDecal();});
+  var _t=window.switchDesignTab;window.switchDesignTab=function(t){_t(t);if(is3DActive){if(!D.worldPos)autoPlace();else placeDecal();}};
+  var _ct=window.selectCtype;window.selectCtype=function(t,b){_ct(t,b);if(is3DActive){t==='none'?removeDecal():D.worldPos?placeDecal():autoPlace();}};
+  var _f=window.selectFont;window.selectFont=function(f,b){_f(f,b);if(is3DActive)placeDecal();};
+  var _o=window.placeCustomOrder;window.placeCustomOrder=function(){if(is3DActive&&renderer){renderer.render(scene,camera);var oc=window.canvas;window.canvas=renderer.domElement;_o();window.canvas=oc;}else _o();};
 })();
 </script>
 <script src="mobile-app.js"></script>
