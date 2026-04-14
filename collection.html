@@ -293,7 +293,7 @@ let activeBrand = '';
 // Load and render brand logos
 function loadBrands() {
   var brands = [];
-  try { brands = JSON.parse(localStorage.getItem('atelier_brands') || '[]').filter(function(b) { return b.status === 'active'; }); } catch(e) {}
+  try { brands = JSON.parse(localStorage.getItem('atelier_brands') || '[]').filter(function(b) { return b.status === 'active' && (b.paymentStatus === 'paid' || b.paymentStatus === 'free'); }); } catch(e) {}
   var bar = document.getElementById('brand-bar');
   var logos = document.getElementById('brand-logos');
   if (!brands.length) { bar.style.display = 'none'; return; }
