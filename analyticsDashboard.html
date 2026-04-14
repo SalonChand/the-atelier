@@ -256,6 +256,7 @@
       <p class="nav-section-title">Custom Studio</p>
       <button class="nav-item" onclick="showPanel('customorders',this)" id="nav-customorders" style="position:relative;"><span class="icon">✦</span> Custom Orders <span id="custom-badge" style="margin-left:auto;background:#8b5e3c;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
       <button class="nav-item" onclick="showPanel('stickers',this)" id="nav-stickers"><span class="icon">🎨</span> Stickers</button>
+      <button class="nav-item" onclick="showPanel('stickerorders',this)" id="nav-stickerorders" style="position:relative;"><span class="icon">📋</span> Sticker Orders <span id="sticker-order-badge" style="margin-left:auto;background:#e65100;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
     </div>
     <div class="nav-section">
       <p class="nav-section-title">System</p>
@@ -687,6 +688,35 @@
 
 <!-- PAYMENT SETTINGS PANEL -->
 <!-- SYNC SETTINGS PANEL -->
+<!-- STICKER ORDERS PANEL -->
+<div class="panel" id="panel-stickerorders">
+  <div class="topbar"><h1 class="page-title">Sticker Orders</h1></div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="so-total">0</div><div class="mini-stat-label">Total Orders</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="so-pending" style="color:#e65100;">0</div><div class="mini-stat-label">Pending</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="so-revenue" style="color:#3a6b3c;">0</div><div class="mini-stat-label">Revenue</div></div>
+  </div>
+  <div class="table-card"><div class="table-header"><span class="table-title">All Sticker Orders</span>
+    <div class="table-actions"><select class="filter-select" id="so-filter" onchange="renderStickerOrdersTable()"><option value="">All</option><option value="awaiting-verification">Awaiting Payment</option><option value="pending">Pending Quote</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option></select></div>
+  </div>
+  <div class="table-scroll"><table><thead><tr><th>ID</th><th>Type</th><th>Sticker</th><th>Customer</th><th>Details</th><th>Price</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="so-tbody"></tbody></table></div></div>
+</div>
+<div class="modal-overlay" id="modal-stickerorder">
+  <div class="modal" style="max-width:600px;"><button class="modal-close" onclick="closeModal('modal-stickerorder')">✕</button>
+    <h2 class="modal-title" id="so-modal-title">Sticker Order</h2>
+    <div id="so-modal-details" style="font-size:0.78rem;line-height:2;margin-bottom:1.5rem;"></div>
+    <div id="so-proof-section" style="display:none;margin-bottom:1.5rem;">
+      <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.5rem;">Payment Proof</p>
+      <img id="so-modal-proof" src="" style="max-width:100%;max-height:300px;border:1px solid rgba(200,184,154,0.3);cursor:pointer;" onclick="window.open(this.src)"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Set Price (NRs.)</label><input type="number" id="so-modal-price" placeholder="e.g. 500" min="0"/></div>
+      <div class="form-group"><label>Update Status</label><select id="so-modal-status"><option value="awaiting-verification">Awaiting Verification</option><option value="pending">Pending Quote</option><option value="confirmed">Confirmed</option><option value="in-production">In Production</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn-danger" onclick="deleteStickerOrder()">Delete</button><button class="btn-secondary" onclick="closeModal('modal-stickerorder')">Close</button><button class="btn-primary" onclick="saveStickerOrder()">Save</button></div>
+  </div>
+</div>
+
 <div class="panel" id="panel-sync">
   <div class="topbar">
     <h1 class="page-title">Firebase Sync</h1>
@@ -1305,7 +1335,7 @@ function showPanel(name,btn){
   // Refresh live purchase data before rendering
   if(name==='orders') ORDERS = getOrders();
   if(name==='customers') CUSTOMERS = getCustomers();
-  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,sync:renderSyncPanel})[name]?.();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,sync:renderSyncPanel})[name]?.();
 }
 
 function toast(msg){
@@ -2772,6 +2802,82 @@ function deleteSticker(idx) {
   var stickers = getStickers(); stickers.splice(idx, 1); saveStickers(stickers); renderStickersTable(); toast("Sticker deleted");
 }
 
+// ── STICKER ORDERS ─────────────────────────────────────────────────────
+var _currentStickerOrderId = null;
+function getStickerOrders() { try { return JSON.parse(localStorage.getItem("atelier_sticker_orders") || "[]"); } catch(e) { return []; } }
+
+function renderStickerOrdersTable() {
+  var orders = getStickerOrders();
+  var filter = document.getElementById("so-filter") ? document.getElementById("so-filter").value : "";
+  var filtered = filter ? orders.filter(function(o){return o.status===filter;}) : orders;
+  document.getElementById("so-total").textContent = orders.length;
+  document.getElementById("so-pending").textContent = orders.filter(function(o){return o.status==="pending"||o.status==="awaiting-verification";}).length;
+  document.getElementById("so-revenue").textContent = "NRs. " + orders.reduce(function(s,o){return s+(o.adminPrice||o.price||0);},0).toLocaleString();
+  var badge = document.getElementById("sticker-order-badge");
+  var pendingCount = orders.filter(function(o){return o.status==="pending"||o.status==="awaiting-verification";}).length;
+  if (badge) { if (pendingCount > 0) { badge.style.display="flex"; badge.textContent=pendingCount; } else { badge.style.display="none"; } }
+  var tbody = document.getElementById("so-tbody");
+  if (!filtered.length) { tbody.innerHTML = "<tr><td colspan=\"9\" style=\"text-align:center;padding:3rem;color:#8a7f73;font-style:italic;\">No sticker orders yet.</td></tr>"; return; }
+  var SC = {"awaiting-verification":"status-awaiting-verification",pending:"status-processing",confirmed:"status-active","in-production":"status-shipped",completed:"status-completed",cancelled:"status-cancelled"};
+  tbody.innerHTML = filtered.map(function(o) {
+    var typeLabel = o.type === "sticker-buy" ? "Digital Buy" : o.type === "sticker-embroidery" ? "Embroidery" : "Print";
+    var details = o.type === "sticker-buy" ? "Digital download" : (o.garment||"—") + " / " + (o.size||"—") + " / " + (o.placement||"—");
+    var price = o.adminPrice ? "NRs. " + Number(o.adminPrice).toLocaleString() : (o.price ? "NRs. " + o.price.toLocaleString() : "<em style=\"color:var(--accent);\">Set price</em>");
+    var sc = SC[o.status] || "status-processing";
+    var sl = o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1).replace("-"," ") : "Pending";
+    return "<tr><td style=\"font-family:monospace;font-size:0.65rem;\">" + o.id + "</td>" +
+      "<td><span style=\"font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;\">" + typeLabel + "</span></td>" +
+      "<td>" + (o.stickerName||"—") + "</td>" +
+      "<td><strong>" + (o.customer||"—") + "</strong><br><span style=\"font-size:0.6rem;color:#8a7f73;\">" + (o.email||"") + "</span></td>" +
+      "<td style=\"font-size:0.7rem;\">" + details + "</td>" +
+      "<td>" + price + "</td>" +
+      "<td style=\"font-size:0.68rem;\">" + (o.date||"—") + "</td>" +
+      "<td><span class=\"status-badge " + sc + "\">" + sl + "</span></td>" +
+      "<td><button class=\"btn-secondary\" style=\"padding:0.3rem 0.7rem;font-size:0.55rem;\" onclick=\"openStickerOrderModal('" + o.id + "')\">View</button></td></tr>";
+  }).join("");
+}
+
+function openStickerOrderModal(id) {
+  var orders = getStickerOrders();
+  var o = orders.find(function(x){return x.id===id;}); if (!o) return;
+  _currentStickerOrderId = id;
+  document.getElementById("so-modal-title").textContent = o.type === "sticker-buy" ? "Sticker Purchase — " + o.id : "Sticker " + (o.customizationType||"Print") + " — " + o.id;
+  document.getElementById("so-modal-status").value = o.status || "pending";
+  document.getElementById("so-modal-price").value = o.adminPrice || o.price || "";
+  var GENDER_LABELS = {men:"Men",women:"Women",unisex:"Unisex"};
+  var rows = [["Customer",o.customer],["Email",o.email],["Phone",o.phone||"—"],["Sticker",o.stickerName]];
+  if (o.type !== "sticker-buy") {
+    rows.push(["Type",(o.customizationType||"print").charAt(0).toUpperCase()+(o.customizationType||"").slice(1)]);
+    rows.push(["Garment",o.garment||"—"]); rows.push(["Size",o.size||"—"]); rows.push(["Gender",GENDER_LABELS[o.gender]||o.gender||"—"]);
+    rows.push(["Colour","<span style=\"display:inline-block;width:12px;height:12px;border-radius:50%;background:"+(o.color||"#ccc")+";border:1px solid rgba(0,0,0,0.1);vertical-align:middle;margin-right:4px;\"></span>"+(o.color||"—")]);
+    rows.push(["Placement",o.placement||"—"]); rows.push(["Print Size",o.printSize||"—"]);
+    rows.push(["Address",o.address||"—"]); rows.push(["Notes",o.notes||"—"]);
+  }
+  rows.push(["Date",o.date+" "+(o.time||"")]);
+  document.getElementById("so-modal-details").innerHTML = rows.map(function(r){return "<div style=\"display:flex;gap:0.5rem;padding:0.2rem 0;border-bottom:1px solid rgba(200,184,154,0.1);\"><span style=\"color:#8a7f73;min-width:100px;font-size:0.65rem;\">"+r[0]+"</span><span style=\"font-size:0.72rem;\">"+r[1]+"</span></div>";}).join("");
+  var proofSection = document.getElementById("so-proof-section");
+  if (o.paymentProof) { proofSection.style.display="block"; document.getElementById("so-modal-proof").src=o.paymentProof; }
+  else { proofSection.style.display="none"; }
+  document.getElementById("modal-stickerorder").classList.add("open");
+}
+
+function saveStickerOrder() {
+  var orders = getStickerOrders();
+  var idx = orders.findIndex(function(o){return o.id===_currentStickerOrderId;}); if (idx<0) return;
+  orders[idx].status = document.getElementById("so-modal-status").value;
+  var price = document.getElementById("so-modal-price").value;
+  if (price) { orders[idx].adminPrice = parseFloat(price); orders[idx].priceStatus = "quoted"; }
+  localStorage.setItem("atelier_sticker_orders", JSON.stringify(orders));
+  closeModal("modal-stickerorder"); renderStickerOrdersTable(); toast("Sticker order updated");
+}
+
+function deleteStickerOrder() {
+  if (!confirm("Delete this order?")) return;
+  var orders = getStickerOrders().filter(function(o){return o.id!==_currentStickerOrderId;});
+  localStorage.setItem("atelier_sticker_orders", JSON.stringify(orders));
+  closeModal("modal-stickerorder"); renderStickerOrdersTable(); toast("Order deleted");
+}
+
 // ── FIREBASE SYNC PANEL ─────────────────────────────────────────────────
 
 function renderSyncPanel() {
@@ -2897,7 +3003,7 @@ function refreshAllData() {
   var activePanel = document.querySelector('.panel.active');
   if (activePanel) {
     var id = activePanel.id.replace('panel-', '');
-    ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,stickers:renderStickersTable,sync:renderSyncPanel})[id]?.();
+    ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,sync:renderSyncPanel})[id]?.();
   }
   updateInquiryBadge();
 }

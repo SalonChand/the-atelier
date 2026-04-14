@@ -7,53 +7,76 @@
 <meta name="theme-color" content="#0e0e0d"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<link rel="apple-touch-icon" href="logo.png"/>
-<link rel="manifest" href="manifest.json"/>
 <title>Stickers | THE ATELIER</title>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-:root{--ink:#0e0e0d;--cream:#f4f1ec;--warm:#c8b89a;--accent:#8b5e3c}*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
-nav{position:fixed;top:0;width:100%;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1.2rem 3rem;background:rgba(244,241,236,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(200,184,154,0.3)}
-.nav-logo{text-decoration:none;position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:0.6rem}
-.nav-logo-text{font-family:'Newsreader',serif;font-style:italic;font-size:1.4rem;color:var(--ink)}
-.nav-links{display:flex;gap:2.5rem}.nav-links a{font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:#6b6258;text-decoration:none}.nav-links a:hover{color:var(--ink)}
-@media(max-width:640px){.nav-links{display:none}nav{padding:1.2rem 1.5rem}}
+:root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; }
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); }
+nav { position:fixed;top:0;width:100%;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1.5rem 3rem;background:rgba(244,241,236,0.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(200,184,154,0.25); }
+.nav-logo { text-decoration:none;position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:0.6rem; }
+.nav-logo-text { font-family:'Newsreader',serif;font-style:italic;font-size:1.4rem;color:var(--ink); }
+.nav-links { display:flex;gap:2.5rem; }
+.nav-links a { font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:#6b6258;text-decoration:none; }
+.nav-links a:hover,.nav-links a.active { color:var(--ink); }
+@media(max-width:640px){ .nav-links{display:none;} nav{padding:1.2rem 1.5rem;} }
 
-.page-hero{padding:9rem 3rem 4rem;text-align:center;border-bottom:1px solid rgba(200,184,154,0.3)}
-.page-hero h1{font-family:'Newsreader',serif;font-style:italic;font-weight:300;font-size:clamp(2.5rem,5vw,4rem);margin-bottom:1rem}
-.page-hero p{font-size:0.75rem;color:#8a7f73;letter-spacing:0.1em;line-height:1.8;max-width:500px;margin:0 auto}
-@media(max-width:640px){.page-hero{padding:7rem 1.5rem 3rem}}
+main { max-width:1200px;margin:0 auto;padding:8rem 2rem 4rem; }
+@media(max-width:640px){ main{padding:6rem 1rem 5rem;} }
 
-.sticker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:1100px;margin:0 auto;padding:4rem 3rem}
-@media(max-width:900px){.sticker-grid{grid-template-columns:repeat(2,1fr);gap:1.5rem;padding:2.5rem 1.5rem}}
-@media(max-width:500px){.sticker-grid{grid-template-columns:1fr}}
+.page-header { text-align:center;margin-bottom:3rem; }
+.page-header h1 { font-family:'Newsreader',serif;font-style:italic;font-weight:300;font-size:clamp(2.5rem,5vw,4rem);margin-bottom:0.75rem; }
+.page-header p { font-size:0.75rem;color:#8a7f73;letter-spacing:0.1em;line-height:1.9;max-width:500px;margin:0 auto; }
 
-.sticker-card{background:white;border:1px solid rgba(200,184,154,0.2);overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;cursor:pointer}
-.sticker-card:hover{transform:translateY(-4px);box-shadow:0 8px 30px rgba(0,0,0,0.08)}
-.sticker-img-wrap{position:relative;overflow:hidden;background:#f8f5f0;aspect-ratio:1;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.sticker-img-wrap canvas{width:100%;height:100%;pointer-events:none}
-.sticker-shield{position:absolute;inset:0;z-index:2;background:transparent;cursor:pointer;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.sticker-info{padding:1rem 1.25rem}
-.sticker-name{font-size:0.85rem;font-weight:400;margin-bottom:0.2rem}
-.sticker-price{font-size:0.75rem;color:var(--accent);font-weight:500}
-.sticker-tag{font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;color:#8a7f73;margin-top:0.3rem}
+.sticker-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem; }
+@media(max-width:1024px){ .sticker-grid{grid-template-columns:repeat(3,1fr);} }
+@media(max-width:768px){ .sticker-grid{grid-template-columns:repeat(2,1fr);} }
+@media(max-width:400px){ .sticker-grid{grid-template-columns:1fr;} }
 
-.sticker-modal{display:none;position:fixed;inset:0;z-index:500;background:rgba(14,14,13,0.7);align-items:center;justify-content:center}
-.sticker-modal.open{display:flex}
-.sticker-modal-content{background:var(--cream);padding:2.5rem;max-width:480px;width:90%;max-height:90vh;overflow-y:auto;position:relative}
-.sticker-modal-close{position:absolute;top:1rem;right:1.5rem;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#8a7f73}
-.sticker-modal-img{width:100%;aspect-ratio:1;background:#f8f5f0;margin-bottom:1.5rem;position:relative;overflow:hidden;user-select:none;-webkit-user-select:none}
-.sticker-modal-img canvas{width:100%;height:100%}
+.sticker-card { background:white;border:1px solid rgba(200,184,154,0.2);overflow:hidden;transition:transform 0.2s,box-shadow 0.2s; }
+.sticker-card:hover { transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.06); }
+.sticker-img-wrap { position:relative;aspect-ratio:1;background:#f0ece6;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none; }
+.sticker-img-wrap canvas { width:100%;height:100%;display:block;pointer-events:none; }
+.sticker-img-wrap::after { content:'';position:absolute;inset:0;z-index:2;background:transparent; }
+.sticker-info { padding:1rem; }
+.sticker-name { font-size:0.82rem;font-weight:400;margin-bottom:0.2rem; }
+.sticker-cat { font-size:0.58rem;color:#8a7f73;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem; }
+.sticker-price { font-size:0.9rem;font-weight:400;margin-bottom:0.6rem; }
+.sticker-actions { display:flex;gap:0.4rem; }
+.sticker-action-btn {
+  flex:1;padding:0.55rem 0.3rem;border:1px solid rgba(200,184,154,0.4);background:transparent;
+  font-family:'Jost';font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;
+  cursor:pointer;transition:all 0.2s;color:var(--ink);text-align:center;
+}
+.sticker-action-btn:hover { background:var(--ink);color:var(--cream);border-color:var(--ink); }
+.sticker-action-btn.primary { background:var(--ink);color:var(--cream);border-color:var(--ink); }
+.sticker-action-btn.primary:hover { background:var(--accent); }
 
-footer{background:var(--ink);color:#6b6258;padding:5rem 3rem 3rem;margin-top:4rem}
-.footer-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem;max-width:1100px;margin:0 auto}
-@media(max-width:768px){.footer-grid{grid-template-columns:1fr 1fr;gap:2rem}footer{padding:3rem 1.5rem 2rem}}
-.footer-col h4{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:1.2rem;color:var(--warm)}
-.footer-col a{display:block;font-size:0.68rem;color:#6b6258;text-decoration:none;margin-bottom:0.65rem}.footer-col a:hover{color:var(--cream)}
-.footer-bottom{border-top:1px solid rgba(200,184,154,0.1);padding-top:2rem;margin-top:3rem;max-width:1100px;margin-left:auto;margin-right:auto}
-.footer-bottom p{font-size:0.6rem;color:#4a453f;letter-spacing:0.08em}
+.empty-state { text-align:center;padding:5rem 2rem;grid-column:1/-1; }
+.empty-state h2 { font-family:'Newsreader',serif;font-style:italic;font-size:2rem;color:#8a7f73;margin-bottom:0.75rem; }
+
+/* Modal */
+.modal-overlay { display:none;position:fixed;inset:0;background:rgba(14,14,13,0.6);z-index:500;align-items:center;justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:white;padding:2rem;width:90%;max-width:520px;max-height:90vh;overflow-y:auto;position:relative; }
+.modal-title { font-family:'Newsreader',serif;font-style:italic;font-size:1.5rem;margin-bottom:1.5rem; }
+.modal-close { position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#8a7f73; }
+.form-group { margin-bottom:1rem; }
+.form-group label { display:block;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.35rem; }
+.form-group input,.form-group select,.form-group textarea { width:100%;padding:0.6rem 0.75rem;border:1px solid rgba(200,184,154,0.4);background:transparent;font-family:'Jost';font-size:0.8rem;outline:none;color:var(--ink); }
+.form-row { display:grid;grid-template-columns:1fr 1fr;gap:0.75rem; }
+@media(max-width:500px){ .form-row{grid-template-columns:1fr;} }
+.chip-row { display:flex;gap:0.4rem;flex-wrap:wrap; }
+.chip { padding:0.4rem 0.75rem;border:1px solid rgba(200,184,154,0.4);background:transparent;font-family:'Jost';font-size:0.6rem;cursor:pointer;transition:all 0.2s;color:var(--ink); }
+.chip.active { background:var(--ink);color:var(--cream);border-color:var(--ink); }
+.submit-btn { width:100%;padding:1rem;background:var(--ink);color:var(--cream);border:none;font-family:'Jost';font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:background 0.2s;margin-top:0.5rem; }
+.submit-btn:hover { background:var(--accent); }
+.upload-zone { border:1.5px dashed rgba(200,184,154,0.5);background:#faf8f5;padding:1rem;text-align:center;cursor:pointer;transition:all 0.2s;position:relative; }
+.upload-zone:hover { border-color:var(--accent); }
+.upload-zone input { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%; }
+.success-msg { display:none;text-align:center;padding:2rem; }
+.success-msg.show { display:block; }
 </style>
 <link rel="stylesheet" href="mobile-app.css?v=3"/>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
@@ -64,135 +87,327 @@ footer{background:var(--ink);color:#6b6258;padding:5rem 3rem 3rem;margin-top:4re
 <nav>
   <div class="nav-links">
     <a href="collection.html">Shop</a>
-    <a href="stickers.html" style="color:var(--ink);font-weight:500;">Stickers</a>
+    <a href="stickers.html" class="active">Stickers</a>
     <a href="aboutUs.html">About</a>
   </div>
-  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:44px;width:auto;"/><span class="nav-logo-text">The Atelier</span></a>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:44px;"/><span class="nav-logo-text">The Atelier</span></a>
   <div style="width:100px;"></div>
 </nav>
 
-<div class="page-hero">
-  <h1>Sticker Collection</h1>
-  <p>Exclusive digital stickers designed by The Atelier. Purchase to download in high-quality resolution.</p>
-</div>
+<main>
+  <div class="page-header">
+    <h1>Sticker Collection</h1>
+    <p>Exclusive digital stickers by The Atelier. Buy for digital download, or get them printed on your favourite garment.</p>
+  </div>
+  <div class="sticker-grid" id="sticker-grid"></div>
+</main>
 
-<div class="sticker-grid" id="sticker-grid"></div>
-
-<div class="sticker-modal" id="sticker-modal">
-  <div class="sticker-modal-content">
-    <button class="sticker-modal-close" onclick="closeStickerModal()">✕</button>
-    <div class="sticker-modal-img" id="modal-sticker-img"></div>
-    <h2 id="modal-sticker-name" style="font-family:'Newsreader',serif;font-style:italic;font-size:1.8rem;margin-bottom:0.5rem;"></h2>
-    <p id="modal-sticker-desc" style="font-size:0.72rem;color:#8a7f73;line-height:1.8;margin-bottom:1.5rem;"></p>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 0;border-top:1px solid rgba(200,184,154,0.2);border-bottom:1px solid rgba(200,184,154,0.2);margin-bottom:1.5rem;">
-      <span style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;">Price</span>
-      <span id="modal-sticker-price" style="font-size:1.2rem;font-weight:500;color:var(--accent);"></span>
+<!-- ═══ BUY MODAL — Payment + Proof Upload ═══ -->
+<div class="modal-overlay" id="modal-buy">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-buy')">✕</button>
+    <h2 class="modal-title" id="buy-title">Purchase Sticker</h2>
+    <div id="buy-form">
+      <p style="font-size:0.75rem;color:#6b6258;line-height:1.8;margin-bottom:1.5rem;">Scan the QR code below to pay. After payment, upload a screenshot of your transaction as proof. Admin will verify and provide the download link.</p>
+      <div style="display:flex;gap:1.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.5rem;">
+        <div style="width:140px;height:140px;border:1px solid rgba(200,184,154,0.3);display:flex;align-items:center;justify-content:center;background:white;" id="buy-qr-img">
+          <span style="font-size:0.55rem;color:#8a7f73;text-align:center;">QR Code<br/>Loading...</span>
+        </div>
+        <div style="flex:1;min-width:180px;">
+          <p style="font-size:0.68rem;color:#5a5249;line-height:1.8;">
+            <strong>1.</strong> Scan QR or transfer manually<br/>
+            <strong>2.</strong> Take a screenshot of payment<br/>
+            <strong>3.</strong> Upload below and submit<br/>
+            <strong>4.</strong> Admin verifies within 1-2 hours
+          </p>
+        </div>
+      </div>
+      <div class="form-group"><label>Amount</label><input id="buy-amount" readonly style="font-weight:500;background:#f8f5f0;"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Your Name *</label><input id="buy-name" placeholder="Full name"/></div>
+        <div class="form-group"><label>Email *</label><input id="buy-email" type="email" placeholder="you@email.com"/></div>
+      </div>
+      <div class="form-group"><label>Phone</label><input id="buy-phone" placeholder="+977-98XXXXXXXX"/></div>
+      <div class="form-group">
+        <label>Payment Proof Screenshot *</label>
+        <div class="upload-zone" onclick="document.getElementById('buy-proof').click()">
+          <input type="file" id="buy-proof" accept="image/*" onchange="previewBuyProof(event)"/>
+          <p style="font-size:0.62rem;color:#8a7f73;">Click to upload payment screenshot</p>
+        </div>
+        <img id="buy-proof-preview" src="" style="max-height:80px;margin-top:0.5rem;display:none;border:1px solid rgba(200,184,154,0.3);"/>
+      </div>
+      <button class="submit-btn" onclick="submitBuyOrder()">Submit Purchase</button>
     </div>
-    <p style="font-size:0.6rem;color:#8a7f73;line-height:1.8;margin-bottom:1.5rem;">✦ High-resolution PNG · ✦ Transparent background · ✦ Commercial license · ✦ Instant download after payment</p>
-    <button onclick="purchaseSticker()" style="width:100%;padding:1.1rem;background:var(--ink);color:var(--cream);border:none;font-family:'Jost';font-size:0.65rem;letter-spacing:0.22em;text-transform:uppercase;cursor:pointer;">✦ Purchase & Download</button>
-    <p style="font-size:0.55rem;color:#a89e94;text-align:center;margin-top:0.75rem;line-height:1.7;">Payment via eSewa, Khalti, or Bank Transfer. Download link sent after verification.</p>
+    <div class="success-msg" id="buy-success">
+      <p style="font-size:2rem;margin-bottom:1rem;">⏳</p>
+      <h3 style="font-family:'Newsreader',serif;font-style:italic;font-size:1.5rem;margin-bottom:0.5rem;">Payment Under Review</h3>
+      <p style="font-size:0.75rem;color:#6b6258;line-height:1.8;">Your payment proof has been submitted. Admin will verify and send the download link to your email within 1-2 hours.</p>
+      <button class="submit-btn" style="margin-top:1.5rem;max-width:200px;margin-left:auto;margin-right:auto;" onclick="closeModal('modal-buy')">Close</button>
+    </div>
   </div>
 </div>
 
-<div class="sticker-modal" id="purchase-success-modal">
-  <div class="sticker-modal-content" style="text-align:center;">
-    <button class="sticker-modal-close" onclick="document.getElementById('purchase-success-modal').classList.remove('open')">✕</button>
-    <div style="width:56px;height:56px;border:1px solid var(--warm);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin:0 auto 1.5rem;">⏳</div>
-    <h2 style="font-family:'Newsreader',serif;font-style:italic;font-size:2rem;margin-bottom:0.75rem;">Purchase Request Sent</h2>
-    <p id="purchase-ref" style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;margin-bottom:1.5rem;"></p>
-    <p style="font-size:0.78rem;color:#6b6258;line-height:1.9;max-width:350px;margin:0 auto 2rem;">Our team will send you a payment link. The high-resolution sticker will be emailed after payment verification.</p>
-    <a href="stickers.html" style="padding:0.9rem 2rem;background:var(--ink);color:var(--cream);text-decoration:none;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;">Continue Browsing</a>
+<!-- ═══ PRINT/EMBROIDERY MODAL ═══ -->
+<div class="modal-overlay" id="modal-print">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modal-print')">✕</button>
+    <h2 class="modal-title" id="print-title">Print on Garment</h2>
+    <div id="print-form">
+      <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(200,184,154,0.2);">
+        <canvas id="print-sticker-preview" width="80" height="80" style="width:80px;height:80px;border:1px solid rgba(200,184,154,0.3);"></canvas>
+        <div>
+          <p id="print-sticker-name" style="font-size:0.85rem;font-weight:500;"></p>
+          <p id="print-type-label" style="font-size:0.6rem;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;margin-top:0.2rem;"></p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Garment Type *</label>
+        <div class="chip-row" id="print-garment-row">
+          <button class="chip active" onclick="selectPrintChip('garment',this,'tshirt')">T-Shirt</button>
+          <button class="chip" onclick="selectPrintChip('garment',this,'shirt')">Shirt</button>
+          <button class="chip" onclick="selectPrintChip('garment',this,'hoodie')">Hoodie</button>
+          <button class="chip" onclick="selectPrintChip('garment',this,'jacket')">Jacket</button>
+          <button class="chip" onclick="selectPrintChip('garment',this,'track')">Track</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Size *</label>
+          <div class="chip-row" id="print-size-row">
+            <button class="chip" onclick="selectPrintChip('size',this,'XS')">XS</button>
+            <button class="chip active" onclick="selectPrintChip('size',this,'S')">S</button>
+            <button class="chip" onclick="selectPrintChip('size',this,'M')">M</button>
+            <button class="chip" onclick="selectPrintChip('size',this,'L')">L</button>
+            <button class="chip" onclick="selectPrintChip('size',this,'XL')">XL</button>
+            <button class="chip" onclick="selectPrintChip('size',this,'XXL')">XXL</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Gender *</label>
+          <div class="chip-row" id="print-gender-row">
+            <button class="chip active" onclick="selectPrintChip('gender',this,'men')">Men</button>
+            <button class="chip" onclick="selectPrintChip('gender',this,'women')">Women</button>
+            <button class="chip" onclick="selectPrintChip('gender',this,'unisex')">Unisex</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Garment Colour *</label>
+        <input type="color" id="print-color" value="#f4f1ec" style="width:100%;height:2.5rem;border:1px solid rgba(200,184,154,0.4);background:transparent;cursor:pointer;"/>
+      </div>
+      <div class="form-group">
+        <label>Placement *</label>
+        <div class="chip-row" id="print-placement-row">
+          <button class="chip active" onclick="selectPrintChip('placement',this,'center')">Center</button>
+          <button class="chip" onclick="selectPrintChip('placement',this,'left')">Left</button>
+          <button class="chip" onclick="selectPrintChip('placement',this,'right')">Right</button>
+          <button class="chip" onclick="selectPrintChip('placement',this,'back')">Back</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Print Size *</label>
+        <div class="chip-row" id="print-printsize-row">
+          <button class="chip" onclick="selectPrintChip('printSize',this,'small')">Small (10cm)</button>
+          <button class="chip active" onclick="selectPrintChip('printSize',this,'medium')">Medium (20cm)</button>
+          <button class="chip" onclick="selectPrintChip('printSize',this,'large')">Large (30cm)</button>
+          <button class="chip" onclick="selectPrintChip('printSize',this,'xl')">XL (40cm)</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Your Name *</label><input id="print-name" placeholder="Full name"/></div>
+        <div class="form-group"><label>Email *</label><input id="print-email" type="email" placeholder="you@email.com"/></div>
+      </div>
+      <div class="form-group"><label>Phone</label><input id="print-phone" placeholder="+977-98XXXXXXXX"/></div>
+      <div class="form-group"><label>Delivery Address *</label><textarea id="print-address" rows="2" placeholder="Street, City, Country"></textarea></div>
+      <div class="form-group"><label>Notes</label><textarea id="print-notes" rows="2" placeholder="Any special requirements..."></textarea></div>
+
+      <div style="padding:1rem;background:rgba(200,184,154,0.08);border:1px solid rgba(200,184,154,0.2);margin-bottom:1rem;text-align:center;">
+        <p style="font-size:0.8rem;color:var(--accent);font-style:italic;">Pricing: Quote on request</p>
+        <p style="font-size:0.58rem;color:#8a7f73;margin-top:0.3rem;">Admin will review your order and send a price quote via email.</p>
+      </div>
+
+      <button class="submit-btn" onclick="submitPrintOrder()">✦ Submit Order</button>
+    </div>
+    <div class="success-msg" id="print-success">
+      <p style="font-size:2rem;margin-bottom:1rem;">✓</p>
+      <h3 style="font-family:'Newsreader',serif;font-style:italic;font-size:1.5rem;margin-bottom:0.5rem;">Order Received</h3>
+      <p id="print-ref" style="font-size:0.6rem;letter-spacing:0.15em;color:#8a7f73;margin-bottom:0.75rem;"></p>
+      <p style="font-size:0.75rem;color:#6b6258;line-height:1.8;">Our team will review your order and send a price quote to your email within 24 hours.</p>
+      <button class="submit-btn" style="margin-top:1.5rem;max-width:200px;margin-left:auto;margin-right:auto;" onclick="closeModal('modal-print')">Close</button>
+    </div>
   </div>
 </div>
 
 <script>
-var STICKERS=[],currentSticker=null;
+// Anti-download
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+document.addEventListener('keydown', function(e) { if ((e.ctrlKey||e.metaKey) && (e.key==='s'||e.key==='S'||e.key==='p'||e.key==='P')) e.preventDefault(); });
 
-function loadStickers(){
-  try{STICKERS=JSON.parse(localStorage.getItem('atelier_stickers')||'[]')}catch(e){STICKERS=[]}
-  renderStickers();
-}
-
-function renderStickers(){
-  var grid=document.getElementById('sticker-grid');
-  var active=STICKERS.filter(function(s){return s.status==='active'});
-  if(!active.length){
-    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:6rem 2rem;"><h2 style="font-family:Newsreader,serif;font-style:italic;font-size:2rem;color:#8a7f73;margin-bottom:1rem;">Coming Soon</h2><p style="font-size:0.75rem;color:#a89e94;">Our sticker collection is being curated.</p></div>';
-    return;
-  }
-  grid.innerHTML=active.map(function(s){
-    return '<div class="sticker-card" onclick="openStickerModal(\''+s.id+'\')">'+
-      '<div class="sticker-img-wrap" id="sticker-wrap-'+s.id+'"><canvas id="sticker-canvas-'+s.id+'"></canvas><div class="sticker-shield"></div></div>'+
-      '<div class="sticker-info"><p class="sticker-name">'+s.name+'</p><p class="sticker-price">NRs. '+(s.price||0).toLocaleString()+'</p><p class="sticker-tag">Digital Download</p></div></div>';
-  }).join('');
-  active.forEach(function(s){renderProtectedImage('sticker-canvas-'+s.id,s.image,false)});
-}
-
-function renderProtectedImage(canvasId,imageSrc,large){
-  var canvas=document.getElementById(canvasId);if(!canvas||!imageSrc)return;
-  var ctx=canvas.getContext('2d');var size=large?600:400;canvas.width=size;canvas.height=size;
-  var img=new Image();img.crossOrigin='anonymous';
-  img.onload=function(){
-    var scale=Math.min(size/img.width,size/img.height)*0.85;
-    var w=img.width*scale,h=img.height*scale;
-    var x=(size-w)/2,y=(size-h)/2;
-    ctx.fillStyle='#f8f5f0';ctx.fillRect(0,0,size,size);
-    ctx.drawImage(img,x,y,w,h);
-    // Watermark
-    ctx.save();ctx.globalAlpha=0.07;
-    ctx.font='bold '+Math.floor(size*0.055)+'px Jost,sans-serif';
-    ctx.fillStyle='#0e0e0d';ctx.textAlign='center';ctx.textBaseline='middle';
-    var sp=size*0.16;ctx.translate(size/2,size/2);ctx.rotate(-0.4);
-    for(var r=-size;r<size*2;r+=sp)for(var c=-size;c<size*2;c+=sp*2.5)ctx.fillText('THE ATELIER',c-size/2,r-size/2);
+// Watermark renderer
+function renderWatermarked(imgSrc, canvas, size) {
+  var ctx = canvas.getContext('2d');
+  var img = new Image(); img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    var s = size || Math.min(img.width, 600);
+    canvas.width = s; canvas.height = s * (img.height / img.width);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = '#0e0e0d';
+    ctx.font = 'italic 16px Newsreader, Georgia, serif'; ctx.textAlign = 'center';
+    for (var y = -canvas.height; y < canvas.height*2; y += 120) {
+      for (var x = -canvas.width; x < canvas.width*2; x += 180) {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(-0.4); ctx.fillText('THE ATELIER', 0, 0); ctx.restore();
+      }
+    }
     ctx.restore();
   };
-  img.src=imageSrc;
+  img.src = imgSrc;
 }
 
-function openStickerModal(id){
-  var s=STICKERS.find(function(x){return x.id===id});if(!s)return;
-  currentSticker=s;
-  document.getElementById('modal-sticker-name').textContent=s.name;
-  document.getElementById('modal-sticker-desc').textContent=s.description||'Exclusive digital sticker by The Atelier.';
-  document.getElementById('modal-sticker-price').textContent='NRs. '+(s.price||0).toLocaleString();
-  var container=document.getElementById('modal-sticker-img');
-  container.innerHTML='<canvas id="modal-sticker-canvas" style="width:100%;height:100%;"></canvas>';
-  setTimeout(function(){renderProtectedImage('modal-sticker-canvas',s.image,true)},50);
-  document.getElementById('sticker-modal').classList.add('open');
-}
-function closeStickerModal(){document.getElementById('sticker-modal').classList.remove('open');currentSticker=null}
+// ── STATE ────────────────────────────────────────────────────────────
+var _activeStickers = [];
+var _currentSticker = null;
+var _printState = { garment:'tshirt', size:'S', gender:'men', placement:'center', printSize:'medium', type:'print' };
+var _buyProofData = null;
 
-function purchaseSticker(){
-  if(!currentSticker)return;
-  var email=prompt('Enter your email address to receive the download link:');
-  if(!email||!email.includes('@')){alert('Please enter a valid email.');return}
-  var purchase={id:'STK-'+Date.now(),stickerId:currentSticker.id,stickerName:currentSticker.name,price:currentSticker.price,email:email,date:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),status:'pending-payment'};
-  var purchases=JSON.parse(localStorage.getItem('atelier_sticker_purchases')||'[]');
-  purchases.unshift(purchase);localStorage.setItem('atelier_sticker_purchases',JSON.stringify(purchases));
-  closeStickerModal();
-  document.getElementById('purchase-ref').textContent='Reference: '+purchase.id;
-  document.getElementById('purchase-success-modal').classList.add('open');
+function selectPrintChip(field, btn, value) {
+  _printState[field] = value;
+  btn.parentElement.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+  btn.classList.add('active');
 }
 
-// Anti-download
-document.addEventListener('contextmenu',function(e){if(e.target.closest('.sticker-img-wrap,.sticker-modal-img')){e.preventDefault();return false}});
-document.addEventListener('dragstart',function(e){if(e.target.closest('.sticker-img-wrap,.sticker-modal-img'))e.preventDefault()});
-document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'))e.preventDefault()});
+// ── LOAD STICKERS ────────────────────────────────────────────────────
+function loadStickers() {
+  var stickers = [];
+  try { stickers = JSON.parse(localStorage.getItem('atelier_stickers') || '[]'); } catch(e) {}
+  _activeStickers = stickers.filter(function(s) { return s.status !== 'inactive'; });
+  var grid = document.getElementById('sticker-grid');
+  if (!_activeStickers.length) {
+    grid.innerHTML = '<div class="empty-state"><h2>Coming Soon</h2><p style="font-size:0.72rem;color:#a89e94;">Our sticker collection is being designed.</p></div>';
+    return;
+  }
+  grid.innerHTML = _activeStickers.map(function(s, i) {
+    return '<div class="sticker-card">' +
+      '<div class="sticker-img-wrap"><canvas id="sc-' + i + '"></canvas></div>' +
+      '<div class="sticker-info">' +
+        '<p class="sticker-name">' + s.name + '</p>' +
+        '<p class="sticker-cat">' + (s.category || 'Original') + '</p>' +
+        '<p class="sticker-price">NRs. ' + (s.price||0).toLocaleString() + '</p>' +
+        '<div class="sticker-actions">' +
+          '<button class="sticker-action-btn primary" onclick="openBuyModal('+i+')">Buy</button>' +
+          '<button class="sticker-action-btn" onclick="openPrintModal('+i+',\'print\')">Print</button>' +
+          '<button class="sticker-action-btn" onclick="openPrintModal('+i+',\'embroidery\')">Embroidery</button>' +
+        '</div></div></div>';
+  }).join('');
+  _activeStickers.forEach(function(s, i) {
+    var c = document.getElementById('sc-' + i);
+    if (c && s.image) renderWatermarked(s.image, c, 400);
+  });
+}
 
-loadStickers();
-window.addEventListener('atelier-data-updated',function(e){if(e.detail&&e.detail.key==='atelier_stickers')loadStickers()});
-window.addEventListener('atelier-synced',loadStickers);
+// ── BUY MODAL ────────────────────────────────────────────────────────
+function openBuyModal(idx) {
+  _currentSticker = _activeStickers[idx]; if (!_currentSticker) return;
+  document.getElementById('buy-title').textContent = 'Purchase: ' + _currentSticker.name;
+  document.getElementById('buy-amount').value = 'NRs. ' + (_currentSticker.price||0).toLocaleString();
+  document.getElementById('buy-form').style.display = 'block';
+  document.getElementById('buy-success').classList.remove('show');
+  document.getElementById('buy-proof-preview').style.display = 'none';
+  _buyProofData = null;
+  // Load QR from payment settings
+  var ps = {}; try { ps = JSON.parse(localStorage.getItem('atelier_payment_settings') || '{}'); } catch(e) {}
+  var qrBox = document.getElementById('buy-qr-img');
+  if (ps.esewaQr) { qrBox.innerHTML = '<img src="'+ps.esewaQr+'" style="width:100%;height:100%;object-fit:contain;"/>'; }
+  else if (ps.khaltiQr) { qrBox.innerHTML = '<img src="'+ps.khaltiQr+'" style="width:100%;height:100%;object-fit:contain;"/>'; }
+  else { qrBox.innerHTML = '<span style="font-size:0.55rem;color:#8a7f73;text-align:center;">No QR set.<br/>Admin needs to<br/>set payment QR.</span>'; }
+  document.getElementById('modal-buy').classList.add('open');
+}
+
+function previewBuyProof(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    _buyProofData = ev.target.result;
+    document.getElementById('buy-proof-preview').src = ev.target.result;
+    document.getElementById('buy-proof-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function submitBuyOrder() {
+  var name = document.getElementById('buy-name').value.trim();
+  var email = document.getElementById('buy-email').value.trim();
+  if (!name || !email) { alert('Please fill in name and email.'); return; }
+  if (!_buyProofData) { alert('Please upload payment proof screenshot.'); return; }
+  var order = {
+    id: 'STKB-' + Date.now(), type: 'sticker-buy', stickerId: _currentSticker.id,
+    stickerName: _currentSticker.name, price: _currentSticker.price,
+    customer: name, email: email, phone: document.getElementById('buy-phone').value.trim(),
+    paymentProof: _buyProofData, status: 'awaiting-verification',
+    date: new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
+    time: new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
+  };
+  var orders = JSON.parse(localStorage.getItem('atelier_sticker_orders') || '[]');
+  orders.unshift(order);
+  localStorage.setItem('atelier_sticker_orders', JSON.stringify(orders));
+  document.getElementById('buy-form').style.display = 'none';
+  document.getElementById('buy-success').classList.add('show');
+}
+
+// ── PRINT/EMBROIDERY MODAL ───────────────────────────────────────────
+function openPrintModal(idx, type) {
+  _currentSticker = _activeStickers[idx]; if (!_currentSticker) return;
+  _printState.type = type;
+  document.getElementById('print-title').textContent = (type === 'embroidery' ? 'Embroidery' : 'Print') + ' on Garment';
+  document.getElementById('print-sticker-name').textContent = _currentSticker.name;
+  document.getElementById('print-type-label').textContent = type === 'embroidery' ? 'Embroidery' : 'Print';
+  document.getElementById('print-form').style.display = 'block';
+  document.getElementById('print-success').classList.remove('show');
+  renderWatermarked(_currentSticker.image, document.getElementById('print-sticker-preview'), 80);
+  document.getElementById('modal-print').classList.add('open');
+}
+
+function submitPrintOrder() {
+  var name = document.getElementById('print-name').value.trim();
+  var email = document.getElementById('print-email').value.trim();
+  var address = document.getElementById('print-address').value.trim();
+  if (!name || !email || !address) { alert('Please fill in name, email, and address.'); return; }
+  var order = {
+    id: 'STKP-' + Date.now(), type: 'sticker-' + _printState.type,
+    stickerId: _currentSticker.id, stickerName: _currentSticker.name,
+    customizationType: _printState.type, garment: _printState.garment,
+    size: _printState.size, gender: _printState.gender,
+    color: document.getElementById('print-color').value,
+    placement: _printState.placement, printSize: _printState.printSize,
+    customer: name, email: email, phone: document.getElementById('print-phone').value.trim(),
+    address: address, notes: document.getElementById('print-notes').value.trim(),
+    status: 'pending', priceStatus: 'pending-quote', adminPrice: null,
+    date: new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
+    time: new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
+  };
+  var orders = JSON.parse(localStorage.getItem('atelier_sticker_orders') || '[]');
+  orders.unshift(order);
+  localStorage.setItem('atelier_sticker_orders', JSON.stringify(orders));
+  document.getElementById('print-form').style.display = 'none';
+  document.getElementById('print-success').classList.add('show');
+  document.getElementById('print-ref').textContent = 'Reference: ' + order.id;
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Cart count
+function updateCartCount() {
+  var cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+  var count = cart.reduce(function(s,i){return s+i.quantity;},0);
+  var badge = document.getElementById('cart-count');
+  if (badge) { if (count > 0) { badge.style.display='flex'; badge.textContent=count; } else { badge.style.display='none'; } }
+}
+
+loadStickers(); updateCartCount();
+window.addEventListener('atelier-data-updated', function(e) {
+  if (e.detail && (e.detail.key === 'atelier_stickers' || e.detail.key === 'atelier_payment_settings')) loadStickers();
+});
 </script>
-
-<footer>
-  <div class="footer-grid">
-    <div class="footer-col"><h4>Shop</h4><a href="collection.html">Collections</a><a href="stickers.html">Stickers</a><a href="customize.html">Custom Studio</a></div>
-    <div class="footer-col"><h4>About</h4><a href="aboutUs.html">Our Story</a><a href="sustainability.html">Sustainability</a><a href="press.html">Press</a></div>
-    <div class="footer-col"><h4>Support</h4><a href="sizingGuide.html">Sizing Guide</a><a href="shippingReturns.html">Shipping</a><a href="contactUs.html">Contact</a></div>
-    <div class="footer-col"><h4>Legal</h4><a href="#">Privacy Policy</a><a href="#">Terms</a></div>
-  </div>
-  <div class="footer-bottom"><p>&copy; 2026 The Atelier. All rights reserved.</p></div>
-</footer>
 <script src="mobile-app.js?v=4"></script>
 </body>
 </html>
