@@ -1235,6 +1235,7 @@
       <div class="form-group"><label>Price (NRs.)</label><input id="mp-price" type="number" placeholder="980"/></div>
       <div class="form-group"><label>Stock</label><input id="mp-stock" type="number" placeholder="24"/></div>
     </div>
+    <div class="form-group"><label>Description</label><textarea id="mp-desc" rows="2" placeholder="Brief product description..." style="width:100%;padding:0.65rem 0.75rem;border:1px solid rgba(200,184,154,0.5);background:transparent;font-family:Jost;font-size:0.8rem;outline:none;color:var(--ink);"></textarea></div>
     <div class="form-group"><label>Status</label><select id="mp-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
     <div class="form-group"><label>Brand (Collab)</label><select id="mp-brand"><option value="">— The Atelier (Own) —</option></select></div>
     <!-- SKU + Barcode Preview -->
@@ -1569,6 +1570,7 @@ function openProductModal(idx){
   document.getElementById('mp-price').value=p.price||'';
   document.getElementById('mp-stock').value=p.stock||'';
   document.getElementById('mp-status').value=p.status||'active';
+  document.getElementById('mp-desc').value=p.desc||'';
   // Populate brand dropdown and set value
   populateBrandDropdown();
   if(document.getElementById('mp-brand')) document.getElementById('mp-brand').value=p.brand||'';
@@ -1589,7 +1591,7 @@ function saveProduct(){
   const fileInput=document.getElementById('mp-image');
   const existingIdx=idx;
   const existingSku=existingIdx>=0?PRODUCTS[existingIdx]?.sku:null;
-  const d={name:document.getElementById('mp-name').value,category:document.getElementById('mp-category').value,color:document.getElementById('mp-color').value,price:parseInt(document.getElementById('mp-price').value)||0,stock:parseInt(document.getElementById('mp-stock').value)||0,brand:document.getElementById('mp-brand')?document.getElementById('mp-brand').value:'',status:document.getElementById('mp-status').value,sku:existingSku||document.getElementById('mp-sku').value||generateSku(document.getElementById('mp-category').value,document.getElementById('mp-name').value)};
+  const d={name:document.getElementById('mp-name').value,category:document.getElementById('mp-category').value,color:document.getElementById('mp-color').value,price:parseInt(document.getElementById('mp-price').value)||0,stock:parseInt(document.getElementById('mp-stock').value)||0,desc:document.getElementById('mp-desc')?document.getElementById('mp-desc').value:'',brand:document.getElementById('mp-brand')?document.getElementById('mp-brand').value:'',status:document.getElementById('mp-status').value,sku:existingSku||document.getElementById('mp-sku').value||generateSku(document.getElementById('mp-category').value,document.getElementById('mp-name').value)};
   if(!d.name){toast('Product name required');return;}
   
   const finishSave=(imgDataArray)=>{
@@ -2879,7 +2881,7 @@ function populateBrandDropdown() {
   var brands = getBrands().filter(function(b){return b.status==="active";});
   var select = document.getElementById("mp-brand"); if (!select) return;
   var current = select.value;
-  select.innerHTML = "<option value=\"\">u2014 The Atelier (Own) u2014</option>" + brands.map(function(b){ return "<option value=\""+b.name+"\">"+b.name+"</option>"; }).join("");
+  select.innerHTML = "<option value=\"\">&mdash; The Atelier (Own) &mdash;</option>" + brands.map(function(b){ return "<option value=\""+b.name+"\">"+b.name+"</option>"; }).join("");
   select.value = current;
 }
 
