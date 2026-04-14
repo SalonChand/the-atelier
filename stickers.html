@@ -317,8 +317,9 @@ function openBuyModal(idx) {
   // Load QR from payment settings
   var ps = {}; try { ps = JSON.parse(localStorage.getItem('atelier_payment_settings') || '{}'); } catch(e) {}
   var qrBox = document.getElementById('buy-qr-img');
-  if (ps.esewaQr) { qrBox.innerHTML = '<img src="'+ps.esewaQr+'" style="width:100%;height:100%;object-fit:contain;"/>'; }
-  else if (ps.khaltiQr) { qrBox.innerHTML = '<img src="'+ps.khaltiQr+'" style="width:100%;height:100%;object-fit:contain;"/>'; }
+  if (ps.esewa_qr) { qrBox.innerHTML = '<img src="'+ps.esewa_qr+'" style="width:100%;height:100%;object-fit:contain;"/>'; }
+  else if (ps.khalti_qr) { qrBox.innerHTML = '<img src="'+ps.khalti_qr+'" style="width:100%;height:100%;object-fit:contain;"/>'; }
+  else if (ps.bank_qr) { qrBox.innerHTML = '<img src="'+ps.bank_qr+'" style="width:100%;height:100%;object-fit:contain;"/>'; }
   else { qrBox.innerHTML = '<span style="font-size:0.55rem;color:#8a7f73;text-align:center;">No QR set.<br/>Admin needs to<br/>set payment QR.</span>'; }
   document.getElementById('modal-buy').classList.add('open');
 }
