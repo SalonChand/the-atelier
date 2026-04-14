@@ -1039,7 +1039,12 @@
     <input type="hidden" id="modal-product-idx"/>
     <input type="hidden" id="mp-sku"/>
     <div class="form-group"><label>Product Name</label><input id="mp-name" placeholder="e.g. Structured Blazer" oninput="updateSkuFromName()"/></div>
-    <div class="form-group"><label>Product Image</label><input type="file" id="mp-image" accept="image/*" style="padding: 0.4rem;"/></div>
+    <div class="form-group">
+      <label>Product Images (up to 7)</label>
+      <input type="file" id="mp-image" accept="image/*" multiple style="padding: 0.4rem;"/>
+      <p style="font-size:0.5rem;color:#8a7f73;margin-top:0.3rem;">First image = main photo. Select multiple files at once.</p>
+      <div id="mp-image-preview" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;"></div>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>Category</label><select id="mp-category" onchange="updateSkuFromName()"><option value="outerwear">Outerwear</option><option value="dresses">Dresses</option><option value="separates">Separates</option></select></div>
       <div class="form-group"><label>Color</label><input id="mp-color" placeholder="e.g. Ivory"/></div>
@@ -1401,26 +1406,37 @@ function saveProduct(){
   const d={name:document.getElementById('mp-name').value,category:document.getElementById('mp-category').value,color:document.getElementById('mp-color').value,price:parseInt(document.getElementById('mp-price').value)||0,stock:parseInt(document.getElementById('mp-stock').value)||0,status:document.getElementById('mp-status').value,sku:existingSku||document.getElementById('mp-sku').value||generateSku(document.getElementById('mp-category').value,document.getElementById('mp-name').value)};
   if(!d.name){toast('Product name required');return;}
   
-  const finishSave=(imgData)=>{
-    if(imgData) d.image=imgData;
-    else if(idx>=0 && PRODUCTS[idx].image) d.image=PRODUCTS[idx].image;
-
-    // Ensure every product has a stable id for URL routing
-    if(idx>=0) {
-      d.id = PRODUCTS[idx].id || d.sku;
-    } else {
-      d.id = d.sku; // use SKU as URL id for new products
+  const finishSave=(imgDataArray)=>{
+    if(imgDataArray && imgDataArray.length > 0) {
+      d.image = imgDataArray[0]; // main image (backward compatible)
+      d.images = imgDataArray.slice(0, 7); // all images, max 7
+    } else if(idx>=0) {
+      d.image = PRODUCTS[idx].image;
+      d.images = PRODUCTS[idx].images || [PRODUCTS[idx].image].filter(Boolean);
     }
+
+    if(idx>=0) { d.id = PRODUCTS[idx].id || d.sku; }
+    else { d.id = d.sku; }
 
     if(idx>=0)PRODUCTS[idx]=d;else PRODUCTS.unshift(d);
     sv('products',PRODUCTS);closeModal('modal-product');renderProductsTable();toast(idx>=0?'Product updated':'Product added');
     fileInput.value='';
+    document.getElementById('mp-image-preview').innerHTML='';
   };
 
-  if(fileInput.files && fileInput.files[0]){
-    const reader=new FileReader();
-    reader.onload=function(e){finishSave(e.target.result);};
-    reader.readAsDataURL(fileInput.files[0]);
+  if(fileInput.files && fileInput.files.length > 0){
+    var files = Array.from(fileInput.files).slice(0, 7);
+    var results = [];
+    var loaded = 0;
+    files.forEach(function(file, i) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        results[i] = e.target.result;
+        loaded++;
+        if (loaded === files.length) finishSave(results);
+      };
+      reader.readAsDataURL(file);
+    });
   } else {
     finishSave(null);
   }
