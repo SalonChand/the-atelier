@@ -1350,8 +1350,24 @@ if (!localStorage.getItem('atelier_admins')) {
   ]));
 }
 
-function ld(k,d){try{return JSON.parse(localStorage.getItem('atelier_admin_'+k))||d;}catch{return d;}}
-function sv(k,d){localStorage.setItem('atelier_admin_'+k,JSON.stringify(d));}
+function ld(k,d){try{return JSON.parse(localStorage.getItem('atelier_admin_'+k))||d;}catch(e){return d;}}
+function sv(k,d){
+  try{localStorage.setItem('atelier_admin_'+k,JSON.stringify(d));}
+  catch(e){
+    if(e.name==='QuotaExceededError'){
+      // Clear old data and retry
+      console.warn('[Storage] Quota exceeded, clearing old cache...');
+      try{
+        // Remove non-essential cached data
+        var keys=['atelier_ann_dismissed','atelier_admin','atelier_current_user','atelier_current_role'];
+        keys.forEach(function(key){try{localStorage.removeItem(key);}catch(x){}});
+        localStorage.setItem('atelier_admin_'+k,JSON.stringify(d));
+      }catch(e2){
+        toast('Storage full. Product saved to Firebase only.');
+      }
+    } else { console.error('[Storage]', e); }
+  }
+}
 
 // Orders & Customers are written directly by checkout.html into these keys
 // We read them with a live getter so they always reflect latest purchases
@@ -1619,9 +1635,23 @@ function saveProduct(){
     files.forEach(function(file, i) {
       var reader = new FileReader();
       reader.onload = function(e) {
-        results[i] = e.target.result;
-        loaded++;
-        if (loaded === files.length) finishSave(results);
+        // Compress image to reduce localStorage/Firebase size
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var maxSize = 600;
+          var w = img.width, h = img.height;
+          if (w > maxSize || h > maxSize) {
+            if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+            else { w = Math.round(w * maxSize / h); h = maxSize; }
+          }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          results[i] = canvas.toDataURL('image/jpeg', 0.6);
+          loaded++;
+          if (loaded === files.length) finishSave(results);
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
