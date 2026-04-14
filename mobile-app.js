@@ -20,7 +20,7 @@
     { icon: '◈', label: 'Home', href: 'index.html', pages: ['index.html', ''] },
     { icon: '◧', label: 'Shop', href: 'collection.html', pages: ['collection.html', 'productDetail.html'] },
     { icon: '✦', label: 'Custom', href: 'customize.html', pages: ['customize.html'] },
-    { icon: '🎨', label: 'Stickers', href: 'stickers.html', pages: ['stickers.html'] },
+    { icon: '◆', label: 'Stickers', href: 'stickers.html', pages: ['stickers.html'] },
     { icon: '◫', label: 'Bag', href: 'shoppingCart.html', pages: ['shoppingCart.html', 'checkout.html'], hasBadge: true },
     { icon: '≡', label: 'More', href: '#more', pages: [] }
   ];
