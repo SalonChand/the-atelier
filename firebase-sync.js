@@ -38,7 +38,8 @@
     'atelier_stickers':'stickers',
     'atelier_sticker_purchases':'sticker_purchases',
     'atelier_stickers':        'stickers',
-    'atelier_sticker_orders': 'sticker_orders'
+    'atelier_sticker_orders': 'sticker_orders',
+    'atelier_brands':          'brands'
   };
   var PATH_TO_KEY = {};
   for (var k in SYNC_KEYS) { PATH_TO_KEY[SYNC_KEYS[k]] = k; }

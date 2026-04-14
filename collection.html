@@ -251,6 +251,12 @@
     <span id="product-count">— pieces</span>
   </div>
 
+  <!-- Brand Collabs Bar -->
+  <div id="brand-bar" style="display:none;margin-bottom:2rem;">
+    <p style="font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.75rem;">Shop by Brand</p>
+    <div id="brand-logos" style="display:flex;gap:1rem;overflow-x:auto;padding:0.5rem 0;align-items:center;-webkit-overflow-scrolling:touch;"></div>
+  </div>
+
   <!-- Customize Banner -->
   <div style="background:var(--ink);color:var(--cream);padding:1.5rem 2.5rem;margin-bottom:2.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
     <div>
@@ -282,6 +288,34 @@ const PRODUCTS = (function() {
 })();
 
 let activeFilter = 'all';
+let activeBrand = '';
+
+// Load and render brand logos
+function loadBrands() {
+  var brands = [];
+  try { brands = JSON.parse(localStorage.getItem('atelier_brands') || '[]').filter(function(b) { return b.status === 'active'; }); } catch(e) {}
+  var bar = document.getElementById('brand-bar');
+  var logos = document.getElementById('brand-logos');
+  if (!brands.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  logos.innerHTML =
+    '<button onclick="filterByBrand(\'\')" id="brand-all" style="flex-shrink:0;padding:0.5rem 1.2rem;border:1px solid ' + (activeBrand === '' ? 'var(--ink)' : 'rgba(200,184,154,0.4)') + ';background:' + (activeBrand === '' ? 'var(--ink)' : 'transparent') + ';color:' + (activeBrand === '' ? 'var(--cream)' : 'var(--ink)') + ';font-family:Jost;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;">All Brands</button>' +
+    brands.map(function(b) {
+      var isActive = activeBrand === b.name;
+      return '<button onclick="filterByBrand(\'' + b.name.replace(/'/g, "\\'") + '\')" style="flex-shrink:0;padding:0.4rem;border:2px solid ' + (isActive ? 'var(--accent)' : 'rgba(200,184,154,0.3)') + ';background:white;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:0.5rem;' + (isActive ? 'box-shadow:0 2px 8px rgba(139,94,60,0.2);' : '') + '">' +
+        '<img src="' + (b.logo || '') + '" style="height:32px;max-width:80px;object-fit:contain;" alt="' + b.name + '"/>' +
+        '</button>';
+    }).join('');
+}
+
+function filterByBrand(brand) {
+  activeBrand = brand;
+  activeFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+  loadBrands();
+  renderProducts();
+}
 
 function addToBag(e, product) {
   e.stopPropagation();
@@ -304,7 +338,8 @@ function renderProducts() {
     try { return JSON.parse(localStorage.getItem('atelier_admin_products') || '[]').filter(p => p.status === 'active'); }
     catch(e) { return []; }
   })();
-  const filtered = activeFilter === 'all' ? allProducts : allProducts.filter(p => p.category === activeFilter);
+  const filtered0 = activeFilter === 'all' ? allProducts : allProducts.filter(p => p.category === activeFilter);
+  const filtered = activeBrand ? filtered0.filter(function(p) { return p.brand === activeBrand; }) : filtered0;
   document.getElementById('product-count').textContent = `${filtered.length} pieces`;
   if (filtered.length === 0) {
     document.getElementById('product-grid').innerHTML = `
@@ -346,14 +381,18 @@ function updateCartCount() {
 
 renderProducts();
 updateCartCount();
+loadBrands();
 
-// Re-render when Firebase syncs product data from another device
+// Re-render when Firebase syncs data
 window.addEventListener('atelier-data-updated', function(e) {
   if (e.detail && (e.detail.key === 'atelier_admin_products' || e.detail.key === 'atelier_announcements')) {
     renderProducts();
   }
+  if (e.detail && e.detail.key === 'atelier_brands') {
+    loadBrands();
+  }
 });
-window.addEventListener('atelier-synced', function() { renderProducts(); });
+window.addEventListener('atelier-synced', function() { renderProducts(); loadBrands(); });
 </script>
 
 <footer>

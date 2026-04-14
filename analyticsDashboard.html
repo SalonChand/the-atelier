@@ -257,6 +257,7 @@
       <button class="nav-item" onclick="showPanel('customorders',this)" id="nav-customorders" style="position:relative;"><span class="icon">✦</span> Custom Orders <span id="custom-badge" style="margin-left:auto;background:#8b5e3c;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
       <button class="nav-item" onclick="showPanel('stickers',this)" id="nav-stickers"><span class="icon">🎨</span> Stickers</button>
       <button class="nav-item" onclick="showPanel('stickerorders',this)" id="nav-stickerorders" style="position:relative;"><span class="icon">📋</span> Sticker Orders <span id="sticker-order-badge" style="margin-left:auto;background:#e65100;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
+      <button class="nav-item" onclick="showPanel('brands',this)" id="nav-brands"><span class="icon">🤝</span> Brand Collabs</button>
     </div>
     <div class="nav-section">
       <p class="nav-section-title">System</p>
@@ -688,6 +689,23 @@
 
 <!-- PAYMENT SETTINGS PANEL -->
 <!-- SYNC SETTINGS PANEL -->
+<!-- BRANDS PANEL -->
+<div class="panel" id="panel-brands">
+  <div class="topbar"><h1 class="page-title">Brand Collabs</h1><div class="topbar-right"><button class="btn-primary" onclick="openBrandModal()">+ Add Brand</button></div></div>
+  <p style="font-size:0.75rem;color:#6b6258;line-height:1.9;margin-bottom:2rem;max-width:650px;">Manage collaboration brands. Brand logos appear at the top of the Shop page. Customers can click a brand to see only that brand's products.</p>
+  <div id="brands-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;"></div>
+</div>
+<div class="modal-overlay" id="modal-brand">
+  <div class="modal"><button class="modal-close" onclick="closeModal('modal-brand')">✕</button>
+    <h2 class="modal-title" id="modal-brand-title">Add Brand</h2><input type="hidden" id="mb-idx" value="-1"/>
+    <div class="form-group"><label>Brand Name *</label><input id="mb-name" placeholder="e.g. Nike, Adidas"/></div>
+    <div class="form-group"><label>Brand Logo *</label><input type="file" id="mb-logo" accept="image/*" style="padding:0.4rem;"/><img id="mb-logo-preview" src="" style="max-height:60px;margin-top:0.5rem;display:none;"/></div>
+    <div class="form-group"><label>Description</label><textarea id="mb-desc" rows="2" placeholder="Brief description of the collaboration..."></textarea></div>
+    <div class="form-group"><label>Status</label><select id="mb-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-brand')">Cancel</button><button class="btn-primary" onclick="saveBrand()">Save Brand</button></div>
+  </div>
+</div>
+
 <!-- STICKER ORDERS PANEL -->
 <div class="panel" id="panel-stickerorders">
   <div class="topbar"><h1 class="page-title">Sticker Orders</h1></div>
@@ -1195,6 +1213,7 @@
       <div class="form-group"><label>Stock</label><input id="mp-stock" type="number" placeholder="24"/></div>
     </div>
     <div class="form-group"><label>Status</label><select id="mp-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <div class="form-group"><label>Brand (Collab)</label><select id="mp-brand"><option value="">— The Atelier (Own) —</option></select></div>
     <!-- SKU + Barcode Preview -->
     <div id="mp-barcode-section" style="display:none;margin-top:1.25rem;padding:1.5rem;background:#f0ece6;border:1px solid rgba(200,184,154,0.4);text-align:center;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
@@ -1335,7 +1354,7 @@ function showPanel(name,btn){
   // Refresh live purchase data before rendering
   if(name==='orders') ORDERS = getOrders();
   if(name==='customers') CUSTOMERS = getCustomers();
-  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,sync:renderSyncPanel})[name]?.();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[name]?.();
 }
 
 function toast(msg){
@@ -1527,6 +1546,9 @@ function openProductModal(idx){
   document.getElementById('mp-price').value=p.price||'';
   document.getElementById('mp-stock').value=p.stock||'';
   document.getElementById('mp-status').value=p.status||'active';
+  // Populate brand dropdown and set value
+  populateBrandDropdown();
+  if(document.getElementById('mp-brand')) document.getElementById('mp-brand').value=p.brand||'';
   // SKU handling
   if(p.sku){
     document.getElementById('mp-sku').value=p.sku;
@@ -1544,7 +1566,7 @@ function saveProduct(){
   const fileInput=document.getElementById('mp-image');
   const existingIdx=idx;
   const existingSku=existingIdx>=0?PRODUCTS[existingIdx]?.sku:null;
-  const d={name:document.getElementById('mp-name').value,category:document.getElementById('mp-category').value,color:document.getElementById('mp-color').value,price:parseInt(document.getElementById('mp-price').value)||0,stock:parseInt(document.getElementById('mp-stock').value)||0,status:document.getElementById('mp-status').value,sku:existingSku||document.getElementById('mp-sku').value||generateSku(document.getElementById('mp-category').value,document.getElementById('mp-name').value)};
+  const d={name:document.getElementById('mp-name').value,category:document.getElementById('mp-category').value,color:document.getElementById('mp-color').value,price:parseInt(document.getElementById('mp-price').value)||0,stock:parseInt(document.getElementById('mp-stock').value)||0,brand:document.getElementById('mp-brand')?document.getElementById('mp-brand').value:'',status:document.getElementById('mp-status').value,sku:existingSku||document.getElementById('mp-sku').value||generateSku(document.getElementById('mp-category').value,document.getElementById('mp-name').value)};
   if(!d.name){toast('Product name required');return;}
   
   const finishSave=(imgDataArray)=>{
@@ -2802,6 +2824,76 @@ function deleteSticker(idx) {
   var stickers = getStickers(); stickers.splice(idx, 1); saveStickers(stickers); renderStickersTable(); toast("Sticker deleted");
 }
 
+// ── BRAND COLLABS ──────────────────────────────────────────────────────
+function getBrands() { try { return JSON.parse(localStorage.getItem("atelier_brands") || "[]"); } catch(e) { return []; } }
+function saveBrandsData(arr) { localStorage.setItem("atelier_brands", JSON.stringify(arr)); }
+
+function renderBrandsPanel() {
+  var brands = getBrands();
+  var grid = document.getElementById("brands-grid");
+  if (!brands.length) { grid.innerHTML = "<div style=\"grid-column:1/-1;text-align:center;padding:3rem;\"><p style=\"font-family:Newsreader,serif;font-style:italic;font-size:1.5rem;color:#8a7f73;\">No brands yet</p><p style=\"font-size:0.7rem;color:#a89e94;margin-top:0.5rem;\">Add collaboration brands that will appear on the Shop page.</p></div>"; return; }
+  grid.innerHTML = brands.map(function(b, i) {
+    return "<div style=\"background:white;border:1px solid rgba(200,184,154,0.2);padding:1.25rem;text-align:center;\"><img src=\"" + (b.logo||"") + "\" style=\"max-height:50px;max-width:100%;object-fit:contain;margin-bottom:0.75rem;\"/><p style=\"font-size:0.8rem;font-weight:500;\">" + b.name + "</p><p style=\"font-size:0.6rem;color:#8a7f73;margin:0.3rem 0 0.75rem;\">" + (b.desc||"") + "</p><span class=\"status-badge " + (b.status==="active"?"status-active":"status-inactive") + "\">" + (b.status||"active") + "</span><div style=\"margin-top:0.75rem;display:flex;gap:0.5rem;justify-content:center;\"><button class=\"btn-secondary\" style=\"padding:0.3rem 0.7rem;font-size:0.55rem;\" onclick=\"editBrand("+i+")\">Edit</button><button class=\"btn-danger\" style=\"padding:0.3rem 0.7rem;font-size:0.55rem;\" onclick=\"deleteBrand("+i+")\">Delete</button></div></div>";
+  }).join("");
+  populateBrandDropdown();
+}
+
+function populateBrandDropdown() {
+  var brands = getBrands().filter(function(b){return b.status==="active";});
+  var select = document.getElementById("mp-brand"); if (!select) return;
+  var current = select.value;
+  select.innerHTML = "<option value=\"\">u2014 The Atelier (Own) u2014</option>" + brands.map(function(b){ return "<option value=\""+b.name+"\">"+b.name+"</option>"; }).join("");
+  select.value = current;
+}
+
+function openBrandModal(idx) {
+  var brands = getBrands();
+  document.getElementById("mb-idx").value = idx !== undefined ? idx : -1;
+  document.getElementById("modal-brand-title").textContent = idx !== undefined ? "Edit Brand" : "Add Brand";
+  if (idx !== undefined && brands[idx]) {
+    document.getElementById("mb-name").value = brands[idx].name || "";
+    document.getElementById("mb-desc").value = brands[idx].desc || "";
+    document.getElementById("mb-status").value = brands[idx].status || "active";
+    if (brands[idx].logo) { document.getElementById("mb-logo-preview").src = brands[idx].logo; document.getElementById("mb-logo-preview").style.display = "block"; }
+    else { document.getElementById("mb-logo-preview").style.display = "none"; }
+  } else {
+    document.getElementById("mb-name").value = ""; document.getElementById("mb-desc").value = "";
+    document.getElementById("mb-status").value = "active"; document.getElementById("mb-logo-preview").style.display = "none";
+  }
+  document.getElementById("mb-logo").value = "";
+  openModal("modal-brand");
+}
+function editBrand(idx) { openBrandModal(idx); }
+
+function saveBrand() {
+  var name = document.getElementById("mb-name").value.trim();
+  if (!name) { toast("Brand name required"); return; }
+  var brands = getBrands();
+  var idx = parseInt(document.getElementById("mb-idx").value);
+  var d = { name: name, desc: document.getElementById("mb-desc").value.trim(), status: document.getElementById("mb-status").value };
+  var fileInput = document.getElementById("mb-logo");
+  var finish = function(logoData) {
+    if (logoData) d.logo = logoData;
+    else if (idx >= 0 && brands[idx]) d.logo = brands[idx].logo;
+    if (idx >= 0) brands[idx] = d; else brands.push(d);
+    saveBrandsData(brands); closeModal("modal-brand"); renderBrandsPanel(); toast(idx >= 0 ? "Brand updated" : "Brand added");
+  };
+  if (fileInput.files && fileInput.files[0]) {
+    var reader = new FileReader(); reader.onload = function(e) { finish(e.target.result); }; reader.readAsDataURL(fileInput.files[0]);
+  } else { finish(null); }
+}
+
+function deleteBrand(idx) {
+  if (!confirm("Delete this brand?")) return;
+  var brands = getBrands(); brands.splice(idx, 1); saveBrandsData(brands); renderBrandsPanel(); toast("Brand deleted");
+}
+
+// Populate brand dropdown when products panel loads
+var _origOpenProduct = window.openProductModal;
+if (typeof _origOpenProduct === "undefined") {
+  setTimeout(function() { populateBrandDropdown(); }, 2000);
+}
+
 // ── STICKER ORDERS ─────────────────────────────────────────────────────
 var _currentStickerOrderId = null;
 function getStickerOrders() { try { return JSON.parse(localStorage.getItem("atelier_sticker_orders") || "[]"); } catch(e) { return []; } }
@@ -3003,7 +3095,7 @@ function refreshAllData() {
   var activePanel = document.querySelector('.panel.active');
   if (activePanel) {
     var id = activePanel.id.replace('panel-', '');
-    ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,sync:renderSyncPanel})[id]?.();
+    ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[id]?.();
   }
   updateInquiryBadge();
 }
