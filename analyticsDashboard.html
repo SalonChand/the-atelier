@@ -643,6 +643,49 @@
   </div>
 </div>
 
+<!-- STICKERS PANEL -->
+<div class="panel" id="panel-stickers">
+  <div class="topbar">
+    <h1 class="page-title">Stickers</h1>
+    <div class="topbar-right">
+      <button class="btn-primary" onclick="openStickerAdminModal()">+ Add Sticker</button>
+    </div>
+  </div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-stat-total">0</div><div class="mini-stat-label">Total Stickers</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-stat-active" style="color:#3a6b3c;">0</div><div class="mini-stat-label">Active</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-stat-purchases" style="color:var(--accent);">0</div><div class="mini-stat-label">Purchases</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header"><span class="table-title">Sticker Designs</span></div>
+    <div class="table-scroll">
+      <table><thead><tr><th>Preview</th><th>Name</th><th>Price</th><th>Status</th><th>Purchases</th><th>Actions</th></tr></thead>
+      <tbody id="stickers-tbody"></tbody></table>
+    </div>
+  </div>
+  <div class="table-card" style="margin-top:1.5rem;">
+    <div class="table-header"><span class="table-title">Purchase Requests</span></div>
+    <div class="table-scroll">
+      <table><thead><tr><th>Ref</th><th>Sticker</th><th>Email</th><th>Price</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="stk-purchases-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-sticker-admin">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-sticker-admin')">✕</button>
+    <h2 class="modal-title" id="modal-sticker-admin-title">Add Sticker</h2>
+    <input type="hidden" id="mstk-idx"/>
+    <div class="form-group"><label>Sticker Name</label><input id="mstk-name" placeholder="e.g. Atelier Logo Gold"/></div>
+    <div class="form-group"><label>Description</label><textarea id="mstk-desc" rows="2" placeholder="Short description..."></textarea></div>
+    <div class="form-group"><label>Sticker Image (High Quality)</label><input type="file" id="mstk-image" accept="image/*" style="padding:0.4rem;"/><p style="font-size:0.5rem;color:#8a7f73;margin-top:0.3rem;">Upload the original high-quality file. This will NOT be downloadable by customers — they see a watermarked preview.</p></div>
+    <div class="form-group"><label>Price (NRs.)</label><input type="number" id="mstk-price" placeholder="e.g. 250" min="0"/></div>
+    <div class="form-group"><label>Status</label><select id="mstk-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-sticker-admin')">Cancel</button><button class="btn-primary" onclick="saveStickerAdmin()">Save Sticker</button></div>
+  </div>
+</div>
+
 <!-- PAYMENT SETTINGS PANEL -->
 <!-- SYNC SETTINGS PANEL -->
 <div class="panel" id="panel-sync">
@@ -697,6 +740,49 @@
         ✓ <strong>Free tier:</strong> 1 GB storage, 10 GB/month transfer — more than enough for this project.
       </p>
     </div>
+  </div>
+</div>
+
+<!-- STICKERS PANEL -->
+<div class="panel" id="panel-stickers">
+  <div class="topbar">
+    <h1 class="page-title">Stickers</h1>
+    <div class="topbar-right">
+      <button class="btn-primary" onclick="openStickerAdminModal()">+ Add Sticker</button>
+    </div>
+  </div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-stat-total">0</div><div class="mini-stat-label">Total Stickers</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-stat-active" style="color:#3a6b3c;">0</div><div class="mini-stat-label">Active</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-stat-purchases" style="color:var(--accent);">0</div><div class="mini-stat-label">Purchases</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header"><span class="table-title">Sticker Designs</span></div>
+    <div class="table-scroll">
+      <table><thead><tr><th>Preview</th><th>Name</th><th>Price</th><th>Status</th><th>Purchases</th><th>Actions</th></tr></thead>
+      <tbody id="stickers-tbody"></tbody></table>
+    </div>
+  </div>
+  <div class="table-card" style="margin-top:1.5rem;">
+    <div class="table-header"><span class="table-title">Purchase Requests</span></div>
+    <div class="table-scroll">
+      <table><thead><tr><th>Ref</th><th>Sticker</th><th>Email</th><th>Price</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="stk-purchases-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-sticker-admin">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-sticker-admin')">✕</button>
+    <h2 class="modal-title" id="modal-sticker-admin-title">Add Sticker</h2>
+    <input type="hidden" id="mstk-idx"/>
+    <div class="form-group"><label>Sticker Name</label><input id="mstk-name" placeholder="e.g. Atelier Logo Gold"/></div>
+    <div class="form-group"><label>Description</label><textarea id="mstk-desc" rows="2" placeholder="Short description..."></textarea></div>
+    <div class="form-group"><label>Sticker Image (High Quality)</label><input type="file" id="mstk-image" accept="image/*" style="padding:0.4rem;"/><p style="font-size:0.5rem;color:#8a7f73;margin-top:0.3rem;">Upload the original high-quality file. This will NOT be downloadable by customers — they see a watermarked preview.</p></div>
+    <div class="form-group"><label>Price (NRs.)</label><input type="number" id="mstk-price" placeholder="e.g. 250" min="0"/></div>
+    <div class="form-group"><label>Status</label><select id="mstk-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-sticker-admin')">Cancel</button><button class="btn-primary" onclick="saveStickerAdmin()">Save Sticker</button></div>
   </div>
 </div>
 
@@ -2737,6 +2823,67 @@ function firebasePushAll() {
     });
   }
 }
+
+// ── STICKERS PANEL ─────────────────────────────────────────────────
+function getStickers(){try{return JSON.parse(localStorage.getItem("atelier_stickers")||"[]")}catch(e){return[]}}
+function getStickerPurchases(){try{return JSON.parse(localStorage.getItem("atelier_sticker_purchases")||"[]")}catch(e){return[]}}
+
+function renderStickersPanel(){
+  var stickers=getStickers();var purchases=getStickerPurchases();
+  document.getElementById("stk-stat-total").textContent=stickers.length;
+  document.getElementById("stk-stat-active").textContent=stickers.filter(function(s){return s.status==="active"}).length;
+  document.getElementById("stk-stat-purchases").textContent=purchases.length;
+  var tbody=document.getElementById("stickers-tbody");
+  if(!stickers.length){tbody.innerHTML="<tr><td colspan=\"6\" style=\"text-align:center;padding:3rem;color:#8a7f73;font-style:italic;\">No stickers yet. Click + Add Sticker to upload your first design.</td></tr>";}
+  else{tbody.innerHTML=stickers.map(function(s,i){
+    var pc=purchases.filter(function(p){return p.stickerId===s.id}).length;
+    return "<tr><td><img src=\""+s.image+"\" style=\"width:48px;height:48px;object-fit:cover;border:1px solid rgba(200,184,154,0.3);\"/></td>"+
+      "<td style=\"font-weight:500;\">"+s.name+"</td>"+
+      "<td>NRs. "+(s.price||0).toLocaleString()+"</td>"+
+      "<td><span class=\"status-badge "+(s.status==="active"?"status-active":"status-inactive")+"\">"+s.status+"</span></td>"+
+      "<td>"+pc+"</td>"+
+      "<td><button class=\"btn-secondary\" style=\"padding:0.3rem 0.7rem;font-size:0.55rem;\" onclick=\"editStickerAdmin("+i+")\">Edit</button> "+
+      "<button class=\"btn-danger\" style=\"padding:0.3rem 0.7rem;font-size:0.55rem;\" onclick=\"deleteStickerAdmin("+i+")\">Del</button></td></tr>";
+  }).join("")}
+  var ptbody=document.getElementById("stk-purchases-tbody");
+  if(!purchases.length){ptbody.innerHTML="<tr><td colspan=\"7\" style=\"text-align:center;padding:2rem;color:#8a7f73;font-style:italic;\">No purchases yet.</td></tr>";}
+  else{ptbody.innerHTML=purchases.map(function(p,i){
+    return "<tr><td style=\"font-family:monospace;font-size:0.7rem;\">"+p.id+"</td>"+
+      "<td>"+p.stickerName+"</td><td>"+p.email+"</td>"+
+      "<td>NRs. "+(p.price||0).toLocaleString()+"</td>"+
+      "<td style=\"font-size:0.7rem;\">"+p.date+"</td>"+
+      "<td><span class=\"status-badge "+(p.status==="completed"?"status-completed":"status-processing")+"\">"+p.status+"</span></td>"+
+      "<td><select onchange=\"updateStickerPurchaseStatus("+i+",this.value)\" style=\"padding:0.3rem;font-size:0.6rem;font-family:Jost;border:1px solid rgba(200,184,154,0.4);\">"+
+        "<option "+(p.status==="pending-payment"?"selected":"")+">pending-payment</option>"+
+        "<option "+(p.status==="paid"?"selected":"")+">paid</option>"+
+        "<option "+(p.status==="completed"?"selected":"")+">completed</option>"+
+        "<option "+(p.status==="cancelled"?"selected":"")+">cancelled</option></select></td></tr>";
+  }).join("")}
+}
+
+var _stkEditIdx=-1;
+function openStickerAdminModal(){_stkEditIdx=-1;document.getElementById("modal-sticker-admin-title").textContent="Add Sticker";document.getElementById("mstk-idx").value=-1;document.getElementById("mstk-name").value="";document.getElementById("mstk-desc").value="";document.getElementById("mstk-price").value="";document.getElementById("mstk-status").value="active";document.getElementById("mstk-image").value="";openModal("modal-sticker-admin")}
+function editStickerAdmin(i){var stickers=getStickers();var s=stickers[i];if(!s)return;_stkEditIdx=i;document.getElementById("modal-sticker-admin-title").textContent="Edit Sticker";document.getElementById("mstk-idx").value=i;document.getElementById("mstk-name").value=s.name||"";document.getElementById("mstk-desc").value=s.description||"";document.getElementById("mstk-price").value=s.price||"";document.getElementById("mstk-status").value=s.status||"active";openModal("modal-sticker-admin")}
+
+function saveStickerAdmin(){
+  var idx=parseInt(document.getElementById("mstk-idx").value);
+  var stickers=getStickers();
+  var d={name:document.getElementById("mstk-name").value,description:document.getElementById("mstk-desc").value,price:parseInt(document.getElementById("mstk-price").value)||0,status:document.getElementById("mstk-status").value};
+  if(!d.name){toast("Sticker name required");return}
+  var fileInput=document.getElementById("mstk-image");
+  var finish=function(imgData){
+    if(imgData)d.image=imgData;
+    else if(idx>=0&&stickers[idx].image)d.image=stickers[idx].image;
+    if(idx>=0){d.id=stickers[idx].id;stickers[idx]=d}else{d.id="stk-"+Date.now();stickers.unshift(d)}
+    localStorage.setItem("atelier_stickers",JSON.stringify(stickers));
+    closeModal("modal-sticker-admin");renderStickersPanel();toast(idx>=0?"Sticker updated":"Sticker added");
+  };
+  if(fileInput.files&&fileInput.files[0]){var r=new FileReader();r.onload=function(e){finish(e.target.result)};r.readAsDataURL(fileInput.files[0])}else{finish(null)}
+}
+
+function deleteStickerAdmin(i){if(!confirm("Delete this sticker?"))return;var stickers=getStickers();stickers.splice(i,1);localStorage.setItem("atelier_stickers",JSON.stringify(stickers));renderStickersPanel();toast("Sticker deleted")}
+
+function updateStickerPurchaseStatus(i,status){var purchases=getStickerPurchases();if(purchases[i]){purchases[i].status=status;localStorage.setItem("atelier_sticker_purchases",JSON.stringify(purchases));renderStickersPanel();toast("Purchase status updated")}}
 
 // ── AUTO-REFRESH ON FIREBASE DATA UPDATE ──────────────────────────────
 function refreshAllData() {
