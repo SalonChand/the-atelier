@@ -504,3 +504,10 @@
 @media (min-width: 769px) {
   #mobile-tab-bar { display: none !important; }
 }
+
+/* Hide bag/cart link and nav icons on mobile — bottom tab bar handles navigation */
+@media (max-width: 768px) {
+  nav .nav-icons,
+  nav a[href="shoppingCart.html"],
+  .mobile-nav { display: none !important; }
+}
