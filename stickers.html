@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="favicon.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0e0e0d"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<link rel="apple-touch-icon" href="logo.png"/>
+<link rel="manifest" href="manifest.json"/>
+<title>Stickers | THE ATELIER</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--ink:#0e0e0d;--cream:#f4f1ec;--warm:#c8b89a;--accent:#8b5e3c}*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+nav{position:fixed;top:0;width:100%;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1.2rem 3rem;background:rgba(244,241,236,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(200,184,154,0.3)}
+.nav-logo{text-decoration:none;position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:0.6rem}
+.nav-logo-text{font-family:'Newsreader',serif;font-style:italic;font-size:1.4rem;color:var(--ink)}
+.nav-links{display:flex;gap:2.5rem}.nav-links a{font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:#6b6258;text-decoration:none}.nav-links a:hover{color:var(--ink)}
+@media(max-width:640px){.nav-links{display:none}nav{padding:1.2rem 1.5rem}}
+
+.page-hero{padding:9rem 3rem 4rem;text-align:center;border-bottom:1px solid rgba(200,184,154,0.3)}
+.page-hero h1{font-family:'Newsreader',serif;font-style:italic;font-weight:300;font-size:clamp(2.5rem,5vw,4rem);margin-bottom:1rem}
+.page-hero p{font-size:0.75rem;color:#8a7f73;letter-spacing:0.1em;line-height:1.8;max-width:500px;margin:0 auto}
+@media(max-width:640px){.page-hero{padding:7rem 1.5rem 3rem}}
+
+.sticker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:1100px;margin:0 auto;padding:4rem 3rem}
+@media(max-width:900px){.sticker-grid{grid-template-columns:repeat(2,1fr);gap:1.5rem;padding:2.5rem 1.5rem}}
+@media(max-width:500px){.sticker-grid{grid-template-columns:1fr}}
+
+.sticker-card{background:white;border:1px solid rgba(200,184,154,0.2);overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;cursor:pointer}
+.sticker-card:hover{transform:translateY(-4px);box-shadow:0 8px 30px rgba(0,0,0,0.08)}
+.sticker-img-wrap{position:relative;overflow:hidden;background:#f8f5f0;aspect-ratio:1;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.sticker-img-wrap canvas{width:100%;height:100%;pointer-events:none}
+.sticker-shield{position:absolute;inset:0;z-index:2;background:transparent;cursor:pointer;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.sticker-info{padding:1rem 1.25rem}
+.sticker-name{font-size:0.85rem;font-weight:400;margin-bottom:0.2rem}
+.sticker-price{font-size:0.75rem;color:var(--accent);font-weight:500}
+.sticker-tag{font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;color:#8a7f73;margin-top:0.3rem}
+
+.sticker-modal{display:none;position:fixed;inset:0;z-index:500;background:rgba(14,14,13,0.7);align-items:center;justify-content:center}
+.sticker-modal.open{display:flex}
+.sticker-modal-content{background:var(--cream);padding:2.5rem;max-width:480px;width:90%;max-height:90vh;overflow-y:auto;position:relative}
+.sticker-modal-close{position:absolute;top:1rem;right:1.5rem;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#8a7f73}
+.sticker-modal-img{width:100%;aspect-ratio:1;background:#f8f5f0;margin-bottom:1.5rem;position:relative;overflow:hidden;user-select:none;-webkit-user-select:none}
+.sticker-modal-img canvas{width:100%;height:100%}
+
+footer{background:var(--ink);color:#6b6258;padding:5rem 3rem 3rem;margin-top:4rem}
+.footer-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem;max-width:1100px;margin:0 auto}
+@media(max-width:768px){.footer-grid{grid-template-columns:1fr 1fr;gap:2rem}footer{padding:3rem 1.5rem 2rem}}
+.footer-col h4{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:1.2rem;color:var(--warm)}
+.footer-col a{display:block;font-size:0.68rem;color:#6b6258;text-decoration:none;margin-bottom:0.65rem}.footer-col a:hover{color:var(--cream)}
+.footer-bottom{border-top:1px solid rgba(200,184,154,0.1);padding-top:2rem;margin-top:3rem;max-width:1100px;margin-left:auto;margin-right:auto}
+.footer-bottom p{font-size:0.6rem;color:#4a453f;letter-spacing:0.08em}
+</style>
+<link rel="stylesheet" href="mobile-app.css?v=2"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="firebase-sync.js?v=3"></script>
+</head>
+<body>
+<nav>
+  <div class="nav-links">
+    <a href="collection.html">Shop</a>
+    <a href="stickers.html" style="color:var(--ink);font-weight:500;">Stickers</a>
+    <a href="aboutUs.html">About</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:44px;width:auto;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div style="width:100px;"></div>
+</nav>
+
+<div class="page-hero">
+  <h1>Sticker Collection</h1>
+  <p>Exclusive digital stickers designed by The Atelier. Purchase to download in high-quality resolution.</p>
+</div>
+
+<div class="sticker-grid" id="sticker-grid"></div>
+
+<div class="sticker-modal" id="sticker-modal">
+  <div class="sticker-modal-content">
+    <button class="sticker-modal-close" onclick="closeStickerModal()">✕</button>
+    <div class="sticker-modal-img" id="modal-sticker-img"></div>
+    <h2 id="modal-sticker-name" style="font-family:'Newsreader',serif;font-style:italic;font-size:1.8rem;margin-bottom:0.5rem;"></h2>
+    <p id="modal-sticker-desc" style="font-size:0.72rem;color:#8a7f73;line-height:1.8;margin-bottom:1.5rem;"></p>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 0;border-top:1px solid rgba(200,184,154,0.2);border-bottom:1px solid rgba(200,184,154,0.2);margin-bottom:1.5rem;">
+      <span style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;">Price</span>
+      <span id="modal-sticker-price" style="font-size:1.2rem;font-weight:500;color:var(--accent);"></span>
+    </div>
+    <p style="font-size:0.6rem;color:#8a7f73;line-height:1.8;margin-bottom:1.5rem;">✦ High-resolution PNG · ✦ Transparent background · ✦ Commercial license · ✦ Instant download after payment</p>
+    <button onclick="purchaseSticker()" style="width:100%;padding:1.1rem;background:var(--ink);color:var(--cream);border:none;font-family:'Jost';font-size:0.65rem;letter-spacing:0.22em;text-transform:uppercase;cursor:pointer;">✦ Purchase & Download</button>
+    <p style="font-size:0.55rem;color:#a89e94;text-align:center;margin-top:0.75rem;line-height:1.7;">Payment via eSewa, Khalti, or Bank Transfer. Download link sent after verification.</p>
+  </div>
+</div>
+
+<div class="sticker-modal" id="purchase-success-modal">
+  <div class="sticker-modal-content" style="text-align:center;">
+    <button class="sticker-modal-close" onclick="document.getElementById('purchase-success-modal').classList.remove('open')">✕</button>
+    <div style="width:56px;height:56px;border:1px solid var(--warm);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin:0 auto 1.5rem;">⏳</div>
+    <h2 style="font-family:'Newsreader',serif;font-style:italic;font-size:2rem;margin-bottom:0.75rem;">Purchase Request Sent</h2>
+    <p id="purchase-ref" style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:#8a7f73;margin-bottom:1.5rem;"></p>
+    <p style="font-size:0.78rem;color:#6b6258;line-height:1.9;max-width:350px;margin:0 auto 2rem;">Our team will send you a payment link. The high-resolution sticker will be emailed after payment verification.</p>
+    <a href="stickers.html" style="padding:0.9rem 2rem;background:var(--ink);color:var(--cream);text-decoration:none;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;">Continue Browsing</a>
+  </div>
+</div>
+
+<script>
+var STICKERS=[],currentSticker=null;
+
+function loadStickers(){
+  try{STICKERS=JSON.parse(localStorage.getItem('atelier_stickers')||'[]')}catch(e){STICKERS=[]}
+  renderStickers();
+}
+
+function renderStickers(){
+  var grid=document.getElementById('sticker-grid');
+  var active=STICKERS.filter(function(s){return s.status==='active'});
+  if(!active.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:6rem 2rem;"><h2 style="font-family:Newsreader,serif;font-style:italic;font-size:2rem;color:#8a7f73;margin-bottom:1rem;">Coming Soon</h2><p style="font-size:0.75rem;color:#a89e94;">Our sticker collection is being curated.</p></div>';
+    return;
+  }
+  grid.innerHTML=active.map(function(s){
+    return '<div class="sticker-card" onclick="openStickerModal(\''+s.id+'\')">'+
+      '<div class="sticker-img-wrap" id="sticker-wrap-'+s.id+'"><canvas id="sticker-canvas-'+s.id+'"></canvas><div class="sticker-shield"></div></div>'+
+      '<div class="sticker-info"><p class="sticker-name">'+s.name+'</p><p class="sticker-price">NRs. '+(s.price||0).toLocaleString()+'</p><p class="sticker-tag">Digital Download</p></div></div>';
+  }).join('');
+  active.forEach(function(s){renderProtectedImage('sticker-canvas-'+s.id,s.image,false)});
+}
+
+function renderProtectedImage(canvasId,imageSrc,large){
+  var canvas=document.getElementById(canvasId);if(!canvas||!imageSrc)return;
+  var ctx=canvas.getContext('2d');var size=large?600:400;canvas.width=size;canvas.height=size;
+  var img=new Image();img.crossOrigin='anonymous';
+  img.onload=function(){
+    var scale=Math.min(size/img.width,size/img.height)*0.85;
+    var w=img.width*scale,h=img.height*scale;
+    var x=(size-w)/2,y=(size-h)/2;
+    ctx.fillStyle='#f8f5f0';ctx.fillRect(0,0,size,size);
+    ctx.drawImage(img,x,y,w,h);
+    // Watermark
+    ctx.save();ctx.globalAlpha=0.07;
+    ctx.font='bold '+Math.floor(size*0.055)+'px Jost,sans-serif';
+    ctx.fillStyle='#0e0e0d';ctx.textAlign='center';ctx.textBaseline='middle';
+    var sp=size*0.16;ctx.translate(size/2,size/2);ctx.rotate(-0.4);
+    for(var r=-size;r<size*2;r+=sp)for(var c=-size;c<size*2;c+=sp*2.5)ctx.fillText('THE ATELIER',c-size/2,r-size/2);
+    ctx.restore();
+  };
+  img.src=imageSrc;
+}
+
+function openStickerModal(id){
+  var s=STICKERS.find(function(x){return x.id===id});if(!s)return;
+  currentSticker=s;
+  document.getElementById('modal-sticker-name').textContent=s.name;
+  document.getElementById('modal-sticker-desc').textContent=s.description||'Exclusive digital sticker by The Atelier.';
+  document.getElementById('modal-sticker-price').textContent='NRs. '+(s.price||0).toLocaleString();
+  var container=document.getElementById('modal-sticker-img');
+  container.innerHTML='<canvas id="modal-sticker-canvas" style="width:100%;height:100%;"></canvas>';
+  setTimeout(function(){renderProtectedImage('modal-sticker-canvas',s.image,true)},50);
+  document.getElementById('sticker-modal').classList.add('open');
+}
+function closeStickerModal(){document.getElementById('sticker-modal').classList.remove('open');currentSticker=null}
+
+function purchaseSticker(){
+  if(!currentSticker)return;
+  var email=prompt('Enter your email address to receive the download link:');
+  if(!email||!email.includes('@')){alert('Please enter a valid email.');return}
+  var purchase={id:'STK-'+Date.now(),stickerId:currentSticker.id,stickerName:currentSticker.name,price:currentSticker.price,email:email,date:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),status:'pending-payment'};
+  var purchases=JSON.parse(localStorage.getItem('atelier_sticker_purchases')||'[]');
+  purchases.unshift(purchase);localStorage.setItem('atelier_sticker_purchases',JSON.stringify(purchases));
+  closeStickerModal();
+  document.getElementById('purchase-ref').textContent='Reference: '+purchase.id;
+  document.getElementById('purchase-success-modal').classList.add('open');
+}
+
+// Anti-download
+document.addEventListener('contextmenu',function(e){if(e.target.closest('.sticker-img-wrap,.sticker-modal-img')){e.preventDefault();return false}});
+document.addEventListener('dragstart',function(e){if(e.target.closest('.sticker-img-wrap,.sticker-modal-img'))e.preventDefault()});
+document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'))e.preventDefault()});
+
+loadStickers();
+window.addEventListener('atelier-data-updated',function(e){if(e.detail&&e.detail.key==='atelier_stickers')loadStickers()});
+window.addEventListener('atelier-synced',loadStickers);
+</script>
+
+<footer>
+  <div class="footer-grid">
+    <div class="footer-col"><h4>Shop</h4><a href="collection.html">Collections</a><a href="stickers.html">Stickers</a><a href="customize.html">Custom Studio</a></div>
+    <div class="footer-col"><h4>About</h4><a href="aboutUs.html">Our Story</a><a href="sustainability.html">Sustainability</a><a href="press.html">Press</a></div>
+    <div class="footer-col"><h4>Support</h4><a href="sizingGuide.html">Sizing Guide</a><a href="shippingReturns.html">Shipping</a><a href="contactUs.html">Contact</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="#">Privacy Policy</a><a href="#">Terms</a></div>
+  </div>
+  <div class="footer-bottom"><p>&copy; 2026 The Atelier. All rights reserved.</p></div>
+</footer>
+<script src="mobile-app.js?v=2"></script>
+</body>
+</html>

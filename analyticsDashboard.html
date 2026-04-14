@@ -255,6 +255,8 @@
     <div class="nav-section">
       <p class="nav-section-title">Custom Studio</p>
       <button class="nav-item" onclick="showPanel('customorders',this)" id="nav-customorders" style="position:relative;"><span class="icon">✦</span> Custom Orders <span id="custom-badge" style="margin-left:auto;background:#8b5e3c;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
+      <button class="nav-item" onclick="showPanel('stickers',this)" id="nav-stickers"><span class="icon">🎨</span> Stickers</button>
+      <button class="nav-item" onclick="showPanel('stickers',this)" id="nav-stickers"><span class="icon">🎨</span> Stickers</button>
     </div>
     <div class="nav-section">
       <p class="nav-section-title">System</p>
@@ -614,6 +616,30 @@
         <tbody id="co-tbody"></tbody>
       </table>
     </div>
+  </div>
+</div>
+
+<!-- STICKERS PANEL -->
+<div class="panel" id="panel-stickers">
+  <div class="topbar"><h1 class="page-title">Stickers</h1><div class="topbar-right"><button class="btn-primary" onclick="openStickerModal()">+ Add Sticker</button></div></div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-total">0</div><div class="mini-stat-label">Total Stickers</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-active" style="color:#3a6b3c;">0</div><div class="mini-stat-label">Active</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" id="stk-revenue">0</div><div class="mini-stat-label">Est. Revenue</div></div>
+  </div>
+  <div class="table-card"><div class="table-header"><span class="table-title">All Stickers</span></div>
+    <div class="table-scroll"><table><thead><tr><th>Preview</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="stickers-tbody"></tbody></table></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-sticker">
+  <div class="modal"><button class="modal-close" onclick="closeModal('modal-sticker')">✕</button>
+    <h2 class="modal-title" id="modal-sticker-title">Add Sticker</h2><input type="hidden" id="ms-idx" value="-1"/>
+    <div class="form-group"><label>Sticker Name *</label><input id="ms-name" placeholder="e.g. Golden Dragon"/></div>
+    <div class="form-group"><label>High-Quality Image *</label><input type="file" id="ms-image" accept="image/*" style="padding:0.4rem;"/><p style="font-size:0.5rem;color:#8a7f73;margin-top:0.3rem;">Upload at highest resolution. Watermark-protected on store.</p><img id="ms-preview" src="" style="max-height:120px;margin-top:0.5rem;display:none;border:1px solid rgba(200,184,154,0.3);"/></div>
+    <div class="form-row"><div class="form-group"><label>Category</label><input id="ms-category" placeholder="e.g. Anime, Abstract"/></div><div class="form-group"><label>Price (NRs.) *</label><input id="ms-price" type="number" placeholder="150" min="0"/></div></div>
+    <div class="form-group"><label>Description</label><textarea id="ms-desc" rows="2" placeholder="Brief description..."></textarea></div>
+    <div class="form-group"><label>Status</label><select id="ms-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-sticker')">Cancel</button><button class="btn-primary" onclick="saveSticker()">Save Sticker</button></div>
   </div>
 </div>
 
@@ -1194,7 +1220,7 @@ function showPanel(name,btn){
   // Refresh live purchase data before rendering
   if(name==='orders') ORDERS = getOrders();
   if(name==='customers') CUSTOMERS = getCustomers();
-  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,sync:renderSyncPanel})[name]?.();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,sync:renderSyncPanel})[name]?.();
 }
 
 function toast(msg){
@@ -2585,6 +2611,82 @@ function savePaymentSettings() {
   toast('✓ Payment settings saved successfully');
 }
 
+// ── STICKERS MANAGEMENT ───────────────────────────────────────────────────
+function getStickers() { try { return JSON.parse(localStorage.getItem("atelier_stickers") || "[]"); } catch(e) { return []; } }
+function saveStickers(arr) { localStorage.setItem("atelier_stickers", JSON.stringify(arr)); }
+
+function renderStickersTable() {
+  var stickers = getStickers();
+  document.getElementById("stk-total").textContent = stickers.length;
+  document.getElementById("stk-active").textContent = stickers.filter(function(s){return s.status==="active";}).length;
+  document.getElementById("stk-revenue").textContent = "NRs. " + stickers.reduce(function(sum,s){return sum+(s.downloads||0)*(s.price||0);},0).toLocaleString();
+  var tbody = document.getElementById("stickers-tbody");
+  if (!stickers.length) { tbody.innerHTML = "<tr><td colspan=\"6\" style=\"text-align:center;padding:3rem;color:#8a7f73;font-style:italic;\">No stickers yet. Click + Add Sticker to start.</td></tr>"; return; }
+  tbody.innerHTML = stickers.map(function(s,i) {
+    var statusClass = s.status==="active" ? "status-active" : "status-inactive";
+    return "<tr><td><img src=\"" + (s.image||"") + "\" style=\"width:48px;height:48px;object-fit:cover;border:1px solid rgba(200,184,154,0.3);\"/></td>" +
+      "<td style=\"font-weight:500;\">" + (s.name||"—") + "</td>" +
+      "<td>" + (s.category||"—") + "</td>" +
+      "<td>NRs. " + (s.price||0).toLocaleString() + "</td>" +
+      "<td><span class=\"status-badge " + statusClass + "\">" + (s.status||"active") + "</span></td>" +
+      "<td><button class=\"btn-secondary\" style=\"padding:0.3rem 0.7rem;font-size:0.55rem;margin-right:0.3rem;\" onclick=\"editSticker("+i+")\">Edit</button>" +
+      "<button class=\"btn-danger\" style=\"padding:0.3rem 0.7rem;font-size:0.55rem;\" onclick=\"deleteSticker("+i+")\">Del</button></td></tr>";
+  }).join("");
+}
+
+var _currentStickerIdx = -1;
+function openStickerModal(idx) {
+  _currentStickerIdx = idx !== undefined ? idx : -1;
+  document.getElementById("ms-idx").value = _currentStickerIdx;
+  document.getElementById("modal-sticker-title").textContent = _currentStickerIdx >= 0 ? "Edit Sticker" : "Add Sticker";
+  var stickers = getStickers();
+  if (_currentStickerIdx >= 0 && stickers[_currentStickerIdx]) {
+    var s = stickers[_currentStickerIdx];
+    document.getElementById("ms-name").value = s.name || "";
+    document.getElementById("ms-category").value = s.category || "";
+    document.getElementById("ms-price").value = s.price || "";
+    document.getElementById("ms-desc").value = s.desc || "";
+    document.getElementById("ms-status").value = s.status || "active";
+    if (s.image) { document.getElementById("ms-preview").src = s.image; document.getElementById("ms-preview").style.display = "block"; }
+  } else {
+    document.getElementById("ms-name").value = "";
+    document.getElementById("ms-category").value = "";
+    document.getElementById("ms-price").value = "";
+    document.getElementById("ms-desc").value = "";
+    document.getElementById("ms-status").value = "active";
+    document.getElementById("ms-preview").style.display = "none";
+  }
+  document.getElementById("ms-image").value = "";
+  openModal("modal-sticker");
+}
+function editSticker(idx) { openStickerModal(idx); }
+
+function saveSticker() {
+  var name = document.getElementById("ms-name").value.trim();
+  var price = parseInt(document.getElementById("ms-price").value) || 0;
+  if (!name) { toast("Sticker name required"); return; }
+  if (!price) { toast("Price required"); return; }
+  var stickers = getStickers();
+  var idx = parseInt(document.getElementById("ms-idx").value);
+  var d = { name: name, category: document.getElementById("ms-category").value.trim(), price: price, desc: document.getElementById("ms-desc").value.trim(), status: document.getElementById("ms-status").value, id: "STK-" + Date.now(), downloads: 0 };
+  var fileInput = document.getElementById("ms-image");
+  var finishSave = function(imgData) {
+    if (imgData) d.image = imgData;
+    else if (idx >= 0 && stickers[idx]) d.image = stickers[idx].image;
+    if (idx >= 0) { d.id = stickers[idx].id || d.id; d.downloads = stickers[idx].downloads || 0; stickers[idx] = d; }
+    else stickers.unshift(d);
+    saveStickers(stickers); closeModal("modal-sticker"); renderStickersTable(); toast(idx >= 0 ? "Sticker updated" : "Sticker added");
+  };
+  if (fileInput.files && fileInput.files[0]) {
+    var reader = new FileReader(); reader.onload = function(e) { finishSave(e.target.result); }; reader.readAsDataURL(fileInput.files[0]);
+  } else { finishSave(null); }
+}
+
+function deleteSticker(idx) {
+  if (!confirm("Delete this sticker?")) return;
+  var stickers = getStickers(); stickers.splice(idx, 1); saveStickers(stickers); renderStickersTable(); toast("Sticker deleted");
+}
+
 // ── FIREBASE SYNC PANEL ─────────────────────────────────────────────────
 
 function renderSyncPanel() {
@@ -2649,7 +2751,7 @@ function refreshAllData() {
   var activePanel = document.querySelector('.panel.active');
   if (activePanel) {
     var id = activePanel.id.replace('panel-', '');
-    ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,sync:renderSyncPanel})[id]?.();
+    ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,stickers:renderStickersTable,sync:renderSyncPanel})[id]?.();
   }
   updateInquiryBadge();
 }

@@ -34,7 +34,10 @@
     'atelier_reviews':         'reviews',
     'atelier_announcements':   'announcements',
     'atelier_admins':          'admins',
-    'atelier_payment_settings':'payment_settings'
+    'atelier_payment_settings':'payment_settings',
+    'atelier_stickers':'stickers',
+    'atelier_sticker_purchases':'sticker_purchases',
+    'atelier_stickers':        'stickers'
   };
   var PATH_TO_KEY = {};
   for (var k in SYNC_KEYS) { PATH_TO_KEY[SYNC_KEYS[k]] = k; }
