@@ -608,8 +608,8 @@
     <div class="table-scroll">
       <table>
         <thead><tr>
-          <th>Order ID</th><th>Customer</th><th>Garment</th><th>Customization</th>
-          <th>Size</th><th>Qty</th><th>Total</th><th>Date</th><th>Status</th><th>Actions</th>
+          <th>Order ID</th><th>Customer</th><th>Garment</th><th>Gender</th><th>Customization</th>
+          <th>Size</th><th>Qty</th><th>Price</th><th>Date</th><th>Status</th><th>Actions</th>
         </tr></thead>
         <tbody id="co-tbody"></tbody>
       </table>
@@ -842,24 +842,32 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
       <div>
         <img id="co-modal-preview" src="" style="width:100%;border:1px solid rgba(200,184,154,0.3);margin-bottom:1rem;" alt="Design Preview"/>
+        <div id="co-modal-images" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1rem;"></div>
       </div>
       <div id="co-modal-details" style="font-size:0.78rem;line-height:2;"></div>
     </div>
-    <div class="form-group" style="margin-top:1.5rem;">
-      <label>Update Status</label>
-      <select id="co-modal-status">
-        <option value="pending">Pending</option>
-        <option value="confirmed">Confirmed</option>
-        <option value="in-production">In Production</option>
-        <option value="ready">Ready to Ship</option>
-        <option value="completed">Completed</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.5rem;">
+      <div class="form-group">
+        <label>Set Price (NRs.) *</label>
+        <input type="number" id="co-modal-price" placeholder="e.g. 5500" min="0" step="100"/>
+        <p style="font-size:0.55rem;color:#8a7f73;margin-top:0.3rem;">Set the final price based on design complexity, materials, and quantity.</p>
+      </div>
+      <div class="form-group">
+        <label>Update Status</label>
+        <select id="co-modal-status">
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="in-production">In Production</option>
+          <option value="ready">Ready to Ship</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-danger" onclick="deleteCustomOrder()">Delete</button>
       <button class="btn-secondary" onclick="closeModal('modal-customorder')">Close</button>
-      <button class="btn-primary" onclick="updateCustomOrderStatus()">Save Status</button>
+      <button class="btn-primary" onclick="updateCustomOrderStatus()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -2213,20 +2221,23 @@ function renderCustomOrdersTable() {
   var STATUS_CLASSES = { pending:'status-processing', confirmed:'status-active', 'in-production':'status-shipped', ready:'status-shipped', completed:'status-completed', cancelled:'status-cancelled' };
   var tbody = document.getElementById('co-tbody');
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:3rem;color:#8a7f73;font-size:0.8rem;font-style:italic;">No custom orders yet. Customers can place orders via the Design Studio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:3rem;color:#8a7f73;font-size:0.8rem;font-style:italic;">No custom orders yet. Customers can place orders via the Design Studio.</td></tr>';
     return;
   }
   tbody.innerHTML = filtered.map(function(o) {
     var sc = STATUS_CLASSES[o.status] || 'status-processing';
     var statusLabel = o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1).replace('-',' ') : 'Pending';
+    var GENDER_LABELS = { men:'Men', women:'Women', unisex:'Unisex' };
+    var priceDisplay = o.adminPrice ? 'NRs. ' + Number(o.adminPrice).toLocaleString() : '<span style="color:var(--accent);font-size:0.6rem;font-style:italic;">Set price</span>';
     return '<tr>' +
       '<td style="font-family:monospace;font-size:0.7rem;">' + o.id + '</td>' +
       '<td><p style="font-size:0.78rem;font-weight:500;">' + (o.customer||'—') + '</p><p style="font-size:0.62rem;color:#8a7f73;">' + (o.email||'') + '</p></td>' +
       '<td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (o.color||'#ccc') + ';border:1px solid rgba(0,0,0,0.15);margin-right:6px;vertical-align:middle;"></span>' + (o.garment||'—') + '</td>' +
+      '<td>' + (GENDER_LABELS[o.gender] || o.gender || '—') + '</td>' +
       '<td style="text-transform:capitalize;">' + (o.customizationType||'—') + '<br><span style="font-size:0.6rem;color:#8a7f73;">' + (o.placement||'') + '</span></td>' +
       '<td>' + (o.size||'—') + '</td>' +
       '<td>' + (o.qty||1) + '</td>' +
-      '<td>NRs. ' + ((o.totalPrice||0).toLocaleString()) + '</td>' +
+      '<td>' + priceDisplay + '</td>' +
       '<td style="font-size:0.7rem;">' + (o.date||'—') + '</td>' +
       '<td><span class="status-badge ' + sc + '">' + statusLabel + '</span></td>' +
       '<td><button class="btn-secondary" style="padding:0.3rem 0.7rem;font-size:0.55rem;" onclick="openCustomOrderModal(\'' + o.id + '\')">View</button></td>' +
@@ -2242,21 +2253,35 @@ function openCustomOrderModal(id) {
   document.getElementById('co-modal-title').textContent = 'Custom Order — ' + o.id;
   document.getElementById('co-modal-preview').src = o.designPreview || '';
   document.getElementById('co-modal-status').value = o.status || 'pending';
+  document.getElementById('co-modal-price').value = o.adminPrice || o.totalPrice || '';
+
+  // Show all uploaded design images
+  var imagesContainer = document.getElementById('co-modal-images');
+  if (o.designImages && o.designImages.length > 0) {
+    imagesContainer.innerHTML = '<p style="font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:#8a7f73;width:100%;margin-bottom:0.3rem;">Customer Design Files (' + o.designImages.length + ')</p>' +
+      o.designImages.map(function(img) {
+        return '<img src="' + img.dataUrl + '" style="width:56px;height:56px;object-fit:cover;border:1px solid rgba(200,184,154,0.3);cursor:pointer;" title="' + (img.name||'design') + '" onclick="document.getElementById(\'co-modal-preview\').src=this.src"/>';
+      }).join('');
+  } else {
+    imagesContainer.innerHTML = '';
+  }
+
+  var GENDER_LABELS = { men: 'Men', women: 'Women', unisex: 'Unisex' };
   var details = [
     ['Customer', o.customer],
     ['Email', o.email],
     ['Phone', o.phone || '—'],
     ['Address', o.address],
     ['Garment', o.garment],
+    ['Gender', GENDER_LABELS[o.gender] || o.gender || '—'],
     ['Colour', '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + o.color + ';border:1px solid rgba(0,0,0,0.1);vertical-align:middle;margin-right:4px;"></span>' + o.color],
     ['Size', o.size + (o.customSize ? ' (' + o.customSize + ')' : '')],
     ['Quantity', o.qty],
     ['Customization', o.customizationType],
     ['Placement', o.placement],
     ['Text Design', o.designText || '—'],
-    ['Has Image', o.hasImage ? '✓ Yes' : 'No'],
-    ['Unit Price', 'NRs. ' + (o.unitPrice||0).toLocaleString()],
-    ['Total', 'NRs. ' + (o.totalPrice||0).toLocaleString()],
+    ['Images', o.imageCount ? o.imageCount + ' file(s)' : (o.hasImage ? '1 file' : 'None')],
+    ['Price', o.adminPrice ? 'NRs. ' + Number(o.adminPrice).toLocaleString() : '<span style="color:var(--accent);font-style:italic;">Not set — enter below</span>'],
     ['Notes', o.notes || '—'],
     ['Date', o.date + ' ' + (o.time||'')]
   ].map(function(row) {
@@ -2271,10 +2296,16 @@ function updateCustomOrderStatus() {
   var idx = orders.findIndex(function(o){ return o.id === _currentCustomOrderId; });
   if (idx < 0) return;
   orders[idx].status = document.getElementById('co-modal-status').value;
+  var price = document.getElementById('co-modal-price').value;
+  if (price) {
+    orders[idx].adminPrice = parseFloat(price);
+    orders[idx].totalPrice = parseFloat(price) * (orders[idx].qty || 1);
+    orders[idx].priceStatus = 'quoted';
+  }
   saveCustomOrdersData(orders);
   closeModal('modal-customorder');
   renderCustomOrdersTable();
-  showToast('Custom order status updated.');
+  showToast('Custom order updated.');
 }
 
 function deleteCustomOrder() {
@@ -2290,9 +2321,9 @@ function deleteCustomOrder() {
 function exportCustomOrdersCSV() {
   var orders = getCustomOrders();
   if (!orders.length) { alert('No custom orders to export.'); return; }
-  var headers = ['ID','Customer','Email','Phone','Garment','Color','Size','Qty','Customization','Placement','Text','Unit Price','Total','Status','Date','Notes'];
+  var headers = ['ID','Customer','Email','Phone','Garment','Gender','Color','Size','Qty','Customization','Placement','Text','Admin Price','Total','Status','Date','Notes'];
   var rows = orders.map(function(o) {
-    return [o.id,o.customer,o.email,o.phone||'',o.garment,o.color,o.size,o.qty,o.customizationType,o.placement,o.designText||'',o.unitPrice,o.totalPrice,o.status,o.date,o.notes||''].map(function(v){ return '"'+(v||'').toString().replace(/"/g,'""')+'"'; }).join(',');
+    return [o.id,o.customer,o.email,o.phone||'',o.garment,o.gender||'',o.color,o.size,o.qty,o.customizationType,o.placement,o.designText||'',o.adminPrice||'',o.totalPrice||'',o.status,o.date,o.notes||''].map(function(v){ return '"'+(v||'').toString().replace(/"/g,'""')+'"'; }).join(',');
   });
   var csv = [headers.join(',')].concat(rows).join('\n');
   var blob = new Blob([csv], { type: 'text/csv' });

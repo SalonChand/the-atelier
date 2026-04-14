@@ -227,9 +227,19 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
       </div>
     </div>
 
+    <!-- Gender -->
+    <div class="ctrl-section">
+      <p class="ctrl-title">02 — Gender</p>
+      <div class="ctype-row">
+        <button class="ctype-btn active" onclick="selectGender('men',this)">♂ Men</button>
+        <button class="ctype-btn" onclick="selectGender('women',this)">♀ Women</button>
+        <button class="ctype-btn" onclick="selectGender('unisex',this)">⚧ Unisex</button>
+      </div>
+    </div>
+
     <!-- 2. Color -->
     <div class="ctrl-section">
-      <p class="ctrl-title">02 — Garment Colour</p>
+      <p class="ctrl-title">03 — Garment Colour</p>
       <div class="color-grid" id="color-grid">
         <div class="color-dot active" style="background:#f4f1ec;" title="Cream" onclick="selectColor('#f4f1ec',this)"></div>
         <div class="color-dot" style="background:#0e0e0d;" title="Onyx" onclick="selectColor('#0e0e0d',this)"></div>
@@ -252,7 +262,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
     <!-- 3. Size -->
     <div class="ctrl-section">
-      <p class="ctrl-title">03 — Size</p>
+      <p class="ctrl-title">04 — Size</p>
       <div class="size-row">
         <button class="size-chip" onclick="selectSize('XS',this)">XS</button>
         <button class="size-chip active" onclick="selectSize('S',this)">S</button>
@@ -274,7 +284,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
     <!-- 4. Quantity -->
     <div class="ctrl-section">
-      <p class="ctrl-title">04 — Quantity</p>
+      <p class="ctrl-title">05 — Quantity</p>
       <div style="display:flex;align-items:center;gap:1rem;">
         <div style="display:flex;align-items:center;border:1px solid rgba(200,184,154,0.4);">
           <button onclick="changeQty(-1)" style="width:2.2rem;height:2.2rem;border:none;background:none;font-size:1.1rem;cursor:pointer;">−</button>
@@ -287,7 +297,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
     <!-- 5. Customization Type -->
     <div class="ctrl-section">
-      <p class="ctrl-title">05 — Customization Type</p>
+      <p class="ctrl-title">06 — Customization Type</p>
       <div class="ctype-row">
         <button class="ctype-btn active" onclick="selectCtype('print',this)">🖨 Print</button>
         <button class="ctype-btn" onclick="selectCtype('embroidery',this)">🪡 Embroidery</button>
@@ -297,7 +307,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
     <!-- 6. Placement -->
     <div class="ctrl-section" id="placement-section">
-      <p class="ctrl-title">06 — Placement</p>
+      <p class="ctrl-title">07 — Placement</p>
       <div class="placement-row">
         <button class="place-btn active" onclick="selectPlacement('chest-left',this)">Chest Left</button>
         <button class="place-btn" onclick="selectPlacement('chest-center',this)">Chest Center</button>
@@ -310,7 +320,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
     <!-- 7. Design Upload / Text -->
     <div class="ctrl-section" id="design-section">
-      <p class="ctrl-title">07 — Your Design</p>
+      <p class="ctrl-title">08 — Your Design</p>
 
       <!-- Tab toggle -->
       <div style="display:flex;gap:0;margin-bottom:1rem;border:1px solid rgba(200,184,154,0.4);">
@@ -318,20 +328,25 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
         <button id="tab-text-btn" class="ctype-btn" style="flex:1;border:none;border-left:1px solid rgba(200,184,154,0.4);padding:0.55rem;" onclick="switchDesignTab('text')">✏ Text</button>
       </div>
 
-      <!-- Image upload -->
+      <!-- Image upload — multiple images -->
       <div id="tab-image">
         <div class="upload-zone" onclick="document.getElementById('design-upload').click()">
-          <input type="file" id="design-upload" accept="image/*" onchange="handleImageUpload(event)"/>
+          <input type="file" id="design-upload" accept="image/*" multiple onchange="handleMultiImageUpload(event)"/>
           <div class="upload-icon">⬆</div>
-          <p>Click to upload your design<br/><span style="font-size:0.55rem;">PNG, JPG, SVG — max 10MB</span></p>
+          <p>Click to upload your designs<br/><span style="font-size:0.55rem;">PNG, JPG, SVG — multiple files allowed — max 10MB each</span></p>
         </div>
-        <img id="preview-thumb" src="" alt="Preview"/>
+        <div id="image-gallery" style="display:none;margin-top:0.75rem;">
+          <div id="image-thumbs" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;"></div>
+          <p id="image-count" style="font-size:0.55rem;color:#8a7f73;letter-spacing:0.1em;margin-bottom:0.5rem;"></p>
+          <p style="font-size:0.5rem;color:#a89e94;letter-spacing:0.08em;margin-bottom:0.5rem;">Click a thumbnail to preview on 3D model. First image is used by default.</p>
+        </div>
+        <img id="preview-thumb" src="" alt="Preview" style="display:none;"/>
         <div id="img-controls" style="display:none;margin-top:0.75rem;">
           <label style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Design Size</label>
           <input type="range" id="design-scale" min="0.05" max="1" step="0.01" value="0.6" style="width:100%;" oninput="updateCanvas()"/>
           <label style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-top:0.6rem;margin-bottom:0.4rem;">Opacity</label>
           <input type="range" id="design-opacity" min="0.1" max="1" step="0.05" value="1" style="width:100%;" oninput="updateCanvas()"/>
-          <button onclick="clearDesign()" style="margin-top:0.75rem;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;background:none;border:1px solid rgba(200,184,154,0.4);padding:0.35rem 0.75rem;cursor:pointer;color:#8a7f73;font-family:'Jost';">Remove Image</button>
+          <button onclick="clearAllDesigns()" style="margin-top:0.75rem;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;background:none;border:1px solid rgba(200,184,154,0.4);padding:0.35rem 0.75rem;cursor:pointer;color:#8a7f73;font-family:'Jost';">Remove All Images</button>
         </div>
       </div>
 
@@ -359,7 +374,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
     <!-- 8. Special Instructions -->
     <div class="ctrl-section">
-      <p class="ctrl-title">08 — Special Instructions</p>
+      <p class="ctrl-title">09 — Special Instructions</p>
       <div class="form-group">
         <textarea id="special-notes" rows="3" placeholder="Any specific requirements, thread colour for embroidery, exact position notes, etc."></textarea>
       </div>
@@ -367,7 +382,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
     <!-- 9. Customer Details -->
     <div class="ctrl-section">
-      <p class="ctrl-title">09 — Your Details</p>
+      <p class="ctrl-title">10 — Your Details</p>
       <div class="form-group"><label>Full Name *</label><input type="text" id="cust-name" placeholder="Alexandra Beaumont"/></div>
       <div class="form-group"><label>Email *</label><input type="email" id="cust-email" placeholder="your@email.com"/></div>
       <div class="form-group"><label>Phone</label><input type="tel" id="cust-phone" placeholder="+977-98XXXXXXXX"/></div>
@@ -376,7 +391,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
     <!-- 10. Order Summary + CTA -->
     <div class="ctrl-section">
-      <p class="ctrl-title">10 — Order Summary</p>
+      <p class="ctrl-title">11 — Order Summary</p>
       <div id="order-summary" style="margin-bottom:1.25rem;"></div>
       <button class="order-btn" onclick="placeCustomOrder()">✦ Place Custom Order</button>
       <p style="font-size:0.58rem;color:#8a7f73;letter-spacing:0.08em;text-align:center;margin-top:0.75rem;line-height:1.8;">Our team will review your design and confirm pricing &amp; timeline within 24 hours.</p>
@@ -401,6 +416,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 // ── STATE ──────────────────────────────────────────────────────────────────
 var state = {
   garment: 'tshirt',
+  gender: 'men',
   color: '#f4f1ec',
   size: 'S',
   qty: 1,
@@ -416,8 +432,13 @@ var state = {
 };
 
 var GARMENT_NAMES = { tshirt:'T-Shirt', shirt:'Shirt', hoodie:'Hoodie', jacket:'Jacket', coat:'Coat', pant:'Pant' };
-var BASE_PRICES   = { tshirt:2800, shirt:3200, hoodie:4500, jacket:5800, coat:7200, pant:3500 };
-var CTYPE_PRICES  = { print:500, embroidery:900, none:0 };
+// Prices are set by admin — these are just display estimates
+var BASE_PRICES   = { tshirt:0, shirt:0, hoodie:0, jacket:0, coat:0, pant:0 };
+var CTYPE_PRICES  = { print:0, embroidery:0, none:0 };
+
+// Multiple uploaded images
+var uploadedImages = []; // array of {img: Image, dataUrl: string, name: string}
+var uploadedImg = null;  // currently active image for preview
 
 // ── GARMENT SHAPES (drawn with Canvas 2D) ──────────────────────────────────
 var SHAPES = {
@@ -707,45 +728,107 @@ function switchDesignTab(tab) {
 }
 
 function handleImageUpload(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var img = new Image();
-    img.onload = function() {
-      uploadedImg = img;
-      document.getElementById('preview-thumb').src = ev.target.result;
-      document.getElementById('preview-thumb').style.display = 'block';
-      document.getElementById('img-controls').style.display = 'block';
-      updateCanvas();
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
+  // Legacy single-image handler — now redirects to multi
+  handleMultiImageUpload(e);
 }
 
-function clearDesign() {
+function handleMultiImageUpload(e) {
+  var files = e.target.files;
+  if (!files || files.length === 0) return;
+  for (var i = 0; i < files.length; i++) {
+    (function(file) {
+      if (file.size > 10 * 1024 * 1024) { alert(file.name + ' is too large (max 10MB)'); return; }
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var img = new Image();
+        img.onload = function() {
+          uploadedImages.push({ img: img, dataUrl: ev.target.result, name: file.name });
+          // Set the first image as the active preview
+          if (uploadedImages.length === 1) {
+            uploadedImg = img;
+            document.getElementById('preview-thumb').src = ev.target.result;
+            document.getElementById('preview-thumb').style.display = 'block';
+          }
+          document.getElementById('img-controls').style.display = 'block';
+          renderImageGallery();
+          updateCanvas();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    })(files[i]);
+  }
+}
+
+function renderImageGallery() {
+  var gallery = document.getElementById('image-gallery');
+  var thumbs = document.getElementById('image-thumbs');
+  var countEl = document.getElementById('image-count');
+  if (uploadedImages.length === 0) { gallery.style.display = 'none'; return; }
+  gallery.style.display = 'block';
+  countEl.textContent = uploadedImages.length + ' design' + (uploadedImages.length > 1 ? 's' : '') + ' uploaded';
+  thumbs.innerHTML = uploadedImages.map(function(item, idx) {
+    var isActive = (uploadedImg === item.img) ? 'border:2px solid var(--accent);' : 'border:2px solid rgba(200,184,154,0.3);';
+    return '<div style="position:relative;width:56px;height:56px;cursor:pointer;" onclick="selectDesignImage(' + idx + ')">' +
+      '<img src="' + item.dataUrl + '" style="width:56px;height:56px;object-fit:cover;' + isActive + '" title="' + item.name + '"/>' +
+      '<button onclick="event.stopPropagation();removeDesignImage(' + idx + ')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--ink);color:var(--cream);border:none;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>' +
+      '</div>';
+  }).join('');
+}
+
+function selectDesignImage(idx) {
+  if (idx >= 0 && idx < uploadedImages.length) {
+    uploadedImg = uploadedImages[idx].img;
+    document.getElementById('preview-thumb').src = uploadedImages[idx].dataUrl;
+    document.getElementById('preview-thumb').style.display = 'block';
+    renderImageGallery();
+    updateCanvas();
+  }
+}
+
+function removeDesignImage(idx) {
+  var wasActive = (uploadedImg === uploadedImages[idx].img);
+  uploadedImages.splice(idx, 1);
+  if (uploadedImages.length === 0) {
+    clearAllDesigns();
+  } else if (wasActive) {
+    uploadedImg = uploadedImages[0].img;
+    document.getElementById('preview-thumb').src = uploadedImages[0].dataUrl;
+  }
+  renderImageGallery();
+  updateCanvas();
+}
+
+function clearAllDesigns() {
+  uploadedImages = [];
   uploadedImg = null;
   document.getElementById('preview-thumb').src = '';
   document.getElementById('preview-thumb').style.display = 'none';
   document.getElementById('img-controls').style.display = 'none';
+  document.getElementById('image-gallery').style.display = 'none';
   document.getElementById('design-upload').value = '';
   updateCanvas();
 }
 
+function selectGender(g, btn) {
+  state.gender = g;
+  document.querySelectorAll('.ctrl-section:nth-child(2) .ctype-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  updateSummary();
+}
+
+function clearDesign() { clearAllDesigns(); }
+
 function updateSummary() {
-  var base = BASE_PRICES[state.garment] || 0;
-  var ctype = CTYPE_PRICES[state.ctype] || 0;
-  var unit = base + ctype;
-  var total = unit * state.qty;
+  var GENDER_LABELS = { men: 'Men', women: 'Women', unisex: 'Unisex' };
   var html = [
     ['Garment', GARMENT_NAMES[state.garment]],
-    ['Base Price', 'NRs. ' + base.toLocaleString()],
-    ['Customization (' + state.ctype + ')', ctype > 0 ? 'NRs. ' + ctype.toLocaleString() : 'Included'],
+    ['Gender', GENDER_LABELS[state.gender] || 'Men'],
+    ['Customization', state.ctype === 'none' ? 'Plain (no design)' : state.ctype.charAt(0).toUpperCase() + state.ctype.slice(1)],
+    ['Designs Uploaded', uploadedImages.length + ' image' + (uploadedImages.length !== 1 ? 's' : '')],
     ['Size', state.size],
     ['Qty', state.qty],
-    ['Unit Price', 'NRs. ' + unit.toLocaleString()],
-    ['Total (est.)', 'NRs. ' + total.toLocaleString()]
+    ['Pricing', '<span style="color:var(--accent);font-style:italic;">Quote on request</span>']
   ].map(function(row) {
     return '<div class="summary-line"><span style="color:#8a7f73;">' + row[0] + '</span><span>' + row[1] + '</span></div>';
   }).join('');
@@ -760,10 +843,6 @@ function placeCustomOrder() {
   if (!name || !email || !address) { alert('Please fill in your name, email, and delivery address.'); return; }
   if (!email.includes('@')) { alert('Please enter a valid email address.'); return; }
 
-  var base = BASE_PRICES[state.garment] || 0;
-  var ctypePrice = CTYPE_PRICES[state.ctype] || 0;
-  var unit = base + ctypePrice;
-
   var customSize = '';
   if (state.size === 'Custom') {
     customSize = 'Chest:' + (document.getElementById('sz-chest').value||'?') + 'cm, Waist:' + (document.getElementById('sz-waist').value||'?') + 'cm, Hip:' + (document.getElementById('sz-hip').value||'?') + 'cm, Length:' + (document.getElementById('sz-length').value||'?') + 'cm';
@@ -771,6 +850,11 @@ function placeCustomOrder() {
 
   // Capture canvas preview
   var preview = canvas.toDataURL('image/png');
+
+  // Collect all uploaded image data URLs (limit to keep localStorage manageable)
+  var designImages = uploadedImages.map(function(item) {
+    return { name: item.name, dataUrl: item.dataUrl };
+  });
 
   var order = {
     id: 'CUS-' + Date.now(),
@@ -783,6 +867,7 @@ function placeCustomOrder() {
     phone: document.getElementById('cust-phone').value.trim(),
     address: address,
     garment: GARMENT_NAMES[state.garment],
+    gender: state.gender,
     color: state.color,
     size: state.size,
     customSize: customSize,
@@ -790,11 +875,14 @@ function placeCustomOrder() {
     customizationType: state.ctype,
     placement: state.placement,
     designText: state.designTab === 'text' ? (document.getElementById('design-text').value || '') : '',
-    hasImage: uploadedImg !== null,
+    designImages: designImages,
+    imageCount: designImages.length,
+    hasImage: uploadedImages.length > 0,
     designPreview: preview,
     notes: document.getElementById('special-notes').value.trim(),
-    unitPrice: unit,
-    totalPrice: unit * state.qty
+    price: null,
+    adminPrice: null,
+    priceStatus: 'pending-quote'
   };
 
   // Save to localStorage for admin
