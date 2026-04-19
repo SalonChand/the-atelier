@@ -1207,10 +1207,37 @@
     </div>
 
     <div class="form-group"><label>Status</label>
-      <select id="modal-order-status"><option value="awaiting-verification">Awaiting Verification</option><option value="processing">Processing</option><option value="shipped">Shipped</option><option value="completed">Completed</option><option value="payment-rejected">Payment Rejected</option><option value="cancelled">Cancelled</option></select>
+      <select id="modal-order-status">
+        <option value="awaiting-verification">Awaiting Verification</option>
+        <option value="processing">Payment Verified</option>
+        <option value="preparing">Being Prepared</option>
+        <option value="shipped">Shipped</option>
+        <option value="out-for-delivery">Out for Delivery</option>
+        <option value="completed">Delivered / Completed</option>
+        <option value="payment-rejected">Payment Rejected</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
     </div>
-    <div class="form-group"><label>Tracking Number</label><input id="modal-order-tracking" placeholder="e.g. 1Z999AA10123456784"/></div>
-    <div class="form-group"><label>Notes</label><textarea id="modal-order-notes" rows="3" placeholder="Internal notes…"></textarea></div>
+    <div class="form-group"><label>Tracking Number <span style="font-size:0.6rem;color:#aaa;">(optional)</span></label><input id="modal-order-tracking" placeholder="e.g. 1Z999AA10123456784"/></div>
+    <div class="form-group"><label>Note to Customer <span style="font-size:0.6rem;color:#aaa;">(shown on tracking page)</span></label><textarea id="modal-order-notes" rows="3" placeholder="e.g. Your order will be delivered within 2 days…"></textarea></div>
+
+    <!-- NOTIFY CUSTOMER SECTION -->
+    <div style="margin-top:1rem;padding:1.25rem;border:1px solid rgba(200,184,154,0.3);background:#fafaf8;">
+      <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.9rem;font-weight:500;">Notify Customer</p>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <button class="btn-primary" style="padding:0.6rem 1.25rem;background:#25D366;border:none;font-size:0.58rem;letter-spacing:0.12em;" onclick="notifyWhatsApp()">
+          💬 Send WhatsApp
+        </button>
+        <button class="btn-primary" style="padding:0.6rem 1.25rem;font-size:0.58rem;letter-spacing:0.12em;" onclick="notifyEmail()">
+          ✉ Send Email
+        </button>
+        <button class="btn-secondary" style="padding:0.6rem 1.25rem;font-size:0.58rem;letter-spacing:0.12em;" onclick="copyTrackingLink()">
+          🔗 Copy Tracking Link
+        </button>
+      </div>
+      <p style="font-size:0.6rem;color:#aaa;margin-top:0.6rem;">Save changes first, then notify the customer.</p>
+    </div>
+
     <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-order')">Cancel</button><button class="btn-primary" onclick="saveOrder()">Save Changes</button></div>
   </div>
 </div>
@@ -1598,10 +1625,79 @@ function verifyPayment(action) {
 }
 function saveOrder(){
   const idx=parseInt(document.getElementById('modal-order-id').value);
+  const prevStatus = ORDERS[idx].status;
   ORDERS[idx].status=document.getElementById('modal-order-status').value;
   ORDERS[idx].tracking=document.getElementById('modal-order-tracking').value;
   ORDERS[idx].notes=document.getElementById('modal-order-notes').value;
-  saveOrders(ORDERS);closeModal('modal-order');renderOrdersTable();toast('Order updated');
+  ORDERS[idx].updatedAt = new Date().toLocaleString('en-NP');
+  saveOrders(ORDERS);
+  closeModal('modal-order');
+  renderOrdersTable();
+  toast('Order updated');
+  if(prevStatus !== ORDERS[idx].status){
+    setTimeout(function(){ toast('Status changed — notify customer via the Notify buttons in order modal.'); },1200);
+  }
+}
+
+function getCurrentOrder(){
+  const idx=parseInt(document.getElementById('modal-order-id').value);
+  return ORDERS[idx];
+}
+
+function getStatusLabel(status){
+  const map={
+    'awaiting-verification':'Order Received — Awaiting Payment Verification',
+    'processing':'Payment Verified — Your order is being processed',
+    'preparing':'Your order is Being Prepared by our team',
+    'shipped':'Your order has been Shipped',
+    'out-for-delivery':'Your order is Out for Delivery today',
+    'completed':'Your order has been Delivered. Thank you!',
+    'cancelled':'Your order has been Cancelled',
+    'payment-rejected':'Payment could not be verified — please contact us'
+  };
+  return map[status]||status;
+}
+
+function notifyWhatsApp(){
+  const idx=parseInt(document.getElementById('modal-order-id').value);
+  const o = ORDERS[idx];
+  if(!o){ toast('Save the order first'); return; }
+  const phone = (o.phone||o.mobile||'').replace(/\D/g,'');
+  const trackUrl = 'https://theatelier-ta.com/trackOrder.html?id=' + encodeURIComponent(o.id||'');
+  const msg = 'Hello ' + (o.customer||'') + ',\n\nYour The Atelier order *' + (o.id||'') + '* has been updated.\n\nStatus: *' + getStatusLabel(o.status) + '*\n' +
+    (o.tracking ? 'Tracking No: ' + o.tracking + '\n' : '') +
+    (o.notes ? '\nNote: ' + o.notes + '\n' : '') +
+    '\nTrack your order: ' + trackUrl + '\n\nThank you for shopping with us! — The Atelier';
+  const waUrl = phone
+    ? 'https://wa.me/' + (phone.startsWith('977')?phone:'977'+phone) + '?text=' + encodeURIComponent(msg)
+    : 'https://wa.me/?text=' + encodeURIComponent(msg);
+  window.open(waUrl, '_blank');
+}
+
+function notifyEmail(){
+  const idx=parseInt(document.getElementById('modal-order-id').value);
+  const o = ORDERS[idx];
+  if(!o){ toast('Save the order first'); return; }
+  const email = o.email||'';
+  const trackUrl = 'https://theatelier-ta.com/trackOrder.html?id=' + encodeURIComponent(o.id||'');
+  const subject = 'Your Order ' + (o.id||'') + ' — Update from The Atelier';
+  const body = 'Hello ' + (o.customer||'') + ',\n\nYour order has been updated.\n\nOrder ID: ' + (o.id||'') + '\nStatus: ' + getStatusLabel(o.status) + '\n' +
+    (o.tracking ? 'Tracking Number: ' + o.tracking + '\n' : '') +
+    (o.notes ? '\nMessage from us: ' + o.notes + '\n' : '') +
+    '\nTrack your order here:\n' + trackUrl + '\n\nThank you for shopping with The Atelier.\n\nBest regards,\nThe Atelier Team\nsodarisalon26@gmail.com | +977-9742590718';
+  window.open('mailto:' + email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body));
+}
+
+function copyTrackingLink(){
+  const idx=parseInt(document.getElementById('modal-order-id').value);
+  const o = ORDERS[idx];
+  if(!o){ toast('Save the order first'); return; }
+  const trackUrl = 'https://theatelier-ta.com/trackOrder.html?id=' + encodeURIComponent(o.id||'');
+  navigator.clipboard.writeText(trackUrl).then(function(){
+    toast('Tracking link copied!');
+  }).catch(function(){
+    prompt('Copy this tracking link:', trackUrl);
+  });
 }
 
 // PRODUCTS
