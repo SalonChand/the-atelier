@@ -891,7 +891,7 @@ document.getElementById('place-order-btn').addEventListener('click', () => {
   const productSummary = cart.map(i => i.name).join(', ');
   const firstProductImage = cart.length > 0 ? (cart[0].image || '') : '';
 
-  // Build order object — keep proof image for Firebase but strip from localStorage to avoid quota errors
+  // Build order object
   const orderObj = {
     id: orderId,
     customer: customer.name,
@@ -899,53 +899,78 @@ document.getElementById('place-order-btn').addEventListener('click', () => {
     phone: customer.phone,
     address: customer.address,
     product: productSummary,
-    productImage: firstProductImage,
+    productImage: '',
     items: cart.map(function(i) { return { name: i.name, price: i.price, qty: i.quantity }; }),
     date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
     amount: subtotalVal,
     status: 'awaiting-verification',
-    payment: paymentInfo
+    payment: paymentInfo,
+    createdAt: Date.now()
   };
 
-  // Write order to localStorage (without large base64 proof image to avoid quota)
-  try {
-    const orders = JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]');
-    const orderForStorage = Object.assign({}, orderObj, {
-      payment: Object.assign({}, paymentInfo, { proofImage: '[stored in Firebase]' })
-    });
-    orders.unshift(orderForStorage);
-    localStorage.setItem('atelier_admin_orders', JSON.stringify(orders));
-  } catch(e) {
-    // localStorage full — Firebase will still sync the order
-    console.warn('localStorage full, order saved to Firebase only');
-  }
-
-  // Write / update customer
-  try {
-    const customers = JSON.parse(localStorage.getItem('atelier_admin_customers') || '[]');
-    const existingIdx = customers.findIndex(function(c){ return c.email.toLowerCase() === customer.email.toLowerCase(); });
-    if (existingIdx >= 0) {
-      customers[existingIdx].orders = (customers[existingIdx].orders || 0) + 1;
-      customers[existingIdx].spent = (customers[existingIdx].spent || 0) + subtotalVal;
-    } else {
-      customers.unshift({
-        name: customer.name, email: customer.email, phone: customer.phone,
-        country: customer.country, orders: 1, spent: subtotalVal,
-        joined: new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-      });
-    }
-    localStorage.setItem('atelier_admin_customers', JSON.stringify(customers));
-  } catch(e) {
-    console.warn('localStorage full, customer saved to Firebase only');
-  }
-
-  // Store order ID for confirmation page tracking link
+  // Save order ID so confirmation page can link to tracking
   try { localStorage.setItem('atelier_last_order_id', orderId); } catch(e) {}
 
-  setTimeout(function() {
+  // ── WRITE DIRECTLY TO FIREBASE ──────────────────────────────────────────
+  // This works from ANY device — customer's phone, desktop, anywhere
+  function writeOrderToFirebase(onDone) {
+    try {
+      var FIREBASE_CONFIG = {
+        apiKey: "AIzaSyCqDm6B0JoILcHHFqO6w2El64UhVS5WgDs",
+        databaseURL: "https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "the-atelier-ce832"
+      };
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      var db = firebase.database();
+
+      // Read current orders, prepend new one, write back
+      db.ref('atelier_admin_orders').once('value').then(function(snap) {
+        var existing = snap.val();
+        var orders = Array.isArray(existing) ? existing : (existing ? Object.values(existing) : []);
+        orders.unshift(orderObj);
+        return db.ref('atelier_admin_orders').set(orders);
+      }).then(function() {
+        // Also update customers
+        return db.ref('atelier_admin_customers').once('value');
+      }).then(function(snap) {
+        var existing = snap.val();
+        var customers = Array.isArray(existing) ? existing : (existing ? Object.values(existing) : []);
+        var idx = customers.findIndex(function(c){ return c && (c.email||'').toLowerCase() === customer.email.toLowerCase(); });
+        if (idx >= 0) {
+          customers[idx].orders = (customers[idx].orders || 0) + 1;
+          customers[idx].spent = (customers[idx].spent || 0) + subtotalVal;
+        } else {
+          customers.unshift({
+            name: customer.name, email: customer.email, phone: customer.phone,
+            country: customer.country, orders: 1, spent: subtotalVal,
+            joined: new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+          });
+        }
+        return db.ref('atelier_admin_customers').set(customers);
+      }).then(function() {
+        onDone(true);
+      }).catch(function(err) {
+        console.error('Firebase write failed:', err);
+        onDone(false);
+      });
+    } catch(e) {
+      console.error('Firebase init failed:', e);
+      onDone(false);
+    }
+  }
+
+  writeOrderToFirebase(function(success) {
+    // Also save to localStorage as backup
+    try {
+      var orders = JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]');
+      var orderForStorage = Object.assign({}, orderObj, { payment: Object.assign({}, paymentInfo, { proofImage: '' }) });
+      orders.unshift(orderForStorage);
+      localStorage.setItem('atelier_admin_orders', JSON.stringify(orders));
+    } catch(e) {}
+
     try { localStorage.removeItem('atelier_cart'); } catch(e) {}
     window.location.href = 'orderConfirmation.html';
-  }, 1200);
+  });
 });
 
 // ── ORDER SUMMARY ────────────────────────────────────────────────────────────
