@@ -850,17 +850,18 @@ function validate() {
 }
 
 // ── PLACE ORDER ──────────────────────────────────────────────────────────────
-document.getElementById('place-order-btn').addEventListener('click', () => {
-  if (!validate()) {
-    // Show visible feedback so user knows what failed
-    const firstErr = document.querySelector('.invalid, .field-error.show, .proof-error.show');
-    if (firstErr) {
-      firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      alert('Please fill in all required fields and upload your payment proof screenshot.');
+document.getElementById('place-order-btn').addEventListener('click', function() {
+  try {
+    var validResult = validate();
+    if (!validResult) {
+      var firstErr = document.querySelector('.invalid, .field-error.show, .proof-error.show');
+      if (firstErr) {
+        firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        alert('Please fill in all required fields and upload your payment screenshot.');
+      }
+      return;
     }
-    return;
-  }
   const btn = document.getElementById('place-order-btn');
   btn.disabled = true;
   btn.textContent = 'Processing...';
@@ -913,50 +914,54 @@ document.getElementById('place-order-btn').addEventListener('click', () => {
 
   // ── WRITE DIRECTLY TO FIREBASE ──────────────────────────────────────────
   // This works from ANY device — customer's phone, desktop, anywhere
+  // Write order using Firebase REST API — no SDK conflict, works from any device
   function writeOrderToFirebase(onDone) {
-    try {
-      var FIREBASE_CONFIG = {
-        apiKey: "AIzaSyCqDm6B0JoILcHHFqO6w2El64UhVS5WgDs",
-        databaseURL: "https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "the-atelier-ce832"
-      };
-      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-      var db = firebase.database();
+    var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
 
-      // Read current orders, prepend new one, write back
-      db.ref('atelier_admin_orders').once('value').then(function(snap) {
-        var existing = snap.val();
-        var orders = Array.isArray(existing) ? existing : (existing ? Object.values(existing) : []);
+    // Step 1: read existing orders
+    fetch(DB_URL + '/atelier_admin_orders.json')
+      .then(function(r){ return r.json(); })
+      .then(function(existing) {
+        var orders = Array.isArray(existing) ? existing : (existing && typeof existing === 'object' ? Object.values(existing) : []);
+        orders = orders.filter(Boolean);
         orders.unshift(orderObj);
-        return db.ref('atelier_admin_orders').set(orders);
-      }).then(function() {
-        // Also update customers
-        return db.ref('atelier_admin_customers').once('value');
-      }).then(function(snap) {
-        var existing = snap.val();
-        var customers = Array.isArray(existing) ? existing : (existing ? Object.values(existing) : []);
+        // Step 2: write back
+        return fetch(DB_URL + '/atelier_admin_orders.json', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orders)
+        });
+      })
+      .then(function(r){ return r.json(); })
+      .then(function() {
+        // Step 3: update customers
+        return fetch(DB_URL + '/atelier_admin_customers.json');
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(existing) {
+        var customers = Array.isArray(existing) ? existing : (existing && typeof existing === 'object' ? Object.values(existing) : []);
+        customers = customers.filter(Boolean);
         var idx = customers.findIndex(function(c){ return c && (c.email||'').toLowerCase() === customer.email.toLowerCase(); });
         if (idx >= 0) {
-          customers[idx].orders = (customers[idx].orders || 0) + 1;
-          customers[idx].spent = (customers[idx].spent || 0) + subtotalVal;
+          customers[idx].orders = (customers[idx].orders||0) + 1;
+          customers[idx].spent = (customers[idx].spent||0) + subtotalVal;
         } else {
-          customers.unshift({
-            name: customer.name, email: customer.email, phone: customer.phone,
-            country: customer.country, orders: 1, spent: subtotalVal,
-            joined: new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-          });
+          customers.unshift({ name: customer.name, email: customer.email, phone: customer.phone, country: customer.country, orders: 1, spent: subtotalVal, joined: new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'}) });
         }
-        return db.ref('atelier_admin_customers').set(customers);
-      }).then(function() {
-        onDone(true);
-      }).catch(function(err) {
-        console.error('Firebase write failed:', err);
+        return fetch(DB_URL + '/atelier_admin_customers.json', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(customers)
+        });
+      })
+      .then(function(){ onDone(true); })
+      .catch(function(err){
+        console.error('Firebase REST error:', err);
+        alert('Could not connect to server. Please check your internet and try again.\nError: ' + err.message);
+        var btn2 = document.getElementById('place-order-btn');
+        btn2.disabled = false; btn2.textContent = 'Place Order';
         onDone(false);
       });
-    } catch(e) {
-      console.error('Firebase init failed:', e);
-      onDone(false);
-    }
   }
 
   writeOrderToFirebase(function(success) {
@@ -971,6 +976,13 @@ document.getElementById('place-order-btn').addEventListener('click', () => {
     try { localStorage.removeItem('atelier_cart'); } catch(e) {}
     window.location.href = 'orderConfirmation.html';
   });
+  } catch(globalErr) {
+    alert('Error placing order: ' + globalErr.message + '\nPlease try again or contact us.');
+    var btn2 = document.getElementById('place-order-btn');
+    btn2.disabled = false;
+    btn2.textContent = 'Place Order';
+    console.error('Place order crash:', globalErr);
+  }
 });
 
 // ── ORDER SUMMARY ────────────────────────────────────────────────────────────
