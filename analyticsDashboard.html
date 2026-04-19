@@ -362,7 +362,7 @@
         <button class="btn-primary" onclick="openProductModal()">+ Add Product</button>
       </div>
     </div>
-    <div class="table-scroll"><table><thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Color</th><th onclick="sortTable('products','price')">Price ↕</th><th onclick="sortTable('products','stock')">Stock ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="products-tbody"></tbody></table></div>
+    <div class="table-scroll"><table><thead><tr><th>Image</th><th>Name</th><th>SKU</th><th>Category</th><th>Color</th><th onclick="sortTable('products','price')">Price ↕</th><th onclick="sortTable('products','stock')">Stock ↕</th><th>Status</th><th>Actions</th></tr></thead><tbody id="products-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -611,7 +611,7 @@
     <div class="table-scroll">
       <table>
         <thead><tr>
-          <th>Order ID</th><th>Customer</th><th>Garment</th><th>Gender</th><th>Customization</th>
+          <th>Order ID</th><th>Preview</th><th>Customer</th><th>Garment</th><th>Gender</th><th>Customization</th>
           <th>Size</th><th>Qty</th><th>Price</th><th>Date</th><th>Status</th><th>Actions</th>
         </tr></thead>
         <tbody id="co-tbody"></tbody>
@@ -1014,6 +1014,14 @@
   </div>
 </div>
 
+<!-- IMAGE VIEWER MODAL -->
+<div id="img-viewer" style="display:none;position:fixed;inset:0;background:rgba(14,14,13,0.92);z-index:2000;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;" onclick="closeImgViewer()">
+  <button style="position:absolute;top:1.5rem;right:1.5rem;background:none;border:none;color:var(--cream);font-size:1.5rem;cursor:pointer;z-index:2001;">✕</button>
+  <img id="img-viewer-main" src="" style="max-width:90vw;max-height:70vh;object-fit:contain;border:1px solid rgba(200,184,154,0.2);" onclick="event.stopPropagation()"/>
+  <div id="img-viewer-thumbs" style="display:flex;gap:0.5rem;margin-top:1rem;overflow-x:auto;max-width:90vw;padding:0.5rem 0;"></div>
+  <p id="img-viewer-title" style="color:var(--cream);font-family:'Newsreader',serif;font-style:italic;font-size:1.2rem;margin-top:1rem;"></p>
+</div>
+
 </main>
 
 <!-- CUSTOM ORDER DETAIL MODAL -->
@@ -1369,6 +1377,52 @@ function sv(k,d){
   }
 }
 
+// ── IMAGE VIEWER ─────────────────────────────────────────────────────
+function openImgViewer(images, title) {
+  if (!images || images.length === 0) { toast('No image available'); return; }
+  var viewer = document.getElementById('img-viewer');
+  var mainImg = document.getElementById('img-viewer-main');
+  var thumbs = document.getElementById('img-viewer-thumbs');
+  var titleEl = document.getElementById('img-viewer-title');
+  mainImg.src = images[0];
+  titleEl.textContent = title || '';
+  if (images.length > 1) {
+    thumbs.innerHTML = images.map(function(src, i) {
+      return '<img src="' + src + '" style="width:56px;height:56px;object-fit:cover;border:2px solid ' + (i===0?'var(--accent)':'rgba(200,184,154,0.3)') + ';cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();viewerSwitch(this,' + i + ')" />';
+    }).join('');
+    thumbs.style.display = 'flex';
+  } else {
+    thumbs.innerHTML = '';
+    thumbs.style.display = 'none';
+  }
+  viewer.style.display = 'flex';
+  window._viewerImages = images;
+}
+function viewerSwitch(el, idx) {
+  document.getElementById('img-viewer-main').src = window._viewerImages[idx];
+  el.parentElement.querySelectorAll('img').forEach(function(t,i) { t.style.borderColor = i===idx ? 'var(--accent)' : 'rgba(200,184,154,0.3)'; });
+}
+function closeImgViewer() { document.getElementById('img-viewer').style.display = 'none'; }
+function viewProductImages(idx) {
+  var p = PRODUCTS[idx]; if (!p) return;
+  var imgs = p.images || (p.image ? [p.image] : []);
+  openImgViewer(imgs, p.name);
+}
+function viewOrderImage(idx) {
+  var o = ORDERS[idx]; if (!o) return;
+  var imgs = o.productImage ? [o.productImage] : [];
+  openImgViewer(imgs, o.product || 'Order ' + o.id);
+}
+function viewCustomerOrders(idx) {
+  var customers = getCustomers();
+  var c = customers[idx]; if (!c) return;
+  // Find all orders by this customer and collect product images
+  var orders = getOrders().filter(function(o) { return o.customer === c.name || o.email === c.email; });
+  var imgs = orders.map(function(o) { return o.productImage; }).filter(Boolean);
+  if (imgs.length === 0) { toast('No product images found for this customer'); return; }
+  openImgViewer(imgs, c.name + ' — Purchased Items');
+}
+
 // Orders & Customers are written directly by checkout.html into these keys
 // We read them with a live getter so they always reflect latest purchases
 function getOrders() { try { return JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]'); } catch { return []; } }
@@ -1460,11 +1514,12 @@ function renderOrdersTable(){
       return`<tr${isUrgent?' style="background:rgba(255,243,224,0.35);"':''}>
         <td style="font-family:'Newsreader',serif;font-style:italic;">${o.id}</td>
         <td><div style="font-weight:500;">${o.customer}</div><div style="font-size:0.6rem;color:#8a7f73;">${o.email||''}</div></td>
-        <td><div style="color:#6b6258;">${o.product}</div>${skuBadge}</td>
+        <td><div style="display:flex;align-items:center;gap:0.5rem;">${o.productImage?'<img src="'+o.productImage+'" style="width:36px;height:36px;object-fit:cover;border:1px solid rgba(200,184,154,0.2);flex-shrink:0;" onerror="this.style.display=\'none\'"/>':''}<div><span style="color:#6b6258;">${o.product}</span><br/>${skuBadge}</div></div></td>
         <td style="color:#8a7f73;">${o.date}</td>
         <td style="font-weight:500;">NRs. ${(o.amount||0).toLocaleString()}</td>
         <td><span class="status-badge status-${o.status}">${statusLabel}</span></td>
         <td style="display:flex;gap:0.5rem;align-items:center;">
+          <button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="viewOrderImage(${idx})">View</button>
           ${isUrgent?'<button class="btn-primary" style="padding:0.3rem 0.7rem;font-size:0.55rem;background:#8b5e3c;" onclick="openOrderModal('+idx+')">Verify</button>':'<button class="btn-secondary" style="padding:0.3rem 0.7rem;font-size:0.55rem;" onclick="openOrderModal('+idx+')">Edit</button>'}
           ${proofIcon}
         </td>
@@ -1561,6 +1616,7 @@ function renderProductsTable(){
     const sl=p.stock===0?'Out of Stock':p.stock<6?'Low Stock':'In Stock';
     const skuHtml=p.sku?`<span style="font-family:monospace;font-size:0.7rem;color:var(--accent);letter-spacing:0.06em;">${p.sku}</span>`:'<span style="color:#ccc;font-size:0.65rem;">—</span>';
     return`<tr>
+      <td><img src="${p.image||''}" style="width:48px;height:48px;object-fit:cover;border:1px solid rgba(200,184,154,0.2);background:#f0ece6;" onerror="this.style.display='none'" alt=""/></td>
       <td style="font-family:'Newsreader',serif;font-style:italic;">${p.name}</td>
       <td>${skuHtml}</td>
       <td style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#8a7f73;">${p.category}</td>
@@ -1569,6 +1625,7 @@ function renderProductsTable(){
       <td>${p.stock}</td>
       <td><span class="status-badge status-${ss}">${sl}</span></td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="viewProductImages(${idx})">View</button>
         <button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="openProductModal(${idx})">Edit</button>
         ${p.sku?`<button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="printBarcode(${idx})">Barcode</button>`:''}
         <button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="deleteProduct(${idx})">Del</button>
@@ -1718,7 +1775,10 @@ function renderCustomersTable(){
         <td>${c.orders||0}</td>
         <td style="font-weight:500;color:var(--accent);">NRs. ${(c.spent||0).toLocaleString()}</td>
         <td style="color:#8a7f73;">${c.joined||'—'}</td>
-        <td><button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="document.getElementById('order-search').value='${c.email}';showPanel('orders',null);renderOrdersTable();">Orders</button></td>
+        <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+          <button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="viewCustomerOrders(${list.indexOf(c)})">View</button>
+          <button class="btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.55rem;" onclick="document.getElementById('order-search').value='${c.email}';showPanel('orders',null);renderOrdersTable();">Orders</button>
+        </td>
       </tr>`;
     }).join('');
 }
@@ -2455,7 +2515,7 @@ function renderCustomOrdersTable() {
   var STATUS_CLASSES = { pending:'status-processing', confirmed:'status-active', 'in-production':'status-shipped', ready:'status-shipped', completed:'status-completed', cancelled:'status-cancelled' };
   var tbody = document.getElementById('co-tbody');
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:3rem;color:#8a7f73;font-size:0.8rem;font-style:italic;">No custom orders yet. Customers can place orders via the Design Studio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:3rem;color:#8a7f73;font-size:0.8rem;font-style:italic;">No custom orders yet. Customers can place orders via the Design Studio.</td></tr>';
     return;
   }
   tbody.innerHTML = filtered.map(function(o) {
@@ -2465,6 +2525,7 @@ function renderCustomOrdersTable() {
     var priceDisplay = o.adminPrice ? 'NRs. ' + Number(o.adminPrice).toLocaleString() : '<span style="color:var(--accent);font-size:0.6rem;font-style:italic;">Set price</span>';
     return '<tr>' +
       '<td style="font-family:monospace;font-size:0.7rem;">' + o.id + '</td>' +
+      '<td>' + (o.designPreview ? '<img src="' + o.designPreview + '" style="width:44px;height:44px;object-fit:cover;border:1px solid rgba(200,184,154,0.2);" onerror="this.style.display=\'none\'"/>' : '<span style="color:#ccc;">—</span>') + '</td>' +
       '<td><p style="font-size:0.78rem;font-weight:500;">' + (o.customer||'—') + '</p><p style="font-size:0.62rem;color:#8a7f73;">' + (o.email||'') + '</p></td>' +
       '<td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (o.color||'#ccc') + ';border:1px solid rgba(0,0,0,0.15);margin-right:6px;vertical-align:middle;"></span>' + (o.garment||'—') + '</td>' +
       '<td>' + (GENDER_LABELS[o.gender] || o.gender || '—') + '</td>' +

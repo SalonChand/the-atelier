@@ -847,6 +847,7 @@ document.getElementById('place-order-btn').addEventListener('click', () => {
   };
   const subtotalVal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
   const productSummary = cart.map(i => i.name).join(', ');
+  const firstProductImage = cart.length > 0 ? (cart[0].image || '') : '';
 
   // Write order — status is "awaiting-verification" until admin approves payment
   const orders = JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]');
@@ -857,6 +858,8 @@ document.getElementById('place-order-btn').addEventListener('click', () => {
     phone: customer.phone,
     address: customer.address,
     product: productSummary,
+    productImage: firstProductImage,
+    items: cart.map(function(i) { return { name: i.name, price: i.price, qty: i.quantity, image: i.image || '' }; }),
     date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
     amount: subtotalVal,
     status: 'awaiting-verification',
