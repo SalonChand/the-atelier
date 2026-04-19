@@ -201,18 +201,19 @@ function getDB() {
 }
 
 function findOrderInFirebase(orderId, callback) {
-  const db = getDB();
-  if (!db) { callback(null); return; }
-  db.ref('atelier_admin_orders').once('value').then(function(snap) {
-    const val = snap.val();
-    if (!val) { callback(null); return; }
-    // val can be array or object
-    const orders = Array.isArray(val) ? val : Object.values(val);
-    const found = orders.find(function(o) {
-      return o && (o.id||'').toUpperCase() === orderId.toUpperCase();
-    });
-    callback(found || null);
-  }).catch(function() { callback(null); });
+  // Use REST API - same as checkout, no SDK conflict
+  var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+  fetch(DB_URL + '/orders.json')
+    .then(function(r){ return r.json(); })
+    .then(function(val) {
+      if (!val) { callback(null); return; }
+      var orders = Array.isArray(val) ? val : Object.values(val);
+      var found = orders.find(function(o) {
+        return o && (o.id||'').toUpperCase() === orderId.toUpperCase();
+      });
+      callback(found || null);
+    })
+    .catch(function() { callback(null); });
 }
 </script>
 <script>

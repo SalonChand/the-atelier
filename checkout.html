@@ -914,19 +914,21 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
 
   // ── WRITE DIRECTLY TO FIREBASE ──────────────────────────────────────────
   // This works from ANY device — customer's phone, desktop, anywhere
-  // Write order using Firebase REST API — no SDK conflict, works from any device
+  // Write order using Firebase REST API
+  // IMPORTANT: paths must match SYNC_KEYS in firebase-sync.js
+  // atelier_admin_orders -> 'orders', atelier_admin_customers -> 'customers'
   function writeOrderToFirebase(onDone) {
     var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
 
-    // Step 1: read existing orders
-    fetch(DB_URL + '/atelier_admin_orders.json')
+    // Step 1: read existing orders from correct Firebase path 'orders'
+    fetch(DB_URL + '/orders.json')
       .then(function(r){ return r.json(); })
       .then(function(existing) {
         var orders = Array.isArray(existing) ? existing : (existing && typeof existing === 'object' ? Object.values(existing) : []);
         orders = orders.filter(Boolean);
         orders.unshift(orderObj);
-        // Step 2: write back
-        return fetch(DB_URL + '/atelier_admin_orders.json', {
+        // Step 2: write back to correct path 'orders'
+        return fetch(DB_URL + '/orders.json', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orders)
@@ -934,8 +936,8 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
       })
       .then(function(r){ return r.json(); })
       .then(function() {
-        // Step 3: update customers
-        return fetch(DB_URL + '/atelier_admin_customers.json');
+        // Step 3: update customers at correct path 'customers'
+        return fetch(DB_URL + '/customers.json');
       })
       .then(function(r){ return r.json(); })
       .then(function(existing) {
@@ -948,7 +950,7 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
         } else {
           customers.unshift({ name: customer.name, email: customer.email, phone: customer.phone, country: customer.country, orders: 1, spent: subtotalVal, joined: new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'}) });
         }
-        return fetch(DB_URL + '/atelier_admin_customers.json', {
+        return fetch(DB_URL + '/customers.json', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(customers)
@@ -957,7 +959,7 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
       .then(function(){ onDone(true); })
       .catch(function(err){
         console.error('Firebase REST error:', err);
-        alert('Could not connect to server. Please check your internet and try again.\nError: ' + err.message);
+        alert('Could not save order. Please check your internet and try again.\nError: ' + err.message);
         var btn2 = document.getElementById('place-order-btn');
         btn2.disabled = false; btn2.textContent = 'Place Order';
         onDone(false);
