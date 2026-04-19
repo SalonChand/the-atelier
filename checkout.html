@@ -787,13 +787,13 @@ function removeProof(method) {
 // ── VALIDATION ───────────────────────────────────────────────────────────────
 function validate() {
   let valid = true;
+  let firstInvalidEl = null;
   const checks = [
     { id: 'fname',   err: 'err-fname',   test: v => v.trim().length > 0 },
     { id: 'lname',   err: 'err-lname',   test: v => v.trim().length > 0 },
     { id: 'email',   err: 'err-email',   test: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
-    { id: 'address', err: 'err-address', test: v => v.trim().length > 3 },
+    { id: 'address', err: 'err-address', test: v => v.trim().length > 0 },
     { id: 'city',    err: 'err-city',    test: v => v.trim().length > 0 },
-    { id: 'postal',  err: 'err-postal',  test: v => v.trim().length > 0 },
     { id: 'country', err: 'err-country', test: v => v.length > 0 },
   ];
 
@@ -817,6 +817,7 @@ function validate() {
 
   checks.forEach(({ id, err, test }) => {
     const el = document.getElementById(id);
+    if (!el) return; // skip if field doesn't exist
     const errEl = document.getElementById(err);
     if (!el) return;
     if (!test(el.value)) {
@@ -828,6 +829,10 @@ function validate() {
       if (errEl) errEl.classList.remove('show');
     }
   });
+
+  // Scroll to first invalid field if any
+  const firstInvalid = document.querySelector('.invalid, .show[id^="err-"]');
+  if (firstInvalid) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   // Validate payment proof upload (mandatory)
   const proofErr = document.getElementById('err-' + activeMethod + '-proof');
@@ -846,7 +851,16 @@ function validate() {
 
 // ── PLACE ORDER ──────────────────────────────────────────────────────────────
 document.getElementById('place-order-btn').addEventListener('click', () => {
-  if (!validate()) return;
+  if (!validate()) {
+    // Show visible feedback so user knows what failed
+    const firstErr = document.querySelector('.invalid, .field-error.show, .proof-error.show');
+    if (firstErr) {
+      firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      alert('Please fill in all required fields and upload your payment proof screenshot.');
+    }
+    return;
+  }
   const btn = document.getElementById('place-order-btn');
   btn.disabled = true;
   btn.textContent = 'Processing...';
