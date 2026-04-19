@@ -55,17 +55,26 @@
 
   /* HERO */
   .hero {
-    height: 100vh; position: relative;
+    min-height: 70vh; position: relative;
     display: flex; align-items: flex-end;
     padding: 0 3rem 5rem;
     overflow: hidden;
+    background: #0e0e0d;
   }
   .hero-img {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     object-fit: cover;
+    object-position: center top;
     transform: scale(1.05);
     animation: heroZoom 8s ease-out forwards;
+  }
+  @media (max-width: 900px) {
+    .hero { min-height: 85vh; padding: 0 1.5rem 3rem; }
+    .hero-img { object-position: center center; }
+  }
+  @media (max-width: 500px) {
+    .hero { min-height: 90vh; }
   }
   @keyframes heroZoom { to { transform: scale(1); } }
   .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(14,14,13,0.55) 0%, rgba(14,14,13,0.1) 60%, transparent 100%); }
