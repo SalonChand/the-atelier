@@ -933,7 +933,13 @@ updateCanvas();
   s1.onload = function() {
     var s2 = document.createElement('script');
     s2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
-    s2.onload = function() { pluginsReady = true; initScene(); };
+    s2.onload = function() {
+      var s3 = document.createElement('script');
+      s3.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/DecalGeometry.js';
+      s3.onload = function() { pluginsReady = true; initScene(); };
+      s3.onerror = function() { pluginsReady = true; initScene(); }; // Continue anyway if decal fails to load
+      document.head.appendChild(s3);
+    };
     document.head.appendChild(s2);
   };
   document.head.appendChild(s1);
@@ -1075,8 +1081,13 @@ updateCanvas();
   function removeDecal() {
     if (decalMesh) {
       if (decalMesh.parent) decalMesh.parent.remove(decalMesh);
-      if (decalMesh.material.map) decalMesh.material.map.dispose();
-      decalMesh.material.dispose(); decalMesh.geometry.dispose(); decalMesh = null;
+      else if (scene) scene.remove(decalMesh);
+      if (decalMesh.material) {
+        if (decalMesh.material.map) decalMesh.material.map.dispose();
+        decalMesh.material.dispose();
+      }
+      if (decalMesh.geometry) decalMesh.geometry.dispose();
+      decalMesh = null;
     }
   }
 
@@ -1092,40 +1103,121 @@ updateCanvas();
     var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
     var decalSize = baseSize * (0.2 + sliderVal * 1.6);
 
+    // Raycast to find the surface point on the garment
     var rayOrigin = new THREE.Vector3(), rayDir = new THREE.Vector3();
     var chestY = mCenter.y + mSize.y * 0.15;
     switch (decalState.side) {
       case 'front': rayOrigin.set(mCenter.x, chestY, mCenter.z + mSize.z*3); rayDir.set(0,0,-1); break;
-      case 'back': rayOrigin.set(mCenter.x, chestY, mCenter.z - mSize.z*3); rayDir.set(0,0,1); break;
-      case 'left': rayOrigin.set(mCenter.x - mSize.x*3, chestY, mCenter.z); rayDir.set(1,0,0); break;
+      case 'back':  rayOrigin.set(mCenter.x, chestY, mCenter.z - mSize.z*3); rayDir.set(0,0,1); break;
+      case 'left':  rayOrigin.set(mCenter.x - mSize.x*3, chestY, mCenter.z); rayDir.set(1,0,0); break;
       case 'right': rayOrigin.set(mCenter.x + mSize.x*3, chestY, mCenter.z); rayDir.set(-1,0,0); break;
     }
     raycaster.set(rayOrigin, rayDir.normalize());
-    var meshes = []; currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh) meshes.push(c); });
+    var meshes = [];
+    currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh && !c.userData.isDecal) meshes.push(c); });
     var hits = raycaster.intersectObjects(meshes, true);
-    var surfacePoint, surfaceNormal;
+
+    var surfacePoint, surfaceNormal, targetMesh;
     if (hits.length > 0) {
-      surfacePoint = hits[0].point.clone(); surfaceNormal = hits[0].face.normal.clone();
+      surfacePoint = hits[0].point.clone();
+      surfaceNormal = hits[0].face.normal.clone();
       surfaceNormal.transformDirection(hits[0].object.matrixWorld);
+      targetMesh = hits[0].object;
     } else {
       surfacePoint = new THREE.Vector3(mCenter.x, chestY, mCenter.z + mSize.z*0.5);
       surfaceNormal = new THREE.Vector3(0,0,1);
+      targetMesh = meshes[0];
     }
 
-    var texture = new THREE.CanvasTexture(texCanvas); texture.encoding = THREE.sRGBEncoding;
-    var offset = surfaceNormal.clone().multiplyScalar(0.02);
+    var texture = new THREE.CanvasTexture(texCanvas);
+    texture.encoding = THREE.sRGBEncoding;
+    texture.needsUpdate = true;
+
+    // ── REAL PRINT ─────────────────────────────────────────────
+    // Use THREE.DecalGeometry to project the design onto the actual
+    // garment surface — so it follows every curve, wrinkle, and fold
+    // exactly like a printed/embroidered design would.
+    if (typeof THREE.DecalGeometry !== 'undefined' && targetMesh) {
+      // Remove old decal before creating new
+      removeDecal();
+
+      // Orientation: align with surface normal (so the decal "faces" outward)
+      var orientation = new THREE.Euler();
+      var lookHelper = new THREE.Object3D();
+      lookHelper.position.copy(surfacePoint);
+      lookHelper.lookAt(surfacePoint.clone().add(surfaceNormal));
+      orientation.copy(lookHelper.rotation);
+
+      // Size: X width, Y height, Z depth (projection depth into the mesh)
+      var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
+
+      try {
+        var decalGeom = new THREE.DecalGeometry(targetMesh, surfacePoint, orientation, size);
+
+        // MATERIAL — make it look "printed on" by responding to garment lighting
+        // Print: slightly matte | Embroidery: slightly glossy with raised look
+        var mat;
+        if (state.ctype === 'embroidery') {
+          mat = new THREE.MeshStandardMaterial({
+            map: texture,
+            transparent: true,
+            depthTest: true,
+            depthWrite: false,
+            polygonOffset: true,
+            polygonOffsetFactor: -4,
+            roughness: 0.45,
+            metalness: 0.08,
+            // Slightly raised look
+            bumpMap: texture,
+            bumpScale: 0.02
+          });
+        } else {
+          // Printed: flat, matte, conforms to fabric
+          mat = new THREE.MeshStandardMaterial({
+            map: texture,
+            transparent: true,
+            depthTest: true,
+            depthWrite: false,
+            polygonOffset: true,
+            polygonOffsetFactor: -4,
+            roughness: 0.85,
+            metalness: 0
+          });
+        }
+
+        decalMesh = new THREE.Mesh(decalGeom, mat);
+        decalMesh.userData.isDecal = true;
+        decalMesh.renderOrder = 1; // render after the garment
+        scene.add(decalMesh);
+        return;
+      } catch (err) {
+        console.warn('[Decal] DecalGeometry failed, falling back to plane:', err);
+        // Fall through to plane fallback
+      }
+    }
+
+    // Fallback: floating plane (older behavior) if DecalGeometry not available
+    var offset = surfaceNormal.clone().multiplyScalar(0.015);
     var localPos = currentModel.worldToLocal(surfacePoint.clone().add(offset));
     var lookTarget = currentModel.worldToLocal(surfacePoint.clone().add(surfaceNormal));
 
-    if (decalMesh) {
+    if (decalMesh && !decalMesh.userData.isDecalGeom) {
       if (decalMesh.material.map) decalMesh.material.map.dispose();
       decalMesh.material.map = texture; decalMesh.material.needsUpdate = true;
       decalMesh.scale.set(decalSize, decalSize, 1);
       decalMesh.position.copy(localPos); decalMesh.lookAt(lookTarget);
     } else {
+      removeDecal();
       var geom = new THREE.PlaneGeometry(1,1);
-      var mat = new THREE.MeshBasicMaterial({ map:texture, transparent:true, depthWrite:false, side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-1 });
-      decalMesh = new THREE.Mesh(geom, mat); decalMesh.renderOrder = 999;
+      var mat2 = new THREE.MeshStandardMaterial({
+        map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+        polygonOffset: true, polygonOffsetFactor: -1,
+        roughness: state.ctype === 'embroidery' ? 0.4 : 0.85,
+        metalness: 0
+      });
+      decalMesh = new THREE.Mesh(geom, mat2);
+      decalMesh.userData.isDecal = true;
+      decalMesh.renderOrder = 999;
       decalMesh.scale.set(decalSize, decalSize, 1);
       decalMesh.position.copy(localPos); decalMesh.lookAt(lookTarget);
       currentModel.add(decalMesh);
@@ -1139,16 +1231,54 @@ updateCanvas();
       var rect = el.getBoundingClientRect();
       mouseVec.x = ((e.clientX-rect.left)/rect.width)*2-1; mouseVec.y = -((e.clientY-rect.top)/rect.height)*2+1;
       raycaster.setFromCamera(mouseVec, camera);
-      var meshes = []; currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh) meshes.push(c); });
+      var meshes = [];
+      currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh && !c.userData.isDecal) meshes.push(c); });
       return raycaster.intersectObjects(meshes, true)[0] || null;
     }
     function moveDecalTo(hit) {
-      if (!hit || !decalMesh || !currentModel) return;
+      if (!hit || !currentModel) return;
       var pt = hit.point.clone(), nm = hit.face.normal.clone();
       nm.transformDirection(hit.object.matrixWorld);
-      var off = nm.clone().multiplyScalar(0.02);
-      decalMesh.position.copy(currentModel.worldToLocal(pt.clone().add(off)));
-      decalMesh.lookAt(currentModel.worldToLocal(pt.clone().add(nm)));
+
+      // If we have a true DecalGeometry decal (attached to scene), rebuild it at the new position
+      // This keeps the decal CONFORMING to the new surface instead of just floating flat
+      if (typeof THREE.DecalGeometry !== 'undefined' && decalMesh && decalMesh.parent === scene) {
+        var texCanvas = getDecalTexture();
+        if (!texCanvas) return;
+        var mBox = new THREE.Box3().setFromObject(currentModel);
+        var mSize = mBox.getSize(new THREE.Vector3());
+        var sliderVal = parseFloat(document.getElementById('design-scale') ? document.getElementById('design-scale').value : 0.5);
+        var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
+        var decalSize = baseSize * (0.2 + sliderVal * 1.6);
+
+        var orientation = new THREE.Euler();
+        var lookHelper = new THREE.Object3D();
+        lookHelper.position.copy(pt);
+        lookHelper.lookAt(pt.clone().add(nm));
+        orientation.copy(lookHelper.rotation);
+
+        var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
+
+        try {
+          // Keep same material, just rebuild geometry at new point
+          var oldMat = decalMesh.material;
+          var oldGeom = decalMesh.geometry;
+          decalMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
+          if (oldGeom) oldGeom.dispose();
+          // Material stays the same — no need to rebuild texture
+          decalMesh.material = oldMat;
+        } catch (err) {
+          console.warn('[Decal] Rebuild failed:', err);
+        }
+        return;
+      }
+
+      // Plane fallback: just reposition
+      if (decalMesh) {
+        var off = nm.clone().multiplyScalar(0.015);
+        decalMesh.position.copy(currentModel.worldToLocal(pt.clone().add(off)));
+        decalMesh.lookAt(currentModel.worldToLocal(pt.clone().add(nm)));
+      }
     }
     el.addEventListener('pointerdown', function(e) {
       if (!is3DActive || !currentModel || !e.shiftKey || !decalMesh) return;
