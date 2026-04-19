@@ -184,6 +184,38 @@ nav { position: sticky; top: 0; z-index: 100; background: var(--cream); border-b
 
 <script src="mobile-app.js?v=5"></script>
 <script>
+// ── FIREBASE DIRECT QUERY ────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCqDm6B0JoILcHHFqO6w2El64UhVS5WgDs",
+  databaseURL: "https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "the-atelier-ce832"
+};
+let _db = null;
+function getDB() {
+  if (_db) return _db;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    _db = firebase.database();
+  } catch(e) { _db = null; }
+  return _db;
+}
+
+function findOrderInFirebase(orderId, callback) {
+  const db = getDB();
+  if (!db) { callback(null); return; }
+  db.ref('atelier_admin_orders').once('value').then(function(snap) {
+    const val = snap.val();
+    if (!val) { callback(null); return; }
+    // val can be array or object
+    const orders = Array.isArray(val) ? val : Object.values(val);
+    const found = orders.find(function(o) {
+      return o && (o.id||'').toUpperCase() === orderId.toUpperCase();
+    });
+    callback(found || null);
+  }).catch(function() { callback(null); });
+}
+</script>
+<script>
 const STATUS_STEPS = [
   { key: 'awaiting-verification', label: 'Order Received', desc: 'Your order has been placed and payment proof is being reviewed.' },
   { key: 'processing',            label: 'Payment Verified', desc: 'Payment confirmed. Your order is now queued for preparation.' },
@@ -226,28 +258,46 @@ function getOrders() {
   try { return JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]'); } catch(e) { return []; }
 }
 
+function matchOrder(orders, input) {
+  return orders.find(function(o) {
+    if (!o) return false;
+    const id = (o.id || '').toUpperCase();
+    return id === input || id === ('ATL-' + input) || ('ATL-' + id) === input;
+  });
+}
+
 function trackOrder() {
   const input = document.getElementById('order-input').value.trim().toUpperCase();
   if (!input) return;
 
-  const orders = getOrders();
-  // Match by order ID (stored as ATL-XXXX-YYYY)
-  const order = orders.find(function(o) {
-    return (o.id || '').toUpperCase() === input || ('ATL-' + (o.id || '')).toUpperCase() === input;
-  });
-
   const errorEl = document.getElementById('error-msg');
   const resultEl = document.getElementById('result-card');
 
-  if (!order) {
-    errorEl.classList.add('show');
-    resultEl.classList.remove('show');
+  // Show loading state
+  errorEl.classList.remove('show');
+  document.getElementById('track-btn-text') && (document.getElementById('track-btn-text').textContent = 'Searching...');
+
+  // 1. Try localStorage first (fast)
+  const localOrders = getOrders();
+  const localOrder = matchOrder(localOrders, input);
+  if (localOrder) {
+    errorEl.classList.remove('show');
+    renderResult(localOrder);
+    resultEl.classList.add('show');
     return;
   }
 
-  errorEl.classList.remove('show');
-  renderResult(order);
-  resultEl.classList.add('show');
+  // 2. Not in localStorage — search Firebase directly
+  findOrderInFirebase(input, function(order) {
+    if (order) {
+      errorEl.classList.remove('show');
+      renderResult(order);
+      resultEl.classList.add('show');
+    } else {
+      errorEl.classList.add('show');
+      resultEl.classList.remove('show');
+    }
+  });
 }
 
 function renderResult(order) {
