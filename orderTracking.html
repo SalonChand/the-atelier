@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="favicon.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0e0e0d"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Track Your Order | THE ATELIER</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; }
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Jost',sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; }
+nav { position:fixed; top:0; width:100%; z-index:100; display:flex; justify-content:space-between; align-items:center; padding:1.5rem 3rem; background:rgba(244,241,236,0.92); backdrop-filter:blur(12px); border-bottom:1px solid rgba(200,184,154,0.25); }
+.nav-logo { text-decoration:none; position:absolute; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:0.6rem; }
+.nav-logo-text { font-family:'Newsreader',serif; font-style:italic; font-size:1.4rem; color:var(--ink); }
+.nav-links { display:flex; gap:2.5rem; }
+.nav-links a { font-size:0.65rem; letter-spacing:0.18em; text-transform:uppercase; color:#6b6258; text-decoration:none; }
+.nav-links a:hover,.nav-links a.active { color:var(--ink); }
+@media(max-width:640px){ .nav-links{display:none;} nav{padding:1.2rem 1.5rem;} }
+
+main { max-width:900px; margin:0 auto; padding:8rem 2rem 4rem; }
+@media(max-width:640px){ main{padding:6rem 1rem 5rem;} }
+
+.page-header { text-align:center; margin-bottom:3rem; }
+.page-header h1 { font-family:'Newsreader',serif; font-style:italic; font-weight:300; font-size:clamp(2.5rem,5vw,4rem); margin-bottom:0.75rem; }
+.page-header p { font-size:0.75rem; color:#8a7f73; letter-spacing:0.1em; }
+
+.lookup-card { background:white; border:1px solid rgba(200,184,154,0.2); padding:2.5rem; margin-bottom:2rem; }
+.form-group { margin-bottom:1.25rem; }
+.form-group label { display:block; font-size:0.58rem; letter-spacing:0.18em; text-transform:uppercase; color:#8a7f73; margin-bottom:0.4rem; }
+.form-group input { width:100%; padding:0.85rem 1rem; border:1px solid rgba(200,184,154,0.4); background:transparent; font-family:'Jost'; font-size:0.85rem; outline:none; transition:border-color 0.2s; }
+.form-group input:focus { border-color:var(--ink); }
+.lookup-btn { width:100%; padding:1rem; background:var(--ink); color:var(--cream); border:none; font-family:'Jost'; font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; cursor:pointer; transition:background 0.2s; }
+.lookup-btn:hover { background:var(--accent); }
+
+.result-card { background:white; border:1px solid rgba(200,184,154,0.2); padding:2.5rem; margin-bottom:2rem; display:none; }
+.result-card.show { display:block; }
+
+.order-header { border-bottom:1px solid rgba(200,184,154,0.25); padding-bottom:1.5rem; margin-bottom:2rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; }
+.order-id { font-family:'Newsreader',serif; font-style:italic; font-size:1.6rem; }
+.order-meta { font-size:0.62rem; color:#8a7f73; letter-spacing:0.1em; margin-top:0.3rem; }
+.order-status-big { padding:0.5rem 1.2rem; font-size:0.62rem; letter-spacing:0.15em; text-transform:uppercase; }
+
+/* Timeline */
+.timeline { position:relative; padding:1rem 0; }
+.timeline::before { content:''; position:absolute; left:15px; top:2rem; bottom:2rem; width:2px; background:rgba(200,184,154,0.3); }
+.timeline-step { position:relative; padding:0.75rem 0 0.75rem 3rem; }
+.timeline-dot { position:absolute; left:6px; top:0.95rem; width:20px; height:20px; border-radius:50%; background:#e0d9cd; border:3px solid var(--cream); z-index:1; }
+.timeline-step.done .timeline-dot { background:var(--accent); }
+.timeline-step.active .timeline-dot { background:var(--accent); box-shadow:0 0 0 4px rgba(139,94,60,0.2); animation:pulse 2s infinite; }
+.timeline-step.cancelled .timeline-dot { background:#b71c1c; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 4px rgba(139,94,60,0.2);} 50%{box-shadow:0 0 0 8px rgba(139,94,60,0.1);} }
+.timeline-title { font-size:0.85rem; font-weight:500; margin-bottom:0.2rem; }
+.timeline-desc { font-size:0.68rem; color:#8a7f73; line-height:1.6; }
+.timeline-step.pending .timeline-title { color:#a89e94; }
+.timeline-step.pending .timeline-desc { color:#c0b8ab; }
+
+.order-details { margin-top:2rem; padding-top:1.5rem; border-top:1px solid rgba(200,184,154,0.25); }
+.detail-row { display:flex; justify-content:space-between; padding:0.5rem 0; font-size:0.72rem; border-bottom:1px solid rgba(200,184,154,0.1); }
+.detail-row:last-child { border-bottom:none; }
+.detail-label { color:#8a7f73; letter-spacing:0.05em; }
+.detail-value { font-weight:500; }
+
+.error-msg { background:#fce4ec; border:1px solid rgba(183,28,28,0.2); color:#b71c1c; padding:1rem 1.5rem; margin-bottom:1.5rem; font-size:0.72rem; text-align:center; display:none; }
+.error-msg.show { display:block; }
+
+.help-section { text-align:center; margin-top:2rem; padding-top:2rem; border-top:1px solid rgba(200,184,154,0.25); }
+.help-section p { font-size:0.68rem; color:#8a7f73; line-height:1.9; }
+.help-section a { color:var(--accent); text-decoration:none; }
+</style>
+<link rel="stylesheet" href="mobile-app.css?v=4"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="firebase-sync.js?v=5"></script>
+</head>
+<body>
+<nav>
+  <div class="nav-links">
+    <a href="collection.html">Shop</a>
+    <a href="stickers.html">Stickers</a>
+    <a href="aboutUs.html">About</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:44px;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div style="width:100px;"></div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <h1>Track Your Order</h1>
+    <p>Enter your Order ID and email to see the current status</p>
+  </div>
+
+  <div class="lookup-card" id="lookup-card">
+    <div class="error-msg" id="error-msg"></div>
+    <div class="form-group">
+      <label>Order ID *</label>
+      <input type="text" id="order-id-input" placeholder="e.g. ORD-1776123456789, CUS-..., STKB-..., STKP-..." autocomplete="off"/>
+    </div>
+    <div class="form-group">
+      <label>Email Address *</label>
+      <input type="email" id="email-input" placeholder="The email used to place the order" autocomplete="email"/>
+    </div>
+    <button class="lookup-btn" onclick="trackOrder()">Track Order</button>
+
+    <div class="help-section">
+      <p>Can't find your order? <a href="contactUs.html">Contact us</a> with your order details.<br/>Your Order ID was sent to your email when you placed the order.</p>
+    </div>
+  </div>
+
+  <div class="result-card" id="result-card">
+    <div class="order-header">
+      <div>
+        <p class="order-id" id="r-order-id"></p>
+        <p class="order-meta" id="r-order-meta"></p>
+      </div>
+      <span class="order-status-big status-badge" id="r-status-badge"></span>
+    </div>
+
+    <div class="timeline" id="r-timeline"></div>
+
+    <div class="order-details" id="r-details"></div>
+
+    <button class="lookup-btn" style="margin-top:2rem;background:transparent;color:var(--ink);border:1px solid rgba(14,14,13,0.25);" onclick="resetTracker()">Track Another Order</button>
+  </div>
+</main>
+
+<footer style="background:var(--ink); color:#8a7f73; padding:4rem 3rem 2rem; margin-top:4rem;">
+  <div style="max-width:1200px; margin:0 auto; text-align:center;">
+    <p style="font-size:0.6rem; color:#4a453f; letter-spacing:0.1em;">© 2026 The Atelier. All rights reserved.</p>
+  </div>
+</footer>
+
+<script>
+// Status config — maps status to (step index, label, description)
+var STATUS_FLOW = [
+  { key:'placed',       label:'Order Placed',       desc:'We have received your order and payment information.' },
+  { key:'confirmed',    label:'Order Confirmed',    desc:'Payment verified. Your order is being prepared.' },
+  { key:'processing',   label:'In Production',      desc:'Our atelier is crafting your piece with care.' },
+  { key:'shipped',      label:'Shipped',            desc:'Your order is on its way to you.' },
+  { key:'completed',    label:'Delivered',          desc:'Your order has been successfully delivered.' }
+];
+
+// Map various status values to timeline step index
+var STATUS_TO_STEP = {
+  'placed':0, 'pending':0, 'awaiting-verification':0, 'pending-quote':0,
+  'confirmed':1, 'approved':1,
+  'processing':2, 'in-production':2,
+  'shipped':3, 'ready':3,
+  'completed':4, 'delivered':4,
+  'cancelled':-1, 'rejected':-1, 'payment-rejected':-1
+};
+
+function resetTracker() {
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('lookup-card').style.display = 'block';
+  document.getElementById('order-id-input').value = '';
+  document.getElementById('email-input').value = '';
+  document.getElementById('error-msg').classList.remove('show');
+}
+
+function findOrder(orderId, email) {
+  var id = orderId.trim().toUpperCase();
+  var em = email.trim().toLowerCase();
+  // Search all order collections
+  var sources = [
+    { key: 'atelier_admin_orders', type: 'Order' },
+    { key: 'atelier_custom_orders', type: 'Custom Order' },
+    { key: 'atelier_sticker_orders', type: 'Sticker Order' }
+  ];
+  for (var i = 0; i < sources.length; i++) {
+    var orders = [];
+    try { orders = JSON.parse(localStorage.getItem(sources[i].key) || '[]'); } catch(e) {}
+    for (var j = 0; j < orders.length; j++) {
+      var o = orders[j];
+      if ((o.id || '').toUpperCase() === id && (o.email || '').toLowerCase() === em) {
+        return { order: o, sourceType: sources[i].type };
+      }
+    }
+  }
+  return null;
+}
+
+function trackOrder() {
+  var orderId = document.getElementById('order-id-input').value;
+  var email = document.getElementById('email-input').value;
+  var errEl = document.getElementById('error-msg');
+  errEl.classList.remove('show');
+
+  if (!orderId.trim() || !email.trim()) {
+    errEl.textContent = 'Please enter both your Order ID and email.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  var result = findOrder(orderId, email);
+  if (!result) {
+    errEl.textContent = 'Order not found. Please check your Order ID and email address, or contact us for help.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  renderOrderStatus(result.order, result.sourceType);
+}
+
+function renderOrderStatus(o, type) {
+  document.getElementById('lookup-card').style.display = 'none';
+  var card = document.getElementById('result-card');
+  card.classList.add('show');
+
+  var currentStep = STATUS_TO_STEP[o.status] !== undefined ? STATUS_TO_STEP[o.status] : 0;
+  var isCancelled = currentStep === -1;
+
+  // Header
+  document.getElementById('r-order-id').textContent = o.id;
+  document.getElementById('r-order-meta').textContent = type + ' · Placed ' + (o.date || '—') + (o.time ? ' at ' + o.time : '');
+  var badge = document.getElementById('r-status-badge');
+  var statusLabel = (o.status || 'pending').replace(/-/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+  badge.textContent = statusLabel;
+  badge.className = 'order-status-big status-badge status-' + (o.status || 'pending');
+
+  // Timeline
+  var tl = document.getElementById('r-timeline');
+  if (isCancelled) {
+    tl.innerHTML = '<div class="timeline-step cancelled"><div class="timeline-dot"></div>' +
+      '<p class="timeline-title" style="color:#b71c1c;">Order ' + statusLabel + '</p>' +
+      '<p class="timeline-desc">This order has been cancelled or rejected. Please contact us if you have questions.</p></div>';
+  } else {
+    tl.innerHTML = STATUS_FLOW.map(function(step, i) {
+      var cls = i < currentStep ? 'done' : i === currentStep ? 'active' : 'pending';
+      return '<div class="timeline-step ' + cls + '">' +
+        '<div class="timeline-dot"></div>' +
+        '<p class="timeline-title">' + step.label + '</p>' +
+        '<p class="timeline-desc">' + step.desc + '</p></div>';
+    }).join('');
+  }
+
+  // Details
+  var details = document.getElementById('r-details');
+  var rows = [];
+  rows.push(['Order Type', type]);
+  if (o.product || o.garment || o.stickerName) rows.push(['Item', o.product || o.garment || o.stickerName]);
+  if (o.customer) rows.push(['Customer', o.customer]);
+  if (o.qty) rows.push(['Quantity', o.qty]);
+  if (o.adminPrice) rows.push(['Price', 'NRs. ' + Number(o.adminPrice).toLocaleString()]);
+  else if (o.amount) rows.push(['Total', 'NRs. ' + Number(o.amount).toLocaleString()]);
+  else if (o.price) rows.push(['Price', 'NRs. ' + Number(o.price).toLocaleString()]);
+  if (o.tracking) rows.push(['Tracking', o.tracking]);
+  if (o.notes) rows.push(['Notes', o.notes]);
+
+  details.innerHTML = rows.map(function(r) {
+    return '<div class="detail-row"><span class="detail-label">' + r[0] + '</span><span class="detail-value">' + r[1] + '</span></div>';
+  }).join('');
+}
+
+// Auto-fill from URL params: ?id=ORD-XXX&email=foo@bar.com
+(function() {
+  var params = new URLSearchParams(location.search);
+  var id = params.get('id'), em = params.get('email');
+  if (id) document.getElementById('order-id-input').value = id;
+  if (em) document.getElementById('email-input').value = em;
+  if (id && em) setTimeout(trackOrder, 300);
+})();
+
+// Handle Enter key
+['order-id-input','email-input'].forEach(function(id) {
+  document.getElementById(id).addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') trackOrder();
+  });
+});
+
+// Re-render when data syncs
+window.addEventListener('atelier-data-updated', function() {
+  if (document.getElementById('result-card').classList.contains('show')) {
+    // Re-track the current order
+    var result = findOrder(document.getElementById('r-order-id').textContent, document.getElementById('email-input').value);
+    if (result) renderOrderStatus(result.order, result.sourceType);
+  }
+});
+</script>
+<script src="mobile-app.js?v=4"></script>
+</body>
+</html>

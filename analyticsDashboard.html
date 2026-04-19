@@ -754,7 +754,7 @@
       <div class="form-group"><label>Set Price (NRs.)</label><input type="number" id="so-modal-price" placeholder="e.g. 500" min="0"/></div>
       <div class="form-group"><label>Update Status</label><select id="so-modal-status"><option value="awaiting-verification">Awaiting Verification</option><option value="pending">Pending Quote</option><option value="confirmed">Confirmed</option><option value="in-production">In Production</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
     </div>
-    <div class="modal-footer"><button class="btn-danger" onclick="deleteStickerOrder()">Delete</button><button class="btn-secondary" onclick="closeModal('modal-stickerorder')">Close</button><button class="btn-primary" onclick="saveStickerOrder()">Save</button></div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:0.4rem;"><button class="btn-secondary" style="background:#25D366;color:#fff;border:none;" onclick="var o=getStickerOrders().find(function(x){return x.id===_currentStickerOrderId;});if(o)sendWhatsApp(o.phone,o);">✉ WhatsApp</button><button class="btn-secondary" onclick="var o=getStickerOrders().find(function(x){return x.id===_currentStickerOrderId;});if(o)sendEmailNotification(o,false);">✉ Email</button><button class="btn-danger" onclick="deleteStickerOrder()">Delete</button><button class="btn-secondary" onclick="closeModal('modal-stickerorder')">Close</button><button class="btn-primary" onclick="saveStickerOrder()">Save</button></div>
   </div>
 </div>
 
@@ -1056,6 +1056,8 @@
     </div>
     <div class="modal-footer">
       <button class="btn-danger" onclick="deleteCustomOrder()">Delete</button>
+      <button class="btn-secondary" style="background:#25D366;color:#fff;border:none;" onclick="var o=getCustomOrders().find(function(x){return x.id===_currentCustomOrderId;});if(o)sendWhatsApp(o.phone,o);">✉ WhatsApp</button>
+      <button class="btn-secondary" onclick="var o=getCustomOrders().find(function(x){return x.id===_currentCustomOrderId;});if(o)sendEmailNotification(o,false);">✉ Email</button>
       <button class="btn-secondary" onclick="closeModal('modal-customorder')">Close</button>
       <button class="btn-primary" onclick="updateCustomOrderStatus()">Save Changes</button>
     </div>
@@ -1211,7 +1213,12 @@
     </div>
     <div class="form-group"><label>Tracking Number</label><input id="modal-order-tracking" placeholder="e.g. 1Z999AA10123456784"/></div>
     <div class="form-group"><label>Notes</label><textarea id="modal-order-notes" rows="3" placeholder="Internal notes…"></textarea></div>
-    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-order')">Cancel</button><button class="btn-primary" onclick="saveOrder()">Save Changes</button></div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:0.4rem;">
+      <button class="btn-secondary" style="background:#25D366;color:#fff;border:none;" onclick="var o=ORDERS[parseInt(document.getElementById('modal-order-id').value)];if(o)sendWhatsApp(o.phone,o);">✉ WhatsApp</button>
+      <button class="btn-secondary" onclick="var o=ORDERS[parseInt(document.getElementById('modal-order-id').value)];if(o)sendEmailNotification(o,false);">✉ Email</button>
+      <button class="btn-secondary" onclick="closeModal('modal-order')">Cancel</button>
+      <button class="btn-primary" onclick="saveOrder()">Save Changes</button>
+    </div>
   </div>
 </div>
 
@@ -1423,6 +1430,97 @@ function viewCustomerOrders(idx) {
   openImgViewer(imgs, c.name + ' — Purchased Items');
 }
 
+// ── WHATSAPP + EMAIL NOTIFICATIONS ───────────────────────────────────
+// Opens WhatsApp with pre-filled message to customer
+function sendWhatsApp(phone, orderData) {
+  if (!phone) { toast('Customer phone number not available'); return; }
+  // Clean phone: remove spaces, dashes, parentheses
+  var cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  // If no country code, prepend Nepal +977
+  if (!cleaned.startsWith('+') && !cleaned.startsWith('977')) {
+    cleaned = cleaned.replace(/^0+/, '');
+    cleaned = '977' + cleaned;
+  } else {
+    cleaned = cleaned.replace(/^\+/, '');
+  }
+  var msg = buildOrderMessage(orderData, 'whatsapp');
+  var url = 'https://wa.me/' + cleaned + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+}
+
+// Send email to customer via mailto: or Formsubmit.co
+function sendEmailNotification(orderData, isAutomatic) {
+  if (!orderData.email) { if (!isAutomatic) toast('Customer email not available'); return; }
+  var msg = buildOrderMessage(orderData, 'email');
+  var subject = 'Update on your order ' + (orderData.id || '');
+
+  if (isAutomatic) {
+    // Use Formsubmit.co for actual email delivery (no backend needed)
+    // Sends via a hidden form POST - works without signup in AJAX mode
+    var fd = new FormData();
+    fd.append('_subject', subject);
+    fd.append('_captcha', 'false');
+    fd.append('_template', 'box');
+    fd.append('name', orderData.customer || 'Customer');
+    fd.append('email', orderData.email);
+    fd.append('order_id', orderData.id || '');
+    fd.append('status', orderData.status || '');
+    fd.append('message', msg);
+
+    // Formsubmit endpoint - uses customer email as recipient
+    fetch('https://formsubmit.co/ajax/' + encodeURIComponent(orderData.email), {
+      method: 'POST', body: fd
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { console.log('[Email] Sent:', d); })
+      .catch(function(e) { console.warn('[Email] Failed:', e); });
+  } else {
+    // Manual trigger - open mailto link
+    var url = 'mailto:' + orderData.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(msg);
+    window.location.href = url;
+  }
+}
+
+// Build a consistent, branded message about the order
+function buildOrderMessage(o, channel) {
+  var greeting = (channel === 'whatsapp') ? 'Hi' : 'Dear';
+  var sign = (channel === 'whatsapp') ? '\n\n— The Atelier' : '\n\nWarm regards,\nThe Atelier\nsodarisalon26@gmail.com\n+977-9742590718';
+  var statusMap = {
+    'confirmed':       'Your order has been confirmed and is now being prepared.',
+    'approved':        'Your payment has been verified and the order is confirmed.',
+    'processing':      'Your order is currently in production. We\'ll notify you once it ships.',
+    'in-production':   'Your order is currently in production.',
+    'ready':           'Your order is ready and will be shipped shortly.',
+    'shipped':         'Your order has been shipped' + (o.tracking ? ' (tracking: ' + o.tracking + ')' : '') + '.',
+    'completed':       'Your order has been delivered. Thank you for choosing The Atelier!',
+    'delivered':       'Your order has been delivered. Thank you!',
+    'cancelled':       'Your order has been cancelled. Please contact us if this was unexpected.',
+    'payment-rejected':'Your payment could not be verified. Please contact us to resubmit proof.',
+    'pending':         'We have received your order and are reviewing it.',
+    'pending-quote':   'We have received your request and will send a price quote shortly.'
+  };
+  var statusMsg = statusMap[o.status] || 'Your order status has been updated to: ' + (o.status || 'pending');
+
+  var trackingUrl = location.origin + location.pathname.replace('analyticsDashboard.html', 'orderTracking.html') + '?id=' + (o.id || '') + '&email=' + encodeURIComponent(o.email || '');
+
+  var parts = [
+    greeting + ' ' + (o.customer || 'valued customer') + ',',
+    '',
+    statusMsg,
+    '',
+    '*Order Details:*',
+    'Order ID: ' + (o.id || '—'),
+    'Item: ' + (o.product || o.garment || o.stickerName || '—'),
+    (o.qty ? 'Quantity: ' + o.qty : ''),
+    (o.adminPrice ? 'Price: NRs. ' + Number(o.adminPrice).toLocaleString() : o.amount ? 'Total: NRs. ' + Number(o.amount).toLocaleString() : ''),
+    (o.tracking ? 'Tracking: ' + o.tracking : ''),
+    '',
+    'Track your order live: ' + trackingUrl,
+    sign
+  ].filter(function(p) { return p !== ''; }).join('\n');
+
+  return parts;
+}
+
 // Orders & Customers are written directly by checkout.html into these keys
 // We read them with a live getter so they always reflect latest purchases
 function getOrders() { try { return JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]'); } catch { return []; } }
@@ -1595,13 +1693,23 @@ function verifyPayment(action) {
   }
   saveOrders(ORDERS);
   renderOrdersTable();
+  // Auto-email customer about payment decision
+  sendEmailNotification(ORDERS[idx], true);
 }
 function saveOrder(){
   const idx=parseInt(document.getElementById('modal-order-id').value);
-  ORDERS[idx].status=document.getElementById('modal-order-status').value;
+  const prevStatus = ORDERS[idx].status;
+  const newStatus = document.getElementById('modal-order-status').value;
+  ORDERS[idx].status=newStatus;
   ORDERS[idx].tracking=document.getElementById('modal-order-tracking').value;
   ORDERS[idx].notes=document.getElementById('modal-order-notes').value;
   saveOrders(ORDERS);closeModal('modal-order');renderOrdersTable();toast('Order updated');
+  // Auto-email on meaningful status changes
+  var notifyStatuses = ['confirmed','approved','processing','shipped','completed','cancelled','payment-rejected'];
+  if (prevStatus !== newStatus && notifyStatuses.indexOf(newStatus) !== -1) {
+    sendEmailNotification(ORDERS[idx], true);
+    toast('Email notification sent to customer');
+  }
 }
 
 // PRODUCTS
@@ -2590,6 +2698,7 @@ function updateCustomOrderStatus() {
   var orders = getCustomOrders();
   var idx = orders.findIndex(function(o){ return o.id === _currentCustomOrderId; });
   if (idx < 0) return;
+  var prevStatus = orders[idx].status;
   orders[idx].status = document.getElementById('co-modal-status').value;
   var price = document.getElementById('co-modal-price').value;
   if (price) {
@@ -2601,6 +2710,11 @@ function updateCustomOrderStatus() {
   closeModal('modal-customorder');
   renderCustomOrdersTable();
   showToast('Custom order updated.');
+  // Auto-email on status change
+  var notifyStatuses = ['confirmed','in-production','ready','completed','cancelled'];
+  if (prevStatus !== orders[idx].status && notifyStatuses.indexOf(orders[idx].status) !== -1) {
+    sendEmailNotification(orders[idx], true);
+  }
 }
 
 function deleteCustomOrder() {
@@ -3130,11 +3244,17 @@ function openStickerOrderModal(id) {
 function saveStickerOrder() {
   var orders = getStickerOrders();
   var idx = orders.findIndex(function(o){return o.id===_currentStickerOrderId;}); if (idx<0) return;
+  var prevStatus = orders[idx].status;
   orders[idx].status = document.getElementById("so-modal-status").value;
   var price = document.getElementById("so-modal-price").value;
   if (price) { orders[idx].adminPrice = parseFloat(price); orders[idx].priceStatus = "quoted"; }
   localStorage.setItem("atelier_sticker_orders", JSON.stringify(orders));
   closeModal("modal-stickerorder"); renderStickerOrdersTable(); toast("Sticker order updated");
+  // Auto-email
+  var notifyStatuses = ['confirmed','in-production','completed','cancelled'];
+  if (prevStatus !== orders[idx].status && notifyStatuses.indexOf(orders[idx].status) !== -1) {
+    sendEmailNotification(orders[idx], true);
+  }
 }
 
 function deleteStickerOrder() {
