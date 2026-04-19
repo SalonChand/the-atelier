@@ -619,6 +619,34 @@
 </main>
 
 <script>
+// ── STORAGE HEALTH CHECK — remove oversized data so orders can be placed ─────
+(function() {
+  try {
+    var testKey = '_quota_test_';
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+  } catch(e) {
+    // localStorage is full — clear old product/order images to free space
+    var keysToTrim = ['atelier_admin_products', 'atelier_admin_orders'];
+    keysToTrim.forEach(function(k) {
+      try {
+        var data = JSON.parse(localStorage.getItem(k) || '[]');
+        // Strip base64 images from stored items
+        data = data.map(function(item) {
+          var cleaned = Object.assign({}, item);
+          if (cleaned.image && cleaned.image.length > 200) cleaned.image = '';
+          if (cleaned.images) cleaned.images = [];
+          if (cleaned.payment && cleaned.payment.proofImage) cleaned.payment.proofImage = '[cleared]';
+          return cleaned;
+        });
+        localStorage.setItem(k, JSON.stringify(data));
+      } catch(e2) {
+        try { localStorage.removeItem(k); } catch(e3) {}
+      }
+    });
+  }
+})();
+
 // ── CART GUARD ──────────────────────────────────────────────────────────────
 const cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
 if (cart.length === 0) { window.location.href = 'shoppingCart.html'; }
@@ -759,13 +787,13 @@ function removeProof(method) {
 // ── VALIDATION ───────────────────────────────────────────────────────────────
 function validate() {
   let valid = true;
+  let firstInvalidEl = null;
   const checks = [
     { id: 'fname',   err: 'err-fname',   test: v => v.trim().length > 0 },
     { id: 'lname',   err: 'err-lname',   test: v => v.trim().length > 0 },
     { id: 'email',   err: 'err-email',   test: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
-    { id: 'address', err: 'err-address', test: v => v.trim().length > 3 },
+    { id: 'address', err: 'err-address', test: v => v.trim().length > 0 },
     { id: 'city',    err: 'err-city',    test: v => v.trim().length > 0 },
-    { id: 'postal',  err: 'err-postal',  test: v => v.trim().length > 0 },
     { id: 'country', err: 'err-country', test: v => v.length > 0 },
   ];
 
@@ -789,6 +817,7 @@ function validate() {
 
   checks.forEach(({ id, err, test }) => {
     const el = document.getElementById(id);
+    if (!el) return; // skip if field doesn't exist
     const errEl = document.getElementById(err);
     if (!el) return;
     if (!test(el.value)) {
@@ -800,6 +829,10 @@ function validate() {
       if (errEl) errEl.classList.remove('show');
     }
   });
+
+  // Scroll to first invalid field if any
+  const firstInvalid = document.querySelector('.invalid, .show[id^="err-"]');
+  if (firstInvalid) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   // Validate payment proof upload (mandatory)
   const proofErr = document.getElementById('err-' + activeMethod + '-proof');
@@ -817,8 +850,18 @@ function validate() {
 }
 
 // ── PLACE ORDER ──────────────────────────────────────────────────────────────
-document.getElementById('place-order-btn').addEventListener('click', () => {
-  if (!validate()) return;
+document.getElementById('place-order-btn').addEventListener('click', function() {
+  try {
+    var validResult = validate();
+    if (!validResult) {
+      var firstErr = document.querySelector('.invalid, .field-error.show, .proof-error.show');
+      if (firstErr) {
+        firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        alert('Please fill in all required fields and upload your payment screenshot.');
+      }
+      return;
+    }
   const btn = document.getElementById('place-order-btn');
   btn.disabled = true;
   btn.textContent = 'Processing...';
@@ -849,46 +892,99 @@ document.getElementById('place-order-btn').addEventListener('click', () => {
   const productSummary = cart.map(i => i.name).join(', ');
   const firstProductImage = cart.length > 0 ? (cart[0].image || '') : '';
 
-  // Write order — status is "awaiting-verification" until admin approves payment
-  const orders = JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]');
-  orders.unshift({
+  // Build order object
+  const orderObj = {
     id: orderId,
     customer: customer.name,
     email: customer.email,
     phone: customer.phone,
     address: customer.address,
     product: productSummary,
-    productImage: firstProductImage,
-    items: cart.map(function(i) { return { name: i.name, price: i.price, qty: i.quantity, image: i.image || '' }; }),
+    productImage: '',
+    items: cart.map(function(i) { return { name: i.name, price: i.price, qty: i.quantity }; }),
     date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
     amount: subtotalVal,
     status: 'awaiting-verification',
-    payment: paymentInfo
-  });
-  localStorage.setItem('atelier_admin_orders', JSON.stringify(orders));
+    payment: paymentInfo,
+    createdAt: Date.now()
+  };
 
-  // Write / update customer
-  const customers = JSON.parse(localStorage.getItem('atelier_admin_customers') || '[]');
-  const existingIdx = customers.findIndex(c => c.email.toLowerCase() === customer.email.toLowerCase());
-  if (existingIdx >= 0) {
-    customers[existingIdx].orders = (customers[existingIdx].orders || 0) + 1;
-    customers[existingIdx].spent = (customers[existingIdx].spent || 0) + subtotalVal;
-  } else {
-    customers.unshift({
-      name: customer.name, email: customer.email, phone: customer.phone,
-      country: customer.country, orders: 1, spent: subtotalVal,
-      joined: new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-    });
+  // Save order ID so confirmation page can link to tracking
+  try { localStorage.setItem('atelier_last_order_id', orderId); } catch(e) {}
+
+  // ── WRITE DIRECTLY TO FIREBASE ──────────────────────────────────────────
+  // This works from ANY device — customer's phone, desktop, anywhere
+  // Write order using Firebase REST API
+  // IMPORTANT: paths must match SYNC_KEYS in firebase-sync.js
+  // atelier_admin_orders -> 'orders', atelier_admin_customers -> 'customers'
+  function writeOrderToFirebase(onDone) {
+    var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+    // Step 1: read existing orders from correct Firebase path 'orders'
+    fetch(DB_URL + '/orders.json')
+      .then(function(r){ return r.json(); })
+      .then(function(existing) {
+        var orders = Array.isArray(existing) ? existing : (existing && typeof existing === 'object' ? Object.values(existing) : []);
+        orders = orders.filter(Boolean);
+        orders.unshift(orderObj);
+        // Step 2: write back to correct path 'orders'
+        return fetch(DB_URL + '/orders.json', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orders)
+        });
+      })
+      .then(function(r){ return r.json(); })
+      .then(function() {
+        // Step 3: update customers at correct path 'customers'
+        return fetch(DB_URL + '/customers.json');
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(existing) {
+        var customers = Array.isArray(existing) ? existing : (existing && typeof existing === 'object' ? Object.values(existing) : []);
+        customers = customers.filter(Boolean);
+        var idx = customers.findIndex(function(c){ return c && (c.email||'').toLowerCase() === customer.email.toLowerCase(); });
+        if (idx >= 0) {
+          customers[idx].orders = (customers[idx].orders||0) + 1;
+          customers[idx].spent = (customers[idx].spent||0) + subtotalVal;
+        } else {
+          customers.unshift({ name: customer.name, email: customer.email, phone: customer.phone, country: customer.country, orders: 1, spent: subtotalVal, joined: new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'}) });
+        }
+        return fetch(DB_URL + '/customers.json', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(customers)
+        });
+      })
+      .then(function(){ onDone(true); })
+      .catch(function(err){
+        console.error('Firebase REST error:', err);
+        alert('Could not save order. Please check your internet and try again.\nError: ' + err.message);
+        var btn2 = document.getElementById('place-order-btn');
+        btn2.disabled = false; btn2.textContent = 'Place Order';
+        onDone(false);
+      });
   }
-  localStorage.setItem('atelier_admin_customers', JSON.stringify(customers));
 
-  // Store order ID for confirmation page
-  localStorage.setItem('atelier_last_order_id', orderId);
+  writeOrderToFirebase(function(success) {
+    // Also save to localStorage as backup
+    try {
+      var orders = JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]');
+      var orderForStorage = Object.assign({}, orderObj, { payment: Object.assign({}, paymentInfo, { proofImage: '' }) });
+      orders.unshift(orderForStorage);
+      localStorage.setItem('atelier_admin_orders', JSON.stringify(orders));
+    } catch(e) {}
 
-  setTimeout(() => {
-    localStorage.removeItem('atelier_cart');
+    try { localStorage.removeItem('atelier_cart'); } catch(e) {}
     window.location.href = 'orderConfirmation.html';
-  }, 1800);
+  });
+  } catch(globalErr) {
+    alert('Error placing order: ' + globalErr.message + '\nPlease try again or contact us.');
+    var btn2 = document.getElementById('place-order-btn');
+    btn2.disabled = false;
+    btn2.textContent = 'Place Order';
+    console.error('Place order crash:', globalErr);
+  }
 });
 
 // ── ORDER SUMMARY ────────────────────────────────────────────────────────────
@@ -906,6 +1002,6 @@ document.getElementById('summary-items').innerHTML = cart.map(item => `
   </div>
 `).join('');
 </script>
-<script src="mobile-app.js?v=4"></script>
+<script src="mobile-app.js?v=5"></script>
 </body>
 </html>

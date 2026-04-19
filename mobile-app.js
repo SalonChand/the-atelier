@@ -64,11 +64,12 @@
       '<a href="sustainability.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Sustainability</a>' +
       '<a href="press.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Press</a>' +
       '<p style="font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:#8a7f73;margin-bottom:1rem;margin-top:1.5rem;">Support</p>' +
-      '<a href="orderTracking.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Track Your Order</a>' +
+      '<a href="trackOrder.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Track Your Order</a>' +
       '<a href="sizingGuide.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Sizing Guide</a>' +
       '<a href="shippingReturns.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Shipping & Returns</a>' +
       '<a href="careInstructions.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Care Instructions</a>' +
       '<a href="stickers.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Stickers</a>' +
+      '<a href="trackOrder.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#8b5e3c;text-decoration:none;letter-spacing:0.08em;font-weight:500;">◎ Track My Order</a>' +
       '<a href="contactUs.html" style="display:block;padding:0.9rem 0;font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Contact Us</a>' +
     '</div>';
   document.body.appendChild(sheet);

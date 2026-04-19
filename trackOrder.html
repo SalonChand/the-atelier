@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="favicon.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0e0e0d"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="The Atelier"/>
+<link rel="apple-touch-icon" href="logo.png"/>
+<link rel="manifest" href="manifest.json"/>
+<title>Track Order | THE ATELIER</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+/* NAV */
+nav { position: sticky; top: 0; z-index: 100; background: var(--cream); border-bottom: 1px solid rgba(200,184,154,0.3); padding: 0 2rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+.nav-logo { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.3rem; text-decoration: none; color: var(--ink); letter-spacing: 0.05em; }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { text-decoration: none; color: var(--ink); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; transition: opacity 0.2s; }
+.nav-links a:hover { opacity: 1; }
+@media(max-width:640px){ .nav-links { display: none; } }
+
+/* MAIN */
+.page-wrap { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+.page-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: clamp(2rem,5vw,3rem); margin-bottom: 0.5rem; }
+.page-sub { font-size: 0.72rem; color: #8a7f73; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2.5rem; }
+
+/* SEARCH BOX */
+.search-box { display: flex; gap: 0; border: 1px solid rgba(14,14,13,0.2); overflow: hidden; margin-bottom: 2.5rem; }
+.search-box input { flex: 1; border: none; background: white; padding: 1rem 1.25rem; font-family: 'Jost', sans-serif; font-size: 0.8rem; outline: none; color: var(--ink); }
+.search-box input::placeholder { color: #aaa; }
+.search-box button { background: var(--ink); color: var(--cream); border: none; padding: 1rem 1.75rem; font-family: 'Jost', sans-serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
+.search-box button:hover { opacity: 0.85; }
+
+/* RESULT CARD */
+.result-card { background: white; border: 1px solid rgba(200,184,154,0.3); padding: 2rem; display: none; }
+.result-card.show { display: block; }
+.order-meta { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(200,184,154,0.3); }
+.order-id-label { font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase; color: #8a7f73; margin-bottom: 0.35rem; }
+.order-id-val { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.3rem; }
+.order-badge { padding: 0.35rem 0.9rem; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; border-radius: 2px; }
+.badge-awaiting { background: #fff3e0; color: #e65100; border: 1px solid rgba(230,81,0,0.25); }
+.badge-processing { background: #e3f2fd; color: #1565c0; border: 1px solid rgba(21,101,192,0.25); }
+.badge-preparing { background: #f3e5f5; color: #6a1b9a; border: 1px solid rgba(106,27,154,0.25); }
+.badge-shipped { background: #e8f5e9; color: #2e7d32; border: 1px solid rgba(46,125,50,0.25); }
+.badge-out-for-delivery { background: #fff8e1; color: #f57f17; border: 1px solid rgba(245,127,23,0.25); }
+.badge-completed { background: #e8f5e9; color: #1b5e20; border: 1px solid rgba(27,94,32,0.35); }
+.badge-cancelled { background: #fce4ec; color: #880e4f; border: 1px solid rgba(136,14,79,0.25); }
+.badge-payment-rejected { background: #fce4ec; color: #b71c1c; border: 1px solid rgba(183,28,28,0.25); }
+
+/* TIMELINE */
+.timeline { position: relative; padding-left: 1.5rem; }
+.timeline::before { content: ''; position: absolute; left: 0.35rem; top: 0.5rem; bottom: 0.5rem; width: 1px; background: rgba(200,184,154,0.5); }
+.tl-step { position: relative; padding: 0 0 1.75rem 1.25rem; }
+.tl-step:last-child { padding-bottom: 0; }
+.tl-dot { position: absolute; left: -1.5rem; top: 0.2rem; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(200,184,154,0.5); background: var(--cream); transition: all 0.3s; }
+.tl-step.done .tl-dot { background: var(--accent); border-color: var(--accent); }
+.tl-step.active .tl-dot { background: var(--ink); border-color: var(--ink); box-shadow: 0 0 0 4px rgba(14,14,13,0.1); }
+.tl-label { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; color: #bbb; margin-bottom: 0.2rem; }
+.tl-step.done .tl-label, .tl-step.active .tl-label { color: var(--ink); }
+.tl-desc { font-size: 0.72rem; color: #8a7f73; line-height: 1.6; }
+.tl-step.active .tl-desc { color: #555; }
+.tl-time { font-size: 0.6rem; color: #bbb; margin-top: 0.2rem; letter-spacing: 0.05em; }
+.tl-step.done .tl-time, .tl-step.active .tl-time { color: #aaa; }
+
+/* ORDER DETAILS */
+.order-details { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid rgba(200,184,154,0.3); display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.detail-item label { font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8a7f73; display: block; margin-bottom: 0.25rem; }
+.detail-item span { font-size: 0.8rem; color: var(--ink); }
+.tracking-num { font-family: monospace; font-size: 0.8rem; color: var(--accent); letter-spacing: 0.05em; }
+
+/* CONTACT ROW */
+.help-row { margin-top: 2rem; padding: 1.25rem; background: rgba(200,184,154,0.12); border: 1px solid rgba(200,184,154,0.3); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.help-row p { font-size: 0.7rem; color: #6b6258; }
+.help-links { display: flex; gap: 1rem; }
+.help-links a { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); text-decoration: none; border-bottom: 1px solid rgba(14,14,13,0.3); padding-bottom: 1px; }
+
+/* ERROR */
+.error-msg { display: none; background: #fce4ec; border: 1px solid rgba(136,14,79,0.2); padding: 1rem 1.25rem; font-size: 0.75rem; color: #880e4f; margin-bottom: 1.5rem; }
+.error-msg.show { display: block; }
+
+/* WHATSAPP HINT */
+.wa-hint { margin-top: 1.5rem; padding: 1rem 1.25rem; background: #e8f5e9; border: 1px solid rgba(46,125,50,0.2); display: none; align-items: center; gap: 0.75rem; }
+.wa-hint.show { display: flex; }
+.wa-hint span { font-size: 1.2rem; }
+.wa-hint p { font-size: 0.7rem; color: #2e7d32; line-height: 1.5; }
+.wa-hint a { color: #1b5e20; font-weight: 500; }
+</style>
+<link rel="stylesheet" href="mobile-app.css?v=3"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="firebase-sync.js?v=4"></script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">The Atelier</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="collection.html">Shop</a></li>
+    <li><a href="customize.html">Custom</a></li>
+    <li><a href="stickers.html">Stickers</a></li>
+    <li><a href="contactUs.html">Contact</a></li>
+  </ul>
+</nav>
+
+<div class="page-wrap">
+  <h1 class="page-title">Track Your Order</h1>
+  <p class="page-sub">Enter your order ID to see live status</p>
+
+  <div class="search-box">
+    <input type="text" id="order-input" placeholder="e.g. ATL-2025-4821" autocomplete="off" autocapitalize="characters"/>
+    <button onclick="trackOrder()">Track</button>
+  </div>
+
+  <div class="error-msg" id="error-msg">No order found with that ID. Please check and try again.</div>
+
+  <!-- RESULT -->
+  <div class="result-card" id="result-card">
+    <div class="order-meta">
+      <div>
+        <div class="order-id-label">Order ID</div>
+        <div class="order-id-val" id="res-id">—</div>
+      </div>
+      <span class="order-badge" id="res-badge">—</span>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="timeline" id="timeline">
+      <!-- Steps injected by JS -->
+    </div>
+
+    <!-- ORDER DETAILS -->
+    <div class="order-details">
+      <div class="detail-item">
+        <label>Customer</label>
+        <span id="res-customer">—</span>
+      </div>
+      <div class="detail-item">
+        <label>Product</label>
+        <span id="res-product">—</span>
+      </div>
+      <div class="detail-item">
+        <label>Order Date</label>
+        <span id="res-date">—</span>
+      </div>
+      <div class="detail-item">
+        <label>Amount</label>
+        <span id="res-amount">—</span>
+      </div>
+      <div class="detail-item" id="tracking-row" style="display:none;">
+        <label>Tracking Number</label>
+        <span class="tracking-num" id="res-tracking">—</span>
+      </div>
+      <div class="detail-item" id="notes-row" style="display:none;">
+        <label>Note from Atelier</label>
+        <span id="res-notes">—</span>
+      </div>
+    </div>
+
+    <!-- WHATSAPP HINT -->
+    <div class="wa-hint" id="wa-hint">
+      <span>💬</span>
+      <p>Need help with your order? <a id="wa-link" href="#" target="_blank">Chat with us on WhatsApp</a></p>
+    </div>
+
+    <!-- HELP ROW -->
+    <div class="help-row">
+      <p>Questions about your order?</p>
+      <div class="help-links">
+        <a href="contactUs.html">Contact Us</a>
+        <a href="shippingReturns.html">Shipping Policy</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="mobile-app.js?v=5"></script>
+<script>
+// ── FIREBASE DIRECT QUERY ────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCqDm6B0JoILcHHFqO6w2El64UhVS5WgDs",
+  databaseURL: "https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "the-atelier-ce832"
+};
+let _db = null;
+function getDB() {
+  if (_db) return _db;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    _db = firebase.database();
+  } catch(e) { _db = null; }
+  return _db;
+}
+
+function findOrderInFirebase(orderId, callback) {
+  // Use REST API - same as checkout, no SDK conflict
+  var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+  fetch(DB_URL + '/orders.json')
+    .then(function(r){ return r.json(); })
+    .then(function(val) {
+      if (!val) { callback(null); return; }
+      var orders = Array.isArray(val) ? val : Object.values(val);
+      var found = orders.find(function(o) {
+        return o && (o.id||'').toUpperCase() === orderId.toUpperCase();
+      });
+      callback(found || null);
+    })
+    .catch(function() { callback(null); });
+}
+</script>
+<script>
+const STATUS_STEPS = [
+  { key: 'awaiting-verification', label: 'Order Received', desc: 'Your order has been placed and payment proof is being reviewed.' },
+  { key: 'processing',            label: 'Payment Verified', desc: 'Payment confirmed. Your order is now queued for preparation.' },
+  { key: 'preparing',             label: 'Being Prepared', desc: 'Our team is carefully preparing your garment.' },
+  { key: 'shipped',               label: 'Shipped', desc: 'Your order is on its way! Check the tracking number below.' },
+  { key: 'out-for-delivery',      label: 'Out for Delivery', desc: 'Your order is out for delivery today.' },
+  { key: 'completed',             label: 'Delivered', desc: 'Your order has been delivered. Thank you for shopping with us!' }
+];
+
+const CANCELLED_STATUSES = ['cancelled', 'payment-rejected'];
+
+const BADGE_MAP = {
+  'awaiting-verification': ['Awaiting Verification', 'badge-awaiting'],
+  'processing':            ['Payment Verified',      'badge-processing'],
+  'preparing':             ['Being Prepared',        'badge-preparing'],
+  'shipped':               ['Shipped',               'badge-shipped'],
+  'out-for-delivery':      ['Out for Delivery',      'badge-out-for-delivery'],
+  'completed':             ['Delivered',             'badge-completed'],
+  'cancelled':             ['Cancelled',             'badge-cancelled'],
+  'payment-rejected':      ['Payment Rejected',      'badge-payment-rejected']
+};
+
+// Pre-fill from URL param
+window.addEventListener('DOMContentLoaded', function() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  if (id) {
+    document.getElementById('order-input').value = id;
+    // Wait for Firebase to load then search
+    setTimeout(trackOrder, 1200);
+  }
+
+  // Allow Enter key
+  document.getElementById('order-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') trackOrder();
+  });
+});
+
+function getOrders() {
+  try { return JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]'); } catch(e) { return []; }
+}
+
+function matchOrder(orders, input) {
+  return orders.find(function(o) {
+    if (!o) return false;
+    const id = (o.id || '').toUpperCase();
+    return id === input || id === ('ATL-' + input) || ('ATL-' + id) === input;
+  });
+}
+
+function trackOrder() {
+  const input = document.getElementById('order-input').value.trim().toUpperCase();
+  if (!input) return;
+
+  const errorEl = document.getElementById('error-msg');
+  const resultEl = document.getElementById('result-card');
+
+  // Show loading state
+  errorEl.classList.remove('show');
+  document.getElementById('track-btn-text') && (document.getElementById('track-btn-text').textContent = 'Searching...');
+
+  // 1. Try localStorage first (fast)
+  const localOrders = getOrders();
+  const localOrder = matchOrder(localOrders, input);
+  if (localOrder) {
+    errorEl.classList.remove('show');
+    renderResult(localOrder);
+    resultEl.classList.add('show');
+    return;
+  }
+
+  // 2. Not in localStorage — search Firebase directly
+  findOrderInFirebase(input, function(order) {
+    if (order) {
+      errorEl.classList.remove('show');
+      renderResult(order);
+      resultEl.classList.add('show');
+    } else {
+      errorEl.classList.add('show');
+      resultEl.classList.remove('show');
+    }
+  });
+}
+
+function renderResult(order) {
+  // ID
+  document.getElementById('res-id').textContent = order.id || '—';
+
+  // Badge
+  const status = order.status || 'awaiting-verification';
+  const badgeData = BADGE_MAP[status] || [status, 'badge-awaiting'];
+  const badge = document.getElementById('res-badge');
+  badge.textContent = badgeData[0];
+  badge.className = 'order-badge ' + badgeData[1];
+
+  // Meta
+  document.getElementById('res-customer').textContent = order.customer || '—';
+  document.getElementById('res-product').textContent = order.product || '—';
+  document.getElementById('res-date').textContent = order.date || '—';
+  document.getElementById('res-amount').textContent = order.amount ? 'NRs. ' + Number(order.amount).toLocaleString() : '—';
+
+  // Tracking number
+  if (order.tracking) {
+    document.getElementById('res-tracking').textContent = order.tracking;
+    document.getElementById('tracking-row').style.display = 'block';
+  } else {
+    document.getElementById('tracking-row').style.display = 'none';
+  }
+
+  // Notes from admin
+  if (order.notes) {
+    document.getElementById('res-notes').textContent = order.notes;
+    document.getElementById('notes-row').style.display = 'block';
+  } else {
+    document.getElementById('notes-row').style.display = 'none';
+  }
+
+  // WhatsApp hint
+  const waHint = document.getElementById('wa-hint');
+  const waLink = document.getElementById('wa-link');
+  waHint.classList.add('show');
+  const waMsg = encodeURIComponent('Hello! I have a question about my order ' + (order.id || '') + '.');
+  waLink.href = 'https://wa.me/9779742590718?text=' + waMsg;
+
+  // Timeline
+  renderTimeline(status, order);
+}
+
+function renderTimeline(status, order) {
+  const container = document.getElementById('timeline');
+  const isCancelled = CANCELLED_STATUSES.includes(status);
+
+  if (isCancelled) {
+    const label = status === 'payment-rejected' ? 'Payment Rejected' : 'Order Cancelled';
+    const desc  = status === 'payment-rejected'
+      ? 'Your payment could not be verified. Please contact us for assistance.'
+      : 'This order has been cancelled. Please contact us if you have questions.';
+    container.innerHTML =
+      '<div class="tl-step active">' +
+        '<div class="tl-dot"></div>' +
+        '<div class="tl-label">' + label + '</div>' +
+        '<div class="tl-desc">' + desc + '</div>' +
+        (order.notes ? '<div class="tl-time">' + order.notes + '</div>' : '') +
+      '</div>';
+    return;
+  }
+
+  // Find current step index
+  const currentIdx = STATUS_STEPS.findIndex(function(s) { return s.key === status; });
+
+  container.innerHTML = STATUS_STEPS.map(function(step, i) {
+    var cls = '';
+    if (i < currentIdx) cls = 'done';
+    else if (i === currentIdx) cls = 'active';
+    return '<div class="tl-step ' + cls + '">' +
+      '<div class="tl-dot"></div>' +
+      '<div class="tl-label">' + step.label + '</div>' +
+      '<div class="tl-desc">' + (cls ? step.desc : '—') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// Re-check when Firebase delivers fresh data
+window.addEventListener('atelier-data-updated', function() {
+  const input = document.getElementById('order-input').value.trim();
+  if (input && document.getElementById('result-card').classList.contains('show')) {
+    trackOrder();
+  }
+});
+</script>
+</body>
+</html>

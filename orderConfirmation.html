@@ -170,13 +170,17 @@
   <p style="font-size:0.65rem;color:#8a7f73;margin-top:1rem;line-height:1.7;">Verification typically takes 1–2 hours during business hours. If there's an issue with your payment, we'll reach out to you via email.</p>
 </div>
 <div class="actions">
-  <a href="collection.html" class="btn-primary">Continue Shopping</a>
-  <a href="index.html" class="btn-secondary">Return Home</a>
+  <a id="track-btn" href="trackOrder.html" class="btn-primary">Track My Order</a>
+  <a href="collection.html" class="btn-secondary">Continue Shopping</a>
 </div>
+<p style="font-size:0.65rem;color:#8a7f73;margin-top:1.5rem;line-height:1.7;">
+  Save your Order ID — you can use it anytime to check your order status on our <a href="trackOrder.html" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent);">tracking page</a>.
+</p>
 <script>
-  const num = 'ATL-2025-' + Math.floor(Math.random() * 9000 + 1000);
+  const num = localStorage.getItem('atelier_last_order_id') || ('ATL-2025-' + Math.floor(Math.random() * 9000 + 1000));
   document.getElementById('order-num').textContent = 'Order #' + num;
+  document.getElementById('track-btn').href = 'trackOrder.html?id=' + encodeURIComponent(num);
 </script>
-<script src="mobile-app.js?v=4"></script>
+<script src="mobile-app.js?v=5"></script>
 </body>
 </html>
