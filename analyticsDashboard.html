@@ -229,6 +229,7 @@
       <p class="nav-section-title">Overview</p>
       <button class="nav-item active" onclick="showPanel('dashboard',this)"><span class="icon">◈</span> Dashboard</button>
       <button class="nav-item" onclick="showPanel('analytics',this)"><span class="icon">◻</span> Analytics</button>
+      <button class="nav-item" onclick="showPanel('visitors',this)" id="nav-visitors"><span class="icon">◎</span> Visitors</button>
     </div>
     <div class="nav-section">
       <p class="nav-section-title">Commerce</p>
@@ -308,6 +309,39 @@
 </div>
 
 <!-- ORDERS -->
+<!-- VISITORS PANEL -->
+<div class="panel" id="panel-visitors">
+  <div class="topbar"><h1 class="page-title">Visitors</h1><div class="topbar-right">
+    <button class="btn-secondary" onclick="exportVisitorsCSV()">Export CSV</button>
+    <button class="btn-danger" onclick="clearVisitors()">Clear Old Data</button>
+  </div></div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="kpi-card"><p class="kpi-label">Total Visits</p><p class="kpi-value" id="vis-total">0</p><p class="kpi-change" id="vis-total-sub" style="color:#8a7f73;">all time</p></div>
+    <div class="kpi-card"><p class="kpi-label">Unique Visitors</p><p class="kpi-value" id="vis-unique">0</p><p class="kpi-change" style="color:#8a7f73;">based on sessions</p></div>
+    <div class="kpi-card"><p class="kpi-label">Today</p><p class="kpi-value" id="vis-today">0</p><p class="kpi-change" id="vis-today-sub" style="color:#8a7f73;">visits today</p></div>
+    <div class="kpi-card"><p class="kpi-label">Last 7 Days</p><p class="kpi-value" id="vis-week">0</p><p class="kpi-change" style="color:#8a7f73;">this week</p></div>
+  </div>
+  <div class="charts-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="chart-card"><p class="chart-title">Top Pages</p><div id="vis-pages" style="font-size:0.72rem;"></div></div>
+    <div class="chart-card"><p class="chart-title">Referrers / Sources</p><div id="vis-referrers" style="font-size:0.72rem;"></div></div>
+  </div>
+  <div class="charts-grid" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="chart-card"><p class="chart-title">Devices</p><div id="vis-devices" style="font-size:0.72rem;"></div></div>
+    <div class="chart-card"><p class="chart-title">Browsers</p><div id="vis-browsers" style="font-size:0.72rem;"></div></div>
+    <div class="chart-card"><p class="chart-title">Locations (Timezone)</p><div id="vis-locations" style="font-size:0.72rem;"></div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Recent Visits</span>
+      <div class="table-actions">
+        <select class="filter-select" id="vis-device-filter" onchange="renderVisitorsPanel()"><option value="">All Devices</option><option value="Desktop">Desktop</option><option value="Mobile">Mobile</option><option value="Tablet">Tablet</option></select>
+        <input class="table-search" placeholder="Search page or referrer..." id="vis-search" oninput="renderVisitorsPanel()"/>
+      </div>
+    </div>
+    <div class="table-scroll"><table><thead><tr><th>Date &amp; Time</th><th>Page</th><th>Referrer</th><th>Device</th><th>Browser</th><th>Location</th><th>Session</th></tr></thead><tbody id="visitors-tbody"></tbody></table></div>
+  </div>
+</div>
+
 <div class="panel" id="panel-orders">
   <div class="topbar"><h1 class="page-title">Orders</h1></div>
   <div class="mini-stats" id="orders-mini-stats">
@@ -1568,7 +1602,7 @@ function showPanel(name,btn){
   // Refresh live purchase data before rendering
   if(name==='orders') ORDERS = getOrders();
   if(name==='customers') CUSTOMERS = getCustomers();
-  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[name]?.();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,visitors:renderVisitorsPanel,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[name]?.();
 }
 
 function toast(msg){
@@ -3303,6 +3337,141 @@ var _origOpenProduct = window.openProductModal;
 if (typeof _origOpenProduct === "undefined") {
   setTimeout(function() { populateBrandDropdown(); }, 2000);
 }
+
+// ── VISITORS TRACKING PANEL ────────────────────────────────────────────
+function getVisitors() {
+  try { return JSON.parse(localStorage.getItem('atelier_visitors') || '[]'); } catch(e) { return []; }
+}
+
+function renderVisitorsPanel() {
+  var visits = getVisitors();
+  var searchEl = document.getElementById('vis-search');
+  var deviceFilterEl = document.getElementById('vis-device-filter');
+  var q = (searchEl ? searchEl.value : '').toLowerCase().trim();
+  var df = deviceFilterEl ? deviceFilterEl.value : '';
+
+  // Apply filters for the table display
+  var filtered = visits.filter(function(v) {
+    if (df && v.device !== df) return false;
+    if (q) {
+      var hay = (v.page + ' ' + v.referrer + ' ' + (v.browser||'') + ' ' + (v.timezone||'')).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+
+  // ── KPI CARDS ────────────────────────────────────
+  var now = Date.now();
+  var DAY = 24 * 60 * 60 * 1000;
+  var today = visits.filter(function(v) { return now - v.timestamp < DAY; }).length;
+  var week = visits.filter(function(v) { return now - v.timestamp < 7*DAY; }).length;
+  var uniqueSessions = {};
+  visits.forEach(function(v) { if (v.sessionId) uniqueSessions[v.sessionId] = true; });
+  var unique = Object.keys(uniqueSessions).length;
+
+  document.getElementById('vis-total').textContent = visits.length.toLocaleString();
+  document.getElementById('vis-unique').textContent = unique.toLocaleString();
+  document.getElementById('vis-today').textContent = today.toLocaleString();
+  document.getElementById('vis-week').textContent = week.toLocaleString();
+
+  // ── TOP PAGES ────────────────────────────────────
+  var pageCounts = {};
+  visits.forEach(function(v) { pageCounts[v.page||'unknown'] = (pageCounts[v.page||'unknown']||0) + 1; });
+  document.getElementById('vis-pages').innerHTML = renderCountList(pageCounts, visits.length, 8) || emptyText();
+
+  // ── TOP REFERRERS ────────────────────────────────
+  var refCounts = {};
+  visits.forEach(function(v) { refCounts[v.referrer||'Direct'] = (refCounts[v.referrer||'Direct']||0) + 1; });
+  document.getElementById('vis-referrers').innerHTML = renderCountList(refCounts, visits.length, 8) || emptyText();
+
+  // ── DEVICES ──────────────────────────────────────
+  var deviceCounts = {};
+  visits.forEach(function(v) { deviceCounts[v.device||'Unknown'] = (deviceCounts[v.device||'Unknown']||0) + 1; });
+  document.getElementById('vis-devices').innerHTML = renderCountList(deviceCounts, visits.length, 5) || emptyText();
+
+  // ── BROWSERS ─────────────────────────────────────
+  var browserCounts = {};
+  visits.forEach(function(v) { browserCounts[v.browser||'Other'] = (browserCounts[v.browser||'Other']||0) + 1; });
+  document.getElementById('vis-browsers').innerHTML = renderCountList(browserCounts, visits.length, 5) || emptyText();
+
+  // ── LOCATIONS ────────────────────────────────────
+  var tzCounts = {};
+  visits.forEach(function(v) {
+    var tz = (v.timezone||'Unknown').split('/').pop().replace(/_/g, ' ');
+    tzCounts[tz] = (tzCounts[tz]||0) + 1;
+  });
+  document.getElementById('vis-locations').innerHTML = renderCountList(tzCounts, visits.length, 6) || emptyText();
+
+  // ── TABLE ────────────────────────────────────────
+  var tbody = document.getElementById('visitors-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:#8a7f73;font-style:italic;">No visits ' + (q||df ? 'matching filters' : 'yet') + '.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.slice(0, 200).map(function(v) {
+    var loc = (v.timezone||'—').split('/').pop().replace(/_/g, ' ');
+    var sessionShort = (v.sessionId||'').substr(-8);
+    return '<tr>' +
+      '<td style="font-size:0.68rem;"><strong>' + (v.date||'—') + '</strong><br><span style="color:#8a7f73;">' + (v.time||'') + '</span></td>' +
+      '<td style="font-family:Newsreader,serif;font-style:italic;">' + (v.page||'unknown') + '</td>' +
+      '<td style="font-size:0.68rem;">' + (v.referrer||'Direct') + '</td>' +
+      '<td><span style="font-size:0.6rem;padding:0.15rem 0.5rem;background:rgba(200,184,154,0.15);border-radius:2px;">' + (v.device||'—') + '</span></td>' +
+      '<td style="font-size:0.68rem;">' + (v.browser||'—') + '<br><span style="color:#8a7f73;font-size:0.6rem;">' + (v.os||'') + '</span></td>' +
+      '<td style="font-size:0.68rem;">' + loc + '</td>' +
+      '<td style="font-family:monospace;font-size:0.6rem;color:#8a7f73;">' + sessionShort + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function emptyText() {
+  return '<p style="color:#a89e94;font-style:italic;padding:1rem 0;text-align:center;">No data yet</p>';
+}
+
+function renderCountList(counts, total, limit) {
+  var arr = Object.keys(counts).map(function(k) { return [k, counts[k]]; });
+  arr.sort(function(a,b) { return b[1] - a[1]; });
+  if (!arr.length) return '';
+  return arr.slice(0, limit).map(function(item) {
+    var pct = total > 0 ? Math.round(100 * item[1] / total) : 0;
+    return '<div style="display:flex;justify-content:space-between;padding:0.55rem 0;border-bottom:1px solid rgba(200,184,154,0.12);">' +
+      '<div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:0.5rem;">' +
+        '<span style="font-size:0.72rem;">' + item[0] + '</span>' +
+        '<div style="width:100%;height:3px;background:rgba(200,184,154,0.2);border-radius:2px;margin-top:0.3rem;">' +
+          '<div style="width:' + pct + '%;height:100%;background:var(--accent);border-radius:2px;"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="text-align:right;min-width:60px;"><strong>' + item[1] + '</strong><br><span style="font-size:0.58rem;color:#8a7f73;">' + pct + '%</span></div>' +
+    '</div>';
+  }).join('');
+}
+
+function exportVisitorsCSV() {
+  var visits = getVisitors();
+  if (!visits.length) { alert('No visitor data to export.'); return; }
+  var headers = ['Date','Time','Page','URL','Referrer','Device','Browser','OS','Timezone','Language','Screen','Session ID'];
+  var rows = visits.map(function(v) {
+    return [v.date,v.time,v.page,v.url,v.referrer,v.device,v.browser,v.os,v.timezone,v.language,v.screen,v.sessionId]
+      .map(function(x) { return '"' + (x||'').toString().replace(/"/g,'""') + '"'; }).join(',');
+  });
+  var csv = [headers.join(',')].concat(rows).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'visitors.csv'; a.click();
+}
+
+function clearVisitors() {
+  if (!confirm('Clear all visitor data? This cannot be undone. (Frees up storage space)')) return;
+  localStorage.setItem('atelier_visitors', '[]');
+  renderVisitorsPanel();
+  toast('Visitor data cleared');
+}
+
+// Live update when new visits sync from Firebase
+window.addEventListener('atelier-data-updated', function(e) {
+  if (e.detail && e.detail.key === 'atelier_visitors') {
+    var panel = document.getElementById('panel-visitors');
+    if (panel && panel.classList.contains('active')) renderVisitorsPanel();
+  }
+});
 
 // ── STICKER ORDERS ─────────────────────────────────────────────────────
 var _currentStickerOrderId = null;
