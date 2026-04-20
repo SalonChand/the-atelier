@@ -170,6 +170,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="admin-notify.js?v=1"></script>
+<script src="admin-automations.js?v=1"></script>
 <script src="firebase-sync.js?v=4"></script>
 </head>
 <body>
@@ -984,6 +985,25 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
       pending = pending.filter(function(c) { return (c.email || '').toLowerCase() !== email; });
       localStorage.setItem('atelier_pending_carts', JSON.stringify(pending));
     } catch(e) {}
+
+    // Auto-deduct stock from products
+    try { if (window.deductStockForOrder) window.deductStockForOrder(cart); } catch(e) { console.warn('stock deduct failed:', e); }
+
+    // Generate invoice PDF and download for customer + save link for admin
+    try {
+      if (window.generateInvoicePDF) {
+        window.generateInvoicePDF(orderObj).then(function(blob) {
+          // Auto-download to customer's device
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'invoice-' + (orderObj.id || 'atelier') + '.pdf';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+        }).catch(function(e) { console.warn('[Invoice] Generation failed:', e); });
+      }
+    } catch(e) { console.warn('invoice gen failed:', e); }
 
     // Notify both admins (email silent, WhatsApp queued to dashboard)
     try { if (window.notifyAdminsOfOrder) window.notifyAdminsOfOrder(orderObj); } catch(e) { console.warn('notify failed:', e); }
