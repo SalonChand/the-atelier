@@ -237,6 +237,7 @@
       <button class="nav-item" onclick="showPanel('products',this)"><span class="icon">◧</span> Products</button>
       <button class="nav-item" onclick="showPanel('inventory',this)"><span class="icon">◨</span> Inventory</button>
       <button class="nav-item" onclick="showPanel('customers',this)"><span class="icon">◩</span> Customers</button>
+      <button class="nav-item" onclick="showPanel('abandoned',this)" id="nav-abandoned" style="position:relative;"><span class="icon">⊗</span> Abandoned Carts <span id="abandoned-badge" style="margin-left:auto;background:#8b5e3c;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
     </div>
     <div class="nav-section">
       <p class="nav-section-title">Payments</p>
@@ -339,6 +340,42 @@
       </div>
     </div>
     <div class="table-scroll"><table><thead><tr><th>Date &amp; Time</th><th>Page</th><th>Referrer</th><th>Device</th><th>Browser</th><th>Location</th><th>Session</th></tr></thead><tbody id="visitors-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ABANDONED CARTS PANEL -->
+<div class="panel" id="panel-abandoned">
+  <div class="topbar"><h1 class="page-title">Abandoned Carts</h1><div class="topbar-right">
+    <button class="btn-secondary" onclick="exportAbandonedCSV()">Export CSV</button>
+    <button class="btn-danger" onclick="clearAbandoned()">Clear Recovered</button>
+  </div></div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="kpi-card"><p class="kpi-label">Active Abandoned</p><p class="kpi-value" id="ab-active">0</p><p class="kpi-change" style="color:#8a7f73;">>1 hour old</p></div>
+    <div class="kpi-card"><p class="kpi-label">Potential Revenue</p><p class="kpi-value" id="ab-value" style="font-size:1.8rem;">NRs. 0</p><p class="kpi-change" style="color:#8a7f73;">at risk</p></div>
+    <div class="kpi-card"><p class="kpi-label">Contacted</p><p class="kpi-value" id="ab-contacted">0</p><p class="kpi-change" style="color:#8a7f73;">customers reached</p></div>
+    <div class="kpi-card"><p class="kpi-label">Recovered</p><p class="kpi-value" id="ab-recovered" style="color:#059669;">0</p><p class="kpi-change" style="color:#8a7f73;">came back & bought</p></div>
+  </div>
+  <div style="background:#fff9ea;border:1px solid rgba(200,184,154,0.4);padding:1rem 1.25rem;margin-bottom:1.5rem;border-radius:2px;">
+    <p style="font-size:0.7rem;line-height:1.7;color:#6b5c48;">
+      <strong>How this works:</strong> Carts appear here when a customer starts checkout but doesn't complete it.
+      After 1+ hours of inactivity, reach out via WhatsApp or Email with the recovery buttons.
+      A gentle nudge often brings back 10–15% of lost sales.
+    </p>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Pending Carts</span>
+      <div class="table-actions">
+        <select class="filter-select" id="ab-filter" onchange="renderAbandonedCartsPanel()">
+          <option value="all">All Carts</option>
+          <option value="recent">Last 24 hours</option>
+          <option value="stale">Over 24 hours (Hot Leads)</option>
+          <option value="contacted">Already Contacted</option>
+          <option value="not-contacted">Not Yet Contacted</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-scroll"><table><thead><tr><th>Time Abandoned</th><th>Customer</th><th>Contact</th><th>Items</th><th>Cart Value</th><th>Status</th><th>Actions</th></tr></thead><tbody id="abandoned-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -1602,7 +1639,7 @@ function showPanel(name,btn){
   // Refresh live purchase data before rendering
   if(name==='orders') ORDERS = getOrders();
   if(name==='customers') CUSTOMERS = getCustomers();
-  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,visitors:renderVisitorsPanel,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[name]?.();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,visitors:renderVisitorsPanel,abandoned:renderAbandonedCartsPanel,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[name]?.();
 }
 
 function toast(msg){
@@ -3471,7 +3508,225 @@ window.addEventListener('atelier-data-updated', function(e) {
     var panel = document.getElementById('panel-visitors');
     if (panel && panel.classList.contains('active')) renderVisitorsPanel();
   }
+  if (e.detail && e.detail.key === 'atelier_pending_carts') {
+    updateAbandonedBadge();
+    var panel2 = document.getElementById('panel-abandoned');
+    if (panel2 && panel2.classList.contains('active')) renderAbandonedCartsPanel();
+  }
 });
+
+// ── ABANDONED CARTS ───────────────────────────────────────────
+function getPendingCarts() {
+  try { return JSON.parse(localStorage.getItem('atelier_pending_carts') || '[]'); } catch(e) { return []; }
+}
+function savePendingCarts(list) {
+  try { localStorage.setItem('atelier_pending_carts', JSON.stringify(list)); } catch(e) {}
+}
+
+function updateAbandonedBadge() {
+  var carts = getPendingCarts();
+  var now = Date.now();
+  var HOUR = 60 * 60 * 1000;
+  // Count: abandoned > 1h, not recovered, not completed
+  var active = carts.filter(function(c) {
+    return !c.recovered && (now - (c.lastUpdated || c.firstSeen)) > HOUR;
+  }).length;
+  var badge = document.getElementById('abandoned-badge');
+  if (badge) {
+    badge.textContent = active;
+    badge.style.display = active > 0 ? 'flex' : 'none';
+  }
+}
+
+function renderAbandonedCartsPanel() {
+  var carts = getPendingCarts();
+  var now = Date.now();
+  var HOUR = 60 * 60 * 1000, DAY = 24 * HOUR;
+  var filterEl = document.getElementById('ab-filter');
+  var filter = filterEl ? filterEl.value : 'all';
+
+  // Stats
+  var active = carts.filter(function(c) { return !c.recovered && (now - (c.lastUpdated || c.firstSeen)) > HOUR; });
+  var totalValue = active.reduce(function(sum, c) { return sum + (c.total || 0); }, 0);
+  var contacted = carts.filter(function(c) { return c.contacted && !c.recovered; }).length;
+  var recovered = carts.filter(function(c) { return c.recovered; }).length;
+
+  document.getElementById('ab-active').textContent = active.length;
+  document.getElementById('ab-value').textContent = 'NRs. ' + Math.round(totalValue).toLocaleString();
+  document.getElementById('ab-contacted').textContent = contacted;
+  document.getElementById('ab-recovered').textContent = recovered;
+
+  // Filter for table
+  var filtered = carts.filter(function(c) {
+    if (c.recovered && filter !== 'all') return false;
+    var age = now - (c.lastUpdated || c.firstSeen);
+    if (filter === 'recent') return age < DAY;
+    if (filter === 'stale') return age >= DAY;
+    if (filter === 'contacted') return c.contacted;
+    if (filter === 'not-contacted') return !c.contacted && age > HOUR;
+    return true; // 'all'
+  });
+
+  // Sort: oldest first (most likely truly abandoned)
+  filtered.sort(function(a, b) {
+    return (a.lastUpdated || a.firstSeen) - (b.lastUpdated || b.firstSeen);
+  });
+
+  var tbody = document.getElementById('abandoned-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:#8a7f73;font-style:italic;">No abandoned carts ' + (filter !== 'all' ? 'matching this filter' : 'yet — customers are finishing their orders!') + '</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(function(c) {
+    var age = now - (c.lastUpdated || c.firstSeen);
+    var ageText;
+    if (age < HOUR) ageText = Math.round(age / 60000) + 'm ago';
+    else if (age < DAY) ageText = Math.round(age / HOUR) + 'h ago';
+    else ageText = Math.round(age / DAY) + 'd ago';
+
+    var ageColor = age < HOUR ? '#8a7f73' : age < DAY ? '#8b5e3c' : '#b71c1c';
+
+    var statusBadge;
+    if (c.recovered) statusBadge = '<span style="background:#dcfce7;color:#059669;padding:0.2rem 0.5rem;font-size:0.58rem;border-radius:2px;">✓ Recovered</span>';
+    else if (c.contacted) statusBadge = '<span style="background:#fef3c7;color:#92400e;padding:0.2rem 0.5rem;font-size:0.58rem;border-radius:2px;">✉ Contacted</span>';
+    else if (age > DAY) statusBadge = '<span style="background:#fee2e2;color:#b71c1c;padding:0.2rem 0.5rem;font-size:0.58rem;border-radius:2px;">● Hot Lead</span>';
+    else statusBadge = '<span style="background:#f4f1ec;color:#8a7f73;padding:0.2rem 0.5rem;font-size:0.58rem;border-radius:2px;">Active</span>';
+
+    var contactHtml = '';
+    if (c.email) contactHtml += '<div style="font-size:0.65rem;">' + c.email + '</div>';
+    if (c.phone) contactHtml += '<div style="font-size:0.6rem;color:#8a7f73;">' + c.phone + '</div>';
+
+    var itemsHtml = (c.cart || []).slice(0, 3).map(function(i) {
+      return '<span style="font-size:0.6rem;color:#6b5c48;">' + (i.name || 'Item') + ' ×' + (i.quantity || 1) + '</span>';
+    }).join('<br>');
+    if ((c.cart || []).length > 3) itemsHtml += '<br><span style="font-size:0.55rem;color:#a89e94;">+' + ((c.cart.length) - 3) + ' more</span>';
+
+    return '<tr>' +
+      '<td><strong style="color:' + ageColor + ';">' + ageText + '</strong><br><span style="font-size:0.6rem;color:#8a7f73;">' + (c.date || '') + ' ' + (c.time || '') + '</span></td>' +
+      '<td><strong>' + (c.customer || '—') + '</strong></td>' +
+      '<td>' + (contactHtml || '<span style="color:#a89e94;">No contact info</span>') + '</td>' +
+      '<td>' + itemsHtml + '<br><span style="font-size:0.6rem;color:#8a7f73;">(' + (c.itemCount || 0) + ' items)</span></td>' +
+      '<td><strong>NRs. ' + Math.round(c.total || 0).toLocaleString() + '</strong></td>' +
+      '<td>' + statusBadge + '</td>' +
+      '<td>' +
+        (c.phone ? '<button class="btn-secondary" style="background:#25D366;color:#fff;border:none;font-size:0.55rem;padding:0.3rem 0.6rem;margin-right:0.3rem;" onclick="recoverViaWhatsApp(\'' + c.id + '\')">WhatsApp</button>' : '') +
+        (c.email ? '<button class="btn-secondary" style="font-size:0.55rem;padding:0.3rem 0.6rem;margin-right:0.3rem;" onclick="recoverViaEmail(\'' + c.id + '\')">Email</button>' : '') +
+        (c.recovered ? '' : '<button class="btn-secondary" style="font-size:0.55rem;padding:0.3rem 0.6rem;" onclick="markRecovered(\'' + c.id + '\')">Mark Recovered</button>') +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function recoverViaWhatsApp(cartId) {
+  var carts = getPendingCarts();
+  var c = carts.find(function(x) { return x.id === cartId; });
+  if (!c || !c.phone) { toast('No phone number for this customer'); return; }
+  var phone = c.phone.replace(/[\s\-\(\)]/g, '').replace(/^\+/, '');
+  if (!phone.startsWith('977')) phone = '977' + phone.replace(/^0+/, '');
+  var items = (c.cart || []).slice(0, 3).map(function(i) { return i.name + ' ×' + i.quantity; }).join(', ');
+  if ((c.cart || []).length > 3) items += ' + more';
+  var msg = 'Hi ' + (c.customer || 'there') + ', we noticed you left some beautiful pieces in your cart at The Atelier:\n\n' +
+    items + '\n\nTotal: NRs. ' + Math.round(c.total || 0).toLocaleString() + '\n\n' +
+    'Your cart is still waiting for you! Complete your order here: https://theatelier-ta.com/shoppingCart.html\n\n' +
+    'Questions? Just reply to this message — we\'re happy to help!\n\n— The Atelier';
+  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+  // Mark as contacted
+  c.contacted = true;
+  c.contactedAt = Date.now();
+  savePendingCarts(carts);
+  renderAbandonedCartsPanel();
+  updateAbandonedBadge();
+  toast('WhatsApp opened. Cart marked as contacted.');
+}
+
+function recoverViaEmail(cartId) {
+  var carts = getPendingCarts();
+  var c = carts.find(function(x) { return x.id === cartId; });
+  if (!c || !c.email) { toast('No email for this customer'); return; }
+
+  var items = (c.cart || []).map(function(i) { return '• ' + i.name + ' ×' + i.quantity + ' — NRs. ' + Math.round((i.price||0) * (i.quantity||1)).toLocaleString(); }).join('\n');
+  var body = 'Hello ' + (c.customer || 'valued customer') + ',\n\n' +
+    'We noticed you left some beautiful pieces in your cart at The Atelier. They\'re still waiting for you:\n\n' +
+    items + '\n\n' +
+    'Total: NRs. ' + Math.round(c.total || 0).toLocaleString() + '\n\n' +
+    'Complete your order here: https://theatelier-ta.com/shoppingCart.html\n\n' +
+    'If you have any questions or need help with sizing, availability, or anything else — just reply to this email.\n\n' +
+    'Warm regards,\nThe Atelier Team\nsodarisalon26@gmail.com | +977-9742590718';
+
+  // Send via Formsubmit.co
+  var fd = new FormData();
+  fd.append('_subject', 'Your Atelier cart is still waiting for you');
+  fd.append('_captcha', 'false');
+  fd.append('_template', 'box');
+  fd.append('name', c.customer || 'Customer');
+  fd.append('email', c.email);
+  fd.append('message', body);
+
+  fetch('https://formsubmit.co/ajax/' + encodeURIComponent(c.email), {
+    method: 'POST', body: fd
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      toast(d && d.success ? '✓ Recovery email sent' : '⚠ Email may not have sent — check Formsubmit activation');
+    })
+    .catch(function(e) { toast('⚠ Email failed — use mailto fallback'); });
+
+  // Also offer mailto as backup
+  setTimeout(function() {
+    if (confirm('Open email client to send a personal follow-up as well?')) {
+      var url = 'mailto:' + c.email + '?subject=' + encodeURIComponent('Your Atelier cart is still waiting') + '&body=' + encodeURIComponent(body);
+      window.location.href = url;
+    }
+  }, 500);
+
+  // Mark as contacted
+  c.contacted = true;
+  c.contactedAt = Date.now();
+  savePendingCarts(carts);
+  renderAbandonedCartsPanel();
+  updateAbandonedBadge();
+}
+
+function markRecovered(cartId) {
+  var carts = getPendingCarts();
+  var c = carts.find(function(x) { return x.id === cartId; });
+  if (!c) return;
+  c.recovered = true;
+  c.recoveredAt = Date.now();
+  savePendingCarts(carts);
+  renderAbandonedCartsPanel();
+  updateAbandonedBadge();
+  toast('✓ Cart marked as recovered');
+}
+
+function clearAbandoned() {
+  if (!confirm('Remove all RECOVERED carts from the list? (Active and contacted carts stay)')) return;
+  var carts = getPendingCarts().filter(function(c) { return !c.recovered; });
+  savePendingCarts(carts);
+  renderAbandonedCartsPanel();
+  updateAbandonedBadge();
+  toast('Recovered carts cleared');
+}
+
+function exportAbandonedCSV() {
+  var carts = getPendingCarts();
+  if (!carts.length) { alert('No abandoned carts to export.'); return; }
+  var headers = ['ID','Date','Customer','Email','Phone','Items','Item Count','Total','Status','First Seen','Last Updated'];
+  var rows = carts.map(function(c) {
+    var items = (c.cart || []).map(function(i) { return i.name + ' ×' + i.quantity; }).join('; ');
+    var status = c.recovered ? 'Recovered' : c.contacted ? 'Contacted' : 'Pending';
+    return [c.id, c.date, c.customer, c.email, c.phone, items, c.itemCount, c.total, status,
+            new Date(c.firstSeen).toLocaleString(), new Date(c.lastUpdated).toLocaleString()]
+      .map(function(x) { return '"' + (x||'').toString().replace(/"/g,'""') + '"'; }).join(',');
+  });
+  var csv = [headers.join(',')].concat(rows).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'abandoned-carts.csv'; a.click();
+}
+
+// Update badge on page load + periodically
+setTimeout(updateAbandonedBadge, 1000);
+setInterval(updateAbandonedBadge, 60000); // every minute
 
 // ── STICKER ORDERS ─────────────────────────────────────────────────────
 var _currentStickerOrderId = null;

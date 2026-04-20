@@ -976,6 +976,13 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
     } catch(e) {}
 
     try { localStorage.removeItem('atelier_cart'); } catch(e) {}
+    // Remove this cart from pending/abandoned list — order completed
+    try {
+      var pending = JSON.parse(localStorage.getItem('atelier_pending_carts') || '[]');
+      var email = (document.getElementById('email').value || '').trim().toLowerCase();
+      pending = pending.filter(function(c) { return (c.email || '').toLowerCase() !== email; });
+      localStorage.setItem('atelier_pending_carts', JSON.stringify(pending));
+    } catch(e) {}
     window.location.href = 'orderConfirmation.html';
   });
   } catch(globalErr) {
@@ -1003,6 +1010,78 @@ document.getElementById('summary-items').innerHTML = cart.map(item => `
 `).join('');
 </script>
 <script src="visitor-tracker.js?v=1"></script>
+<!-- ═══ ABANDONED CART CAPTURE ═══
+     Silently saves cart + customer info to atelier_pending_carts as the user types.
+     If they leave without completing checkout, admin can recover them.
+     On successful order placement, the entry is removed. -->
+<script>
+(function() {
+  'use strict';
+  function savePendingCart() {
+    try {
+      var cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+      if (!cart.length) return;
+      var email = (document.getElementById('email') || {}).value || '';
+      var phone = (document.getElementById('phone') || {}).value || '';
+      var fname = (document.getElementById('fname') || {}).value || '';
+      var lname = (document.getElementById('lname') || {}).value || '';
+      // Only save if user has entered at least an email OR phone (otherwise we can't contact them)
+      if (!email.trim() && !phone.trim()) return;
+
+      var pending = JSON.parse(localStorage.getItem('atelier_pending_carts') || '[]');
+      // Find existing entry by email (updates if same customer)
+      var key = (email || phone).toLowerCase().trim();
+      var existing = pending.findIndex(function(c) {
+        return ((c.email || '').toLowerCase() === key || (c.phone || '').toLowerCase() === key);
+      });
+
+      var total = 0;
+      cart.forEach(function(item) { total += (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1); });
+
+      var entry = {
+        id: existing >= 0 ? pending[existing].id : 'PC-' + Date.now(),
+        email: email.trim(),
+        phone: phone.trim(),
+        customer: (fname + ' ' + lname).trim(),
+        cart: cart,
+        total: total,
+        itemCount: cart.reduce(function(n, i) { return n + (parseInt(i.quantity) || 1); }, 0),
+        firstSeen: existing >= 0 ? pending[existing].firstSeen : Date.now(),
+        lastUpdated: Date.now(),
+        date: new Date().toLocaleDateString('en-GB'),
+        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        recovered: false,
+        contacted: false
+      };
+
+      if (existing >= 0) pending[existing] = entry;
+      else pending.push(entry);
+
+      // Keep only last 100 pending carts
+      if (pending.length > 100) pending = pending.slice(-100);
+
+      localStorage.setItem('atelier_pending_carts', JSON.stringify(pending));
+    } catch(e) { console.warn('[AbandonedCart] Save failed:', e); }
+  }
+
+  // Debounce save to avoid thrashing
+  var saveTimeout;
+  function debouncedSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(savePendingCart, 600);
+  }
+
+  // Attach to key fields
+  ['email','phone','fname','lname'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', debouncedSave);
+  });
+
+  // Save on page unload (in case they close the tab mid-typing)
+  window.addEventListener('beforeunload', savePendingCart);
+  window.addEventListener('pagehide', savePendingCart);
+})();
+</script>
 <script src="mobile-app.js?v=5"></script>
 </body>
 </html>

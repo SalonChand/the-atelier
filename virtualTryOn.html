@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#0e0e0d"/>
+<link rel="icon" type="image/png" href="favicon.png"/>
+<title>Virtual Try-On | THE ATELIER</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root { --ink:#0e0e0d; --cream:#f4f1ec; --warm:#c8b89a; --accent:#8b5e3c; }
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; overflow:hidden; background:#000; font-family:'Jost',sans-serif; -webkit-tap-highlight-color:transparent; }
+body { position:relative; touch-action:none; }
+
+/* Camera feed */
+#video { position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; transform:scaleX(-1); z-index:1; background:#000; }
+
+/* Garment overlay */
+#garment-overlay { position:fixed; width:60vw; max-width:400px; height:auto; z-index:2; pointer-events:none; touch-action:none; filter:drop-shadow(0 4px 12px rgba(0,0,0,0.3)); transition:none; }
+
+/* Top bar */
+.top-bar { position:fixed; top:0; left:0; right:0; z-index:10; padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); color:#fff; padding-top:calc(1rem + env(safe-area-inset-top, 0px)); }
+.top-bar a { color:#fff; text-decoration:none; font-size:0.6rem; letter-spacing:0.2em; text-transform:uppercase; }
+.top-bar .title { font-family:'Newsreader',serif; font-style:italic; font-size:1.2rem; letter-spacing:0.02em; }
+
+/* Bottom controls */
+.controls-bar { position:fixed; bottom:0; left:0; right:0; z-index:10; padding:1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px)); background:linear-gradient(to top, rgba(0,0,0,0.85), transparent); }
+.hint { color:#fff; font-size:0.6rem; letter-spacing:0.12em; text-transform:uppercase; text-align:center; margin-bottom:1rem; opacity:0.85; }
+
+/* Garment picker */
+.garment-scroll { display:flex; gap:0.5rem; overflow-x:auto; padding:0.5rem 0; margin-bottom:1rem; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.garment-scroll::-webkit-scrollbar { display:none; }
+.garment-chip { flex-shrink:0; padding:0.5rem 0.9rem; border:1px solid rgba(255,255,255,0.3); background:rgba(0,0,0,0.4); color:#fff; border-radius:20px; font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; white-space:nowrap; transition:all 0.2s; font-family:'Jost'; }
+.garment-chip.active { background:#fff; color:#0e0e0d; border-color:#fff; }
+
+/* Action buttons */
+.actions { display:flex; gap:0.6rem; justify-content:center; }
+.action-btn { padding:0.75rem 1rem; background:rgba(255,255,255,0.95); color:#0e0e0d; border:none; font-size:0.6rem; letter-spacing:0.15em; text-transform:uppercase; cursor:pointer; font-family:'Jost'; font-weight:500; border-radius:4px; flex:1; max-width:130px; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+.action-btn.primary { background:var(--accent); color:#fff; }
+.action-btn:active { transform:scale(0.96); }
+
+/* Permission / loading overlay */
+.permission-overlay { position:fixed; inset:0; z-index:100; background:var(--cream); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem; text-align:center; }
+.permission-overlay.hidden { display:none; }
+.permission-overlay h1 { font-family:'Newsreader',serif; font-style:italic; font-size:2rem; margin-bottom:1rem; color:var(--ink); }
+.permission-overlay p { font-size:0.75rem; color:#6b6258; line-height:1.8; margin-bottom:1.5rem; max-width:320px; }
+.permission-overlay button { padding:1rem 2rem; background:var(--ink); color:#fff; border:none; font-family:'Jost'; font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; cursor:pointer; }
+.permission-overlay .camera-icon { font-size:3rem; margin-bottom:1.5rem; }
+
+/* Size/position controls */
+.slider-row { display:flex; align-items:center; gap:0.75rem; background:rgba(0,0,0,0.5); padding:0.4rem 0.75rem; border-radius:20px; margin-bottom:0.75rem; }
+.slider-row label { color:#fff; font-size:0.55rem; letter-spacing:0.12em; text-transform:uppercase; min-width:35px; }
+.slider-row input[type="range"] { flex:1; }
+
+/* Error state */
+.error-banner { position:fixed; top:60px; left:1rem; right:1rem; z-index:50; background:#fee2e2; color:#b71c1c; padding:0.75rem 1rem; border-radius:4px; font-size:0.7rem; text-align:center; display:none; }
+.error-banner.show { display:block; }
+
+/* Reset button */
+.reset-float { position:fixed; top:60px; right:1rem; z-index:10; background:rgba(0,0,0,0.6); color:#fff; border:1px solid rgba(255,255,255,0.3); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<!-- Permission / Loading state -->
+<div class="permission-overlay" id="permission-overlay">
+  <div class="camera-icon">📷</div>
+  <h1>Virtual Try-On</h1>
+  <p>See how our pieces look on you. Allow camera access to start — your video is processed entirely on your device and never leaves your phone.</p>
+  <button onclick="startCamera()">Start Camera</button>
+  <p style="margin-top:1.5rem;font-size:0.6rem;color:#a89e94;">Works best on mobile · No video is recorded or uploaded</p>
+  <p id="permission-error" style="color:#b71c1c;margin-top:1rem;display:none;"></p>
+</div>
+
+<!-- Camera feed -->
+<video id="video" autoplay playsinline muted></video>
+
+<!-- Draggable garment overlay -->
+<img id="garment-overlay" src="" alt="" style="display:none;"/>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <a href="collection.html">← Back</a>
+  <span class="title">Try-On</span>
+  <span style="width:50px;"></span>
+</div>
+
+<button class="reset-float" onclick="resetPosition()" title="Reset position">⟳</button>
+
+<!-- Bottom controls -->
+<div class="controls-bar">
+  <p class="hint">Drag to move · Pinch to resize</p>
+
+  <div class="slider-row">
+    <label>Size</label>
+    <input type="range" id="size-slider" min="20" max="120" value="60" oninput="updateOverlaySize()"/>
+  </div>
+
+  <div class="garment-scroll" id="garment-picker"></div>
+
+  <div class="actions">
+    <button class="action-btn" onclick="flipCamera()">Flip Cam</button>
+    <button class="action-btn primary" onclick="captureSnapshot()">📸 Snap</button>
+    <button class="action-btn" onclick="window.location.href='collection.html'">Shop</button>
+  </div>
+</div>
+
+<div class="error-banner" id="error-banner"></div>
+
+<canvas id="snapshot-canvas" style="display:none;"></canvas>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="firebase-sync.js?v=5"></script>
+<script>
+'use strict';
+
+var video = document.getElementById('video');
+var overlay = document.getElementById('garment-overlay');
+var permOverlay = document.getElementById('permission-overlay');
+var errorBanner = document.getElementById('error-banner');
+var currentStream = null;
+var useFrontCamera = true;
+var currentProduct = null;
+
+// Overlay position & size state
+var overlayState = {
+  x: 0.5,      // normalized 0-1 (center)
+  y: 0.5,
+  scale: 0.6,  // 60vw width
+  rotation: 0
+};
+
+// ── LOAD PRODUCTS FROM SITE ──
+function loadProducts() {
+  try {
+    var products = JSON.parse(localStorage.getItem('atelier_admin_products') || '[]')
+      .filter(function(p) { return p.status === 'active' && p.image; });
+    renderGarmentPicker(products);
+  } catch(e) { console.warn('[TryOn] Load products failed:', e); }
+}
+
+function renderGarmentPicker(products) {
+  var picker = document.getElementById('garment-picker');
+  if (!products.length) {
+    picker.innerHTML = '<span style="color:rgba(255,255,255,0.6);font-size:0.65rem;padding:0.5rem;">No products available. Check back soon!</span>';
+    return;
+  }
+  picker.innerHTML = products.map(function(p, i) {
+    return '<button class="garment-chip' + (i === 0 ? ' active' : '') + '" onclick="selectGarment(' + i + ', this)" data-img="' + (p.image || '').replace(/"/g, '&quot;') + '" data-name="' + (p.name || '').replace(/"/g, '&quot;') + '">' + (p.name || 'Item') + '</button>';
+  }).join('');
+  // Auto-select first
+  if (products.length) selectGarment(0, picker.children[0]);
+}
+
+function selectGarment(idx, btn) {
+  var all = document.querySelectorAll('.garment-chip');
+  for (var i = 0; i < all.length; i++) all[i].classList.remove('active');
+  btn.classList.add('active');
+  var src = btn.getAttribute('data-img');
+  var name = btn.getAttribute('data-name');
+  overlay.src = src;
+  overlay.alt = name;
+  overlay.style.display = 'block';
+  currentProduct = { name: name, image: src };
+  resetPosition();
+}
+
+// ── POSITIONING ──
+function applyOverlayTransform() {
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var width = overlayState.scale * vw;
+  overlay.style.width = width + 'px';
+  overlay.style.height = 'auto';
+  var x = overlayState.x * vw - (width / 2);
+  // Center vertically based on current image height
+  var imgHeight = overlay.clientHeight || (width * 1.1);
+  var y = overlayState.y * vh - (imgHeight / 2);
+  overlay.style.left = x + 'px';
+  overlay.style.top = y + 'px';
+  overlay.style.transform = 'rotate(' + overlayState.rotation + 'deg)';
+}
+
+function updateOverlaySize() {
+  var slider = document.getElementById('size-slider');
+  overlayState.scale = parseInt(slider.value) / 100;
+  applyOverlayTransform();
+}
+
+function resetPosition() {
+  overlayState.x = 0.5;
+  overlayState.y = 0.5;
+  overlayState.scale = 0.6;
+  overlayState.rotation = 0;
+  var slider = document.getElementById('size-slider');
+  if (slider) slider.value = 60;
+  applyOverlayTransform();
+}
+
+// ── TOUCH INTERACTION (drag + pinch) ──
+var touchState = { pointers: {}, initialDist: 0, initialScale: 0, initialCenter: null };
+
+function getTouchPos(e) {
+  var t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX, y: t.clientY };
+}
+
+function handleTouchStart(e) {
+  e.preventDefault();
+  if (e.touches) {
+    for (var i = 0; i < e.touches.length; i++) {
+      var t = e.touches[i];
+      touchState.pointers[t.identifier] = { x: t.clientX, y: t.clientY, startX: t.clientX, startY: t.clientY };
+    }
+    if (e.touches.length === 2) {
+      var t0 = e.touches[0], t1 = e.touches[1];
+      touchState.initialDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      touchState.initialScale = overlayState.scale;
+    }
+    touchState.startOverlayX = overlayState.x;
+    touchState.startOverlayY = overlayState.y;
+  }
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (!e.touches) return;
+  var vw = window.innerWidth, vh = window.innerHeight;
+
+  if (e.touches.length === 1) {
+    // Single touch = drag
+    var t = e.touches[0];
+    var startPointer = touchState.pointers[t.identifier];
+    if (!startPointer) return;
+    var dx = (t.clientX - startPointer.startX) / vw;
+    var dy = (t.clientY - startPointer.startY) / vh;
+    overlayState.x = Math.max(0.05, Math.min(0.95, touchState.startOverlayX + dx));
+    overlayState.y = Math.max(0.05, Math.min(0.95, touchState.startOverlayY + dy));
+    applyOverlayTransform();
+  } else if (e.touches.length === 2) {
+    // Pinch = resize
+    var t0 = e.touches[0], t1 = e.touches[1];
+    var dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+    if (touchState.initialDist > 0) {
+      var ratio = dist / touchState.initialDist;
+      overlayState.scale = Math.max(0.2, Math.min(1.2, touchState.initialScale * ratio));
+      var slider = document.getElementById('size-slider');
+      if (slider) slider.value = Math.round(overlayState.scale * 100);
+      applyOverlayTransform();
+    }
+  }
+}
+
+function handleTouchEnd(e) {
+  e.preventDefault();
+  if (e.changedTouches) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      delete touchState.pointers[e.changedTouches[i].identifier];
+    }
+  }
+}
+
+// Attach touch listeners to the whole document (not just overlay, since user can touch anywhere)
+document.addEventListener('touchstart', handleTouchStart, { passive: false });
+document.addEventListener('touchmove', handleTouchMove, { passive: false });
+document.addEventListener('touchend', handleTouchEnd, { passive: false });
+document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+// Desktop mouse support
+var mouseDragging = false, mouseStart = { x: 0, y: 0, ox: 0, oy: 0 };
+document.addEventListener('mousedown', function(e) {
+  if (e.target.closest('.controls-bar') || e.target.closest('.top-bar') || e.target.closest('.permission-overlay')) return;
+  mouseDragging = true;
+  mouseStart = { x: e.clientX, y: e.clientY, ox: overlayState.x, oy: overlayState.y };
+});
+document.addEventListener('mousemove', function(e) {
+  if (!mouseDragging) return;
+  var dx = (e.clientX - mouseStart.x) / window.innerWidth;
+  var dy = (e.clientY - mouseStart.y) / window.innerHeight;
+  overlayState.x = Math.max(0.05, Math.min(0.95, mouseStart.ox + dx));
+  overlayState.y = Math.max(0.05, Math.min(0.95, mouseStart.oy + dy));
+  applyOverlayTransform();
+});
+document.addEventListener('mouseup', function() { mouseDragging = false; });
+
+// Desktop scroll to resize
+document.addEventListener('wheel', function(e) {
+  if (e.target.closest('.controls-bar') || e.target.closest('.top-bar')) return;
+  e.preventDefault();
+  var delta = -e.deltaY * 0.001;
+  overlayState.scale = Math.max(0.2, Math.min(1.2, overlayState.scale + delta));
+  var slider = document.getElementById('size-slider');
+  if (slider) slider.value = Math.round(overlayState.scale * 100);
+  applyOverlayTransform();
+}, { passive: false });
+
+window.addEventListener('resize', applyOverlayTransform);
+
+// ── CAMERA ──
+function showError(msg) {
+  errorBanner.textContent = msg;
+  errorBanner.classList.add('show');
+  setTimeout(function() { errorBanner.classList.remove('show'); }, 5000);
+}
+
+function startCamera() {
+  var errEl = document.getElementById('permission-error');
+  errEl.style.display = 'none';
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    errEl.textContent = 'Your browser does not support camera access. Try Chrome or Safari.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    errEl.textContent = 'Camera access requires HTTPS. Please use the live site.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var constraints = {
+    video: {
+      facingMode: useFrontCamera ? 'user' : 'environment',
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    },
+    audio: false
+  };
+
+  navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+    currentStream = stream;
+    video.srcObject = stream;
+    video.play().catch(function() {});
+    permOverlay.classList.add('hidden');
+    loadProducts();
+    // Initial overlay position after a frame so clientHeight is accurate
+    setTimeout(applyOverlayTransform, 200);
+  }).catch(function(err) {
+    var msg;
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      msg = 'Camera permission denied. Please enable it in your browser settings.';
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      msg = 'No camera found on this device.';
+    } else if (err.name === 'NotReadableError') {
+      msg = 'Camera is being used by another app. Close it and try again.';
+    } else {
+      msg = 'Could not access camera: ' + (err.message || err.name);
+    }
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    console.error('[TryOn] Camera error:', err);
+  });
+}
+
+function flipCamera() {
+  useFrontCamera = !useFrontCamera;
+  if (currentStream) {
+    currentStream.getTracks().forEach(function(t) { t.stop(); });
+  }
+  // Back camera doesn't need mirror flip
+  video.style.transform = useFrontCamera ? 'scaleX(-1)' : 'scaleX(1)';
+  startCamera();
+}
+
+// ── SNAPSHOT ──
+function captureSnapshot() {
+  try {
+    var canvas = document.getElementById('snapshot-canvas');
+    var vw = window.innerWidth, vh = window.innerHeight;
+    canvas.width = vw;
+    canvas.height = vh;
+    var ctx = canvas.getContext('2d');
+
+    // Draw video (flipped if front cam)
+    ctx.save();
+    if (useFrontCamera) {
+      ctx.translate(vw, 0);
+      ctx.scale(-1, 1);
+    }
+    // Calculate object-fit: cover dimensions
+    var videoRatio = video.videoWidth / video.videoHeight;
+    var screenRatio = vw / vh;
+    var drawW, drawH, drawX, drawY;
+    if (videoRatio > screenRatio) {
+      drawH = vh;
+      drawW = vh * videoRatio;
+      drawX = (vw - drawW) / 2;
+      drawY = 0;
+    } else {
+      drawW = vw;
+      drawH = vw / videoRatio;
+      drawX = 0;
+      drawY = (vh - drawH) / 2;
+    }
+    ctx.drawImage(video, drawX, drawY, drawW, drawH);
+    ctx.restore();
+
+    // Draw overlay garment on top
+    if (overlay.complete && overlay.naturalWidth > 0) {
+      var oLeft = parseFloat(overlay.style.left) || 0;
+      var oTop = parseFloat(overlay.style.top) || 0;
+      var oWidth = parseFloat(overlay.style.width) || overlay.clientWidth;
+      var oHeight = overlay.clientHeight;
+      ctx.drawImage(overlay, oLeft, oTop, oWidth, oHeight);
+    }
+
+    // Convert to blob and share/download
+    canvas.toBlob(function(blob) {
+      if (!blob) { showError('Could not save photo'); return; }
+
+      // Try native share first (iOS/Android)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], 'atelier-tryon.jpg', { type: 'image/jpeg' })] })) {
+        var file = new File([blob], 'atelier-tryon.jpg', { type: 'image/jpeg' });
+        navigator.share({
+          files: [file],
+          title: 'My Atelier Try-On',
+          text: 'Check out this look from The Atelier!'
+        }).catch(function(e) {
+          // User cancelled share — fall back to download
+          downloadBlob(blob);
+        });
+      } else {
+        downloadBlob(blob);
+      }
+    }, 'image/jpeg', 0.9);
+  } catch(e) {
+    showError('Snapshot failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+function downloadBlob(blob) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'atelier-tryon-' + Date.now() + '.jpg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+// Clean up on unload
+window.addEventListener('beforeunload', function() {
+  if (currentStream) {
+    currentStream.getTracks().forEach(function(t) { t.stop(); });
+  }
+});
+</script>
+</body>
+</html>
