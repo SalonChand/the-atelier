@@ -26,7 +26,31 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 .nav-back:hover { color: var(--ink); }
 
 .customizer-wrap { display: grid; grid-template-columns: 1fr 380px; min-height: calc(100vh - 64px); margin-top: 64px; }
-@media (max-width: 900px) { .customizer-wrap { grid-template-columns: 1fr; } }
+@media (max-width: 900px) {
+  .customizer-wrap { grid-template-columns: 1fr; }
+  /* On mobile: 3D viewer stays visible while controls scroll */
+  .canvas-area {
+    position: sticky;
+    top: 64px;
+    z-index: 5;
+    min-height: 50vh !important;
+    max-height: 55vh;
+    padding: 1rem !important;
+    background: #f8f5f0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  }
+  .canvas-stage { max-width: 100% !important; }
+  .controls { max-height: none !important; overflow-y: visible !important; }
+}
+@media (max-width: 500px) {
+  .canvas-area {
+    min-height: 45vh !important;
+    max-height: 50vh;
+    padding: 0.5rem !important;
+  }
+  .view-toggle { margin-top: 0.75rem !important; }
+  .canvas-hint { font-size: 0.55rem; margin-top: 0.5rem; }
+}
 
 /* ─── CANVAS AREA ─── */
 .canvas-area {
@@ -105,7 +129,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
   text-align: center; cursor: pointer; transition: all 0.2s; position: relative;
 }
 .upload-zone:hover { border-color: var(--accent); background: rgba(139,94,60,0.03); }
-.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.upload-zone input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0,0,0,0); }
 .upload-zone p { font-size: 0.62rem; color: #8a7f73; letter-spacing: 0.1em; line-height: 1.8; }
 .upload-zone .upload-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
 #preview-thumb { max-height: 80px; max-width: 100%; margin: 0.5rem auto 0; display: none; border: 1px solid rgba(200,184,154,0.3); }
@@ -330,15 +354,15 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
       <!-- Image upload — multiple images -->
       <div id="tab-image">
-        <div class="upload-zone" onclick="document.getElementById('design-upload').click()">
+        <label class="upload-zone" for="design-upload" style="display:block;cursor:pointer;">
           <input type="file" id="design-upload" accept="image/*" multiple onchange="handleMultiImageUpload(event)"/>
           <div class="upload-icon">⬆</div>
-          <p>Click to upload your designs<br/><span style="font-size:0.55rem;">PNG, JPG, SVG — multiple files allowed — max 10MB each</span></p>
-        </div>
+          <p>Tap to upload your designs<br/><span style="font-size:0.55rem;">PNG, JPG, SVG — multiple files allowed — max 10MB each</span></p>
+        </label>
         <div id="image-gallery" style="display:none;margin-top:0.75rem;">
           <div id="image-thumbs" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;"></div>
           <p id="image-count" style="font-size:0.55rem;color:#8a7f73;letter-spacing:0.1em;margin-bottom:0.5rem;"></p>
-          <p style="font-size:0.5rem;color:#a89e94;letter-spacing:0.08em;margin-bottom:0.5rem;">Click a thumbnail to preview on 3D model. First image is used by default.</p>
+          <p style="font-size:0.5rem;color:#a89e94;letter-spacing:0.08em;margin-bottom:0.5rem;">Tap a thumbnail to preview on 3D model. First image is used by default.</p>
         </div>
         <img id="preview-thumb" src="" alt="Preview" style="display:none;"/>
         <div id="img-controls" style="display:none;margin-top:0.75rem;">
