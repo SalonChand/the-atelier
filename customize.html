@@ -1454,115 +1454,123 @@ updateCanvas();
 
   // ═══════════════════════════════════════════════════════════════════
   // MOBILE JOYSTICK — drag design around the garment surface
+  // Self-contained: creates its own DOM, works on mobile touch & desktop mouse
+  // Smooth performance: translates decal in real-time, rebuilds only on release
   // ═══════════════════════════════════════════════════════════════════
-  var joystick = document.getElementById('design-joystick');
-  var knob = document.getElementById('joystick-knob');
-  var joystickLabel = document.getElementById('joystick-label');
+
+  // Build the joystick DOM (so it's always available regardless of HTML order)
+  var joystick = document.createElement('div');
+  joystick.id = 'design-joystick';
+  joystick.style.cssText = 'display:none;position:fixed;bottom:calc(90px + env(safe-area-inset-bottom, 0px));right:16px;width:110px;height:110px;background:rgba(14,14,13,0.95);border:2px solid #c8b89a;border-radius:50%;z-index:9999;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 0 4px rgba(200,184,154,0.15);-webkit-tap-highlight-color:transparent;';
+
+  var knob = document.createElement('div');
+  knob.id = 'joystick-knob';
+  knob.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46px;height:46px;background:linear-gradient(135deg,#d4c0a0 0%,#8b5e3c 50%,#5a3820 100%);border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,0.6),inset 0 2px 4px rgba(255,255,255,0.3),inset 0 -2px 4px rgba(0,0,0,0.3);pointer-events:none;';
+  joystick.appendChild(knob);
+
+  // Arrow hints
+  var arrowStyle = 'position:absolute;font-size:0.75rem;color:#c8b89a;font-weight:600;pointer-events:none;';
+  var aU = document.createElement('span'); aU.style.cssText = arrowStyle + 'top:8px;left:50%;transform:translateX(-50%);'; aU.textContent = '↑'; joystick.appendChild(aU);
+  var aD = document.createElement('span'); aD.style.cssText = arrowStyle + 'bottom:8px;left:50%;transform:translateX(-50%);'; aD.textContent = '↓'; joystick.appendChild(aD);
+  var aL = document.createElement('span'); aL.style.cssText = arrowStyle + 'left:8px;top:50%;transform:translateY(-50%);'; aL.textContent = '←'; joystick.appendChild(aL);
+  var aR = document.createElement('span'); aR.style.cssText = arrowStyle + 'right:8px;top:50%;transform:translateY(-50%);'; aR.textContent = '→'; joystick.appendChild(aR);
+
+  var joystickLabel = document.createElement('div');
+  joystickLabel.id = 'joystick-label';
+  joystickLabel.style.cssText = 'display:none;position:fixed;bottom:calc(210px + env(safe-area-inset-bottom, 0px));right:16px;font-size:0.55rem;color:#fff;background:rgba(14,14,13,0.92);padding:0.4rem 0.8rem;border-radius:14px;letter-spacing:0.15em;text-transform:uppercase;pointer-events:none;z-index:9999;white-space:nowrap;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+  joystickLabel.textContent = 'Drag to Move Design';
+
+  document.body.appendChild(joystick);
+  document.body.appendChild(joystickLabel);
+
   var joystickActive = false;
-  var joystickRadius = 26; // how far the knob can move from center (px)
-  var joystickCenter = { x: 0, y: 0 };
-  var currentOffset = { x: 0, y: 0 }; // normalized -1 to 1
+  var joystickRadius = 28;
+  var currentOffset = { x: 0, y: 0 };
   var joystickRAF = null;
+  var _joystickHasMoved = false;
 
   function showJoystickIfMobile() {
     var isMobile = window.innerWidth <= 900;
-    // Show joystick on mobile when 3D is active AND there's a design (decal or uploaded image)
     var hasDesign = !!decalMesh || (uploadedImg && state.ctype !== 'none') ||
                     (state.designTab === 'text' && document.getElementById('design-text') && document.getElementById('design-text').value);
     var shouldShow = isMobile && is3DActive && hasDesign && state.ctype !== 'none';
-    if (joystick) joystick.style.display = shouldShow ? 'block' : 'none';
-    if (joystickLabel) joystickLabel.style.display = shouldShow ? 'block' : 'none';
+    joystick.style.display = shouldShow ? 'block' : 'none';
+    joystickLabel.style.display = shouldShow ? 'block' : 'none';
   }
 
-  // Hook into updateDecal to show/hide joystick when decal appears/disappears
-  var _origUpdateDecal = updateDecal;
-  updateDecal = function() {
-    _origUpdateDecal.apply(this, arguments);
-    showJoystickIfMobile();
-  };
-  var _origRemoveDecal = removeDecal;
-  removeDecal = function() {
-    _origRemoveDecal.apply(this, arguments);
-    showJoystickIfMobile();
-  };
+  // Update joystick visibility whenever the decal state changes
+  var _origUpdateDecal2 = updateDecal;
+  updateDecal = function() { _origUpdateDecal2.apply(this, arguments); showJoystickIfMobile(); };
+  var _origRemoveDecal2 = removeDecal;
+  removeDecal = function() { _origRemoveDecal2.apply(this, arguments); showJoystickIfMobile(); };
 
   window.addEventListener('resize', showJoystickIfMobile);
 
-  // Joystick drag handlers
-  function getJoystickPoint(e) {
+  // Get pointer position relative to joystick center
+  function getJoystickOffset(e) {
     var rect = joystick.getBoundingClientRect();
-    joystickCenter.x = rect.left + rect.width / 2;
-    joystickCenter.y = rect.top + rect.height / 2;
-    var t = e.touches ? e.touches[0] : e;
-    return { x: t.clientX - joystickCenter.x, y: t.clientY - joystickCenter.y };
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+    return { x: t.clientX - cx, y: t.clientY - cy };
   }
 
   function setKnobPosition(dx, dy) {
-    // Clamp to circle
     var dist = Math.sqrt(dx*dx + dy*dy);
     if (dist > joystickRadius) {
       dx = (dx / dist) * joystickRadius;
       dy = (dy / dist) * joystickRadius;
     }
     knob.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
-    currentOffset.x = dx / joystickRadius; // -1 to 1
+    currentOffset.x = dx / joystickRadius;
     currentOffset.y = dy / joystickRadius;
   }
 
   function resetKnob() {
-    currentOffset.x = 0;
-    currentOffset.y = 0;
+    currentOffset.x = 0; currentOffset.y = 0;
     knob.style.transform = 'translate(-50%, -50%)';
   }
 
-  // Continuously move decal while joystick is held — SMOOTH version
-  // Strategy: just translate the decal mesh position in real-time (no rebuild).
-  // On release, do ONE raycast + rebuild to snap to actual surface cleanly.
-  var _joystickDragged = false;
-  function moveDecalByJoystick() {
-    if (!joystickActive || !is3DActive || !currentModel || !decalMesh) return;
-
-    // Track whether any movement happened — for end-of-drag cleanup
-    if (Math.abs(currentOffset.x) > 0.05 || Math.abs(currentOffset.y) > 0.05) {
-      _joystickDragged = true;
-    }
-
-    // Speed proportional to joystick displacement squared (finer control near center)
-    var speedX = currentOffset.x * Math.abs(currentOffset.x) * 0.012;
-    var speedY = -currentOffset.y * Math.abs(currentOffset.y) * 0.012;
-
-    if (speedX === 0 && speedY === 0) {
-      joystickRAF = requestAnimationFrame(moveDecalByJoystick);
+  // Smooth movement loop — just translates mesh.position, no rebuild
+  function animateJoystick() {
+    if (!joystickActive) return;
+    if (!is3DActive || !currentModel || !decalMesh) {
+      joystickRAF = requestAnimationFrame(animateJoystick);
       return;
     }
 
-    // Get camera's screen-plane axes (right and up relative to camera)
-    var camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-    var camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+    var ox = currentOffset.x, oy = currentOffset.y;
+    if (Math.abs(ox) > 0.1 || Math.abs(oy) > 0.1) {
+      _joystickHasMoved = true;
+      // Quadratic speed curve: finer near center, faster at edges
+      var speedX = ox * Math.abs(ox) * 0.018;
+      var speedY = -oy * Math.abs(oy) * 0.018;
 
-    // Translate decal in camera's screen plane — SMOOTH, no rebuild
-    var translation = camRight.multiplyScalar(speedX).add(camUp.multiplyScalar(speedY));
-    decalMesh.position.add(translation);
+      // Get camera's screen-plane axes
+      var camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+      var camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
 
-    // Continue animating
-    joystickRAF = requestAnimationFrame(moveDecalByJoystick);
+      // Translate decal in camera's view plane
+      var translation = camRight.multiplyScalar(speedX).add(camUp.multiplyScalar(speedY));
+      decalMesh.position.add(translation);
+    }
+
+    joystickRAF = requestAnimationFrame(animateJoystick);
   }
 
-  // Called when joystick released — rebuild decal at current position to reproject on surface
-  function snapDecalToSurface() {
-    if (!is3DActive || !currentModel || !decalMesh || !_joystickDragged) return;
-    _joystickDragged = false;
+  // On release: reproject decal onto actual garment surface
+  function reprojectDecalToSurface() {
+    if (!_joystickHasMoved || !is3DActive || !currentModel || !decalMesh) { _joystickHasMoved = false; return; }
+    _joystickHasMoved = false;
 
-    // Find where the decal's center is in world space
     var worldPos;
     if (decalMesh.parent === scene) {
-      // DecalGeometry is in scene space, position is already applied
       worldPos = decalMesh.position.clone();
     } else {
       worldPos = decalMesh.getWorldPosition(new THREE.Vector3());
     }
 
-    // Raycast from camera through that world position to find the nearest surface
+    // Cast ray from camera through decal center to find nearest surface
     var rayDir = worldPos.clone().sub(camera.position).normalize();
     raycaster.set(camera.position, rayDir);
     var meshes = [];
@@ -1572,20 +1580,13 @@ updateCanvas();
     var hits = raycaster.intersectObjects(meshes, true);
     if (hits.length === 0) return;
 
-    moveDecalToPoint(hits[0]);
-  }
-
-  // Move decal to a surface point (similar logic to shift+drag but exposed for joystick)
-  function moveDecalToPoint(hit) {
-    if (!hit || !currentModel || !decalMesh) return;
+    // Rebuild decal at new hit point
+    var hit = hits[0];
     var pt = hit.point.clone();
     var nm = hit.face.normal.clone();
     nm.transformDirection(hit.object.matrixWorld);
 
-    // Rebuild DecalGeometry at new point (if available)
     if (typeof THREE.DecalGeometry !== 'undefined' && decalMesh.parent === scene) {
-      var texCanvas = getDecalTexture();
-      if (!texCanvas) return;
       var mBox = new THREE.Box3().setFromObject(currentModel);
       var mSize = mBox.getSize(new THREE.Vector3());
       var sliderVal = parseFloat(document.getElementById('design-scale') ? document.getElementById('design-scale').value : 0.5);
@@ -1603,68 +1604,62 @@ updateCanvas();
       try {
         var oldGeom = decalMesh.geometry;
         decalMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
+        decalMesh.position.set(0,0,0); // DecalGeometry has vertices in world space
+        decalMesh.scale.set(1,1,1);
         if (oldGeom) oldGeom.dispose();
-      } catch (err) { /* silent */ }
-      return;
+      } catch (err) { console.warn('[Joystick] Reproject failed:', err); }
+    } else if (decalMesh) {
+      var off = nm.clone().multiplyScalar(0.015);
+      decalMesh.position.copy(currentModel.worldToLocal(pt.clone().add(off)));
+      decalMesh.lookAt(currentModel.worldToLocal(pt.clone().add(nm)));
     }
-
-    // Plane fallback
-    var off = nm.clone().multiplyScalar(0.015);
-    decalMesh.position.copy(currentModel.worldToLocal(pt.clone().add(off)));
-    decalMesh.lookAt(currentModel.worldToLocal(pt.clone().add(nm)));
   }
 
-  if (joystick) {
-    function onJoystickStart(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      joystickActive = true;
-      var p = getJoystickPoint(e);
-      setKnobPosition(p.x, p.y);
-      if (joystickRAF) cancelAnimationFrame(joystickRAF);
-      joystickRAF = requestAnimationFrame(moveDecalByJoystick);
-    }
-    function onJoystickMove(e) {
-      if (!joystickActive) return;
-      e.preventDefault();
-      e.stopPropagation();
-      var p = getJoystickPoint(e);
-      setKnobPosition(p.x, p.y);
-    }
-    function onJoystickEnd(e) {
-      if (!joystickActive) return;
-      e.preventDefault();
-      joystickActive = false;
-      resetKnob();
-      if (joystickRAF) { cancelAnimationFrame(joystickRAF); joystickRAF = null; }
-      // After release, reproject the decal onto the actual surface for clean look
-      snapDecalToSurface();
-    }
-
-    joystick.addEventListener('touchstart', onJoystickStart, { passive: false });
-    joystick.addEventListener('touchmove', onJoystickMove, { passive: false });
-    joystick.addEventListener('touchend', onJoystickEnd, { passive: false });
-    joystick.addEventListener('touchcancel', onJoystickEnd, { passive: false });
-    // Also support mouse for testing on desktop
-    joystick.addEventListener('mousedown', onJoystickStart);
-    document.addEventListener('mousemove', function(e) { if (joystickActive) onJoystickMove(e); });
-    document.addEventListener('mouseup', onJoystickEnd);
+  // ── EVENT HANDLERS ────────────────────────────────────────
+  function onStart(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    joystickActive = true;
+    _joystickHasMoved = false;
+    var off = getJoystickOffset(e);
+    setKnobPosition(off.x, off.y);
+    if (joystickRAF) cancelAnimationFrame(joystickRAF);
+    joystickRAF = requestAnimationFrame(animateJoystick);
   }
+
+  function onMove(e) {
+    if (!joystickActive) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var off = getJoystickOffset(e);
+    setKnobPosition(off.x, off.y);
+  }
+
+  function onEnd(e) {
+    if (!joystickActive) return;
+    if (e && e.preventDefault) e.preventDefault();
+    joystickActive = false;
+    resetKnob();
+    if (joystickRAF) { cancelAnimationFrame(joystickRAF); joystickRAF = null; }
+    reprojectDecalToSurface();
+  }
+
+  // Touch events (mobile)
+  joystick.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('touchmove', function(e) { if (joystickActive) onMove(e); }, { passive: false });
+  document.addEventListener('touchend', onEnd, { passive: false });
+  document.addEventListener('touchcancel', onEnd, { passive: false });
+
+  // Mouse events (desktop testing)
+  joystick.addEventListener('mousedown', onStart);
+  document.addEventListener('mousemove', function(e) { if (joystickActive) onMove(e); });
+  document.addEventListener('mouseup', onEnd);
+
+  // Check initial state
+  showJoystickIfMobile();
+
 })();
 </script>
-<!-- ═══════════════════════════════════════════════════════════════════
-     MOBILE JOYSTICK — floats over page, outside the 3D model section
-     Only visible on mobile (≤900px) when a decal is on the garment
-     ═══════════════════════════════════════════════════════════════════ -->
-<div id="design-joystick" style="display:none;position:fixed;bottom:calc(90px + env(safe-area-inset-bottom, 0px));right:16px;width:110px;height:110px;background:rgba(14,14,13,0.95);border:2px solid #c8b89a;border-radius:50%;z-index:1500;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 0 4px rgba(200,184,154,0.15);-webkit-tap-highlight-color:transparent;">
-  <div id="joystick-knob" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46px;height:46px;background:linear-gradient(135deg,#d4c0a0 0%,#8b5e3c 50%,#5a3820 100%);border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,0.6),inset 0 2px 4px rgba(255,255,255,0.3),inset 0 -2px 4px rgba(0,0,0,0.3);pointer-events:none;"></div>
-  <span style="position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:0.7rem;color:#c8b89a;pointer-events:none;font-weight:600;">↑</span>
-  <span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:0.7rem;color:#c8b89a;pointer-events:none;font-weight:600;">↓</span>
-  <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:0.7rem;color:#c8b89a;pointer-events:none;font-weight:600;">←</span>
-  <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:0.7rem;color:#c8b89a;pointer-events:none;font-weight:600;">→</span>
-</div>
-<p id="joystick-label" style="display:none;position:fixed;bottom:calc(210px + env(safe-area-inset-bottom, 0px));right:16px;font-size:0.55rem;color:#fff;background:rgba(14,14,13,0.92);padding:0.4rem 0.8rem;border-radius:14px;letter-spacing:0.15em;text-transform:uppercase;pointer-events:none;z-index:1500;white-space:nowrap;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.3);">Drag to Move Design</p>
-
 <script src="visitor-tracker.js?v=1"></script>
 <script src="mobile-app.js?v=5"></script>
 </body>
