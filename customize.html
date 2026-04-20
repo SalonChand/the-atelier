@@ -27,11 +27,13 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
 .customizer-wrap { display: grid; grid-template-columns: 1fr 380px; min-height: calc(100vh - 64px); margin-top: 64px; }
 @media (max-width: 900px) {
-  .customizer-wrap { grid-template-columns: 1fr; }
-  /* On mobile: 3D viewer stays fixed at top, controls scroll below */
+  .customizer-wrap { grid-template-columns: 1fr; padding-top: 50vh; }
+  /* On mobile: 3D viewer is FIXED at top (always visible), controls scroll below */
   .canvas-area {
-    position: sticky;
+    position: fixed !important;
     top: 64px;
+    left: 0;
+    right: 0;
     z-index: 20;
     height: 50vh;
     min-height: unset !important;
@@ -48,6 +50,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
   .controls { max-height: none !important; overflow-y: visible !important; }
 }
 @media (max-width: 500px) {
+  .customizer-wrap { padding-top: 45vh; }
   .canvas-area {
     height: 45vh;
     max-height: 45vh;
