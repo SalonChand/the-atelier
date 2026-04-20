@@ -212,6 +212,15 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
           <div style="width:36px;height:36px;border:2px solid rgba(200,184,154,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin3d 0.8s linear infinite;"></div>
           <p style="font-size:0.6rem;color:#8a7f73;letter-spacing:0.12em;margin-top:1rem;text-transform:uppercase;">Loading 3D Model…</p>
         </div>
+        <!-- MOBILE JOYSTICK — drag design around the garment -->
+        <div id="design-joystick" style="display:none;position:absolute;bottom:12px;right:12px;width:90px;height:90px;background:rgba(14,14,13,0.08);border:1.5px solid rgba(139,94,60,0.4);border-radius:50%;z-index:10;touch-action:none;user-select:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+          <div id="joystick-knob" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:38px;height:38px;background:linear-gradient(135deg,#8b5e3c,#6b4423);border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.25);pointer-events:none;transition:transform 0.1s ease-out;"></div>
+          <span style="position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:0.55rem;color:rgba(139,94,60,0.7);pointer-events:none;">↑</span>
+          <span style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:0.55rem;color:rgba(139,94,60,0.7);pointer-events:none;">↓</span>
+          <span style="position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:0.55rem;color:rgba(139,94,60,0.7);pointer-events:none;">←</span>
+          <span style="position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:0.55rem;color:rgba(139,94,60,0.7);pointer-events:none;">→</span>
+        </div>
+        <p id="joystick-label" style="display:none;position:absolute;bottom:110px;right:12px;font-size:0.5rem;color:#8a7f73;letter-spacing:0.1em;text-transform:uppercase;background:rgba(244,241,236,0.9);padding:0.25rem 0.5rem;border-radius:2px;pointer-events:none;z-index:10;">Drag to Move Design</p>
       </div>
       <style>@keyframes spin3d { to { transform: rotate(360deg); } }</style>
       <!-- 2D fallback canvas (for other garments) -->
@@ -1451,6 +1460,187 @@ updateCanvas();
     if (is3DActive && renderer) { renderer.render(scene, camera); var saved = window.canvas; window.canvas = renderer.domElement; _origPlaceCustomOrder(); window.canvas = saved; }
     else _origPlaceCustomOrder();
   };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MOBILE JOYSTICK — drag design around the garment surface
+  // ═══════════════════════════════════════════════════════════════════
+  var joystick = document.getElementById('design-joystick');
+  var knob = document.getElementById('joystick-knob');
+  var joystickLabel = document.getElementById('joystick-label');
+  var joystickActive = false;
+  var joystickRadius = 26; // how far the knob can move from center (px)
+  var joystickCenter = { x: 0, y: 0 };
+  var currentOffset = { x: 0, y: 0 }; // normalized -1 to 1
+  var joystickRAF = null;
+
+  function showJoystickIfMobile() {
+    var isMobile = window.innerWidth <= 900;
+    var shouldShow = isMobile && is3DActive && decalMesh && state.ctype !== 'none';
+    if (joystick) joystick.style.display = shouldShow ? 'block' : 'none';
+    if (joystickLabel) joystickLabel.style.display = shouldShow ? 'block' : 'none';
+  }
+
+  // Hook into updateDecal to show/hide joystick when decal appears/disappears
+  var _origUpdateDecal = updateDecal;
+  updateDecal = function() {
+    _origUpdateDecal.apply(this, arguments);
+    showJoystickIfMobile();
+  };
+  var _origRemoveDecal = removeDecal;
+  removeDecal = function() {
+    _origRemoveDecal.apply(this, arguments);
+    showJoystickIfMobile();
+  };
+
+  window.addEventListener('resize', showJoystickIfMobile);
+
+  // Joystick drag handlers
+  function getJoystickPoint(e) {
+    var rect = joystick.getBoundingClientRect();
+    joystickCenter.x = rect.left + rect.width / 2;
+    joystickCenter.y = rect.top + rect.height / 2;
+    var t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - joystickCenter.x, y: t.clientY - joystickCenter.y };
+  }
+
+  function setKnobPosition(dx, dy) {
+    // Clamp to circle
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > joystickRadius) {
+      dx = (dx / dist) * joystickRadius;
+      dy = (dy / dist) * joystickRadius;
+    }
+    knob.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+    currentOffset.x = dx / joystickRadius; // -1 to 1
+    currentOffset.y = dy / joystickRadius;
+  }
+
+  function resetKnob() {
+    currentOffset.x = 0;
+    currentOffset.y = 0;
+    knob.style.transform = 'translate(-50%, -50%)';
+  }
+
+  // Continuously move decal while joystick is held
+  function moveDecalByJoystick() {
+    if (!joystickActive || !is3DActive || !currentModel || !decalMesh) return;
+
+    // Speed proportional to joystick displacement
+    var speed = 0.006; // world units per frame
+    var dx = currentOffset.x * speed;
+    var dy = -currentOffset.y * speed; // invert Y (up on joystick = up in 3D world)
+
+    // Get current decal world position
+    var currentWorldPos;
+    if (decalMesh.parent === scene) {
+      // DecalGeometry on scene — use geometry bounds center
+      decalMesh.geometry.computeBoundingBox();
+      currentWorldPos = decalMesh.geometry.boundingBox.getCenter(new THREE.Vector3());
+    } else {
+      // Plane child of model
+      currentWorldPos = decalMesh.getWorldPosition(new THREE.Vector3());
+    }
+
+    // Calculate new target position in world space
+    // Map joystick to screen-plane movement relative to camera
+    var camRight = new THREE.Vector3(); camera.getWorldDirection(new THREE.Vector3());
+    camRight.setFromMatrixColumn(camera.matrixWorld, 0); // camera's right vector
+    var camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1); // camera's up
+
+    var newTarget = currentWorldPos.clone()
+      .add(camRight.multiplyScalar(dx))
+      .add(camUp.multiplyScalar(dy));
+
+    // Raycast from camera through the new target point to find garment surface
+    var rayDir = newTarget.clone().sub(camera.position).normalize();
+    raycaster.set(camera.position, rayDir);
+    var meshes = [];
+    currentModel.traverse(function(c) {
+      if (c.isMesh && c !== decalMesh && !c.userData.isDecal) meshes.push(c);
+    });
+    var hits = raycaster.intersectObjects(meshes, true);
+    if (hits.length === 0) return;
+
+    var hit = hits[0];
+    moveDecalToPoint(hit);
+
+    // Continue animating
+    if (joystickActive) joystickRAF = requestAnimationFrame(moveDecalByJoystick);
+  }
+
+  // Move decal to a surface point (similar logic to shift+drag but exposed for joystick)
+  function moveDecalToPoint(hit) {
+    if (!hit || !currentModel || !decalMesh) return;
+    var pt = hit.point.clone();
+    var nm = hit.face.normal.clone();
+    nm.transformDirection(hit.object.matrixWorld);
+
+    // Rebuild DecalGeometry at new point (if available)
+    if (typeof THREE.DecalGeometry !== 'undefined' && decalMesh.parent === scene) {
+      var texCanvas = getDecalTexture();
+      if (!texCanvas) return;
+      var mBox = new THREE.Box3().setFromObject(currentModel);
+      var mSize = mBox.getSize(new THREE.Vector3());
+      var sliderVal = parseFloat(document.getElementById('design-scale') ? document.getElementById('design-scale').value : 0.5);
+      var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
+      var decalSize = baseSize * (0.2 + sliderVal * 1.6);
+
+      var orientation = new THREE.Euler();
+      var lookHelper = new THREE.Object3D();
+      lookHelper.position.copy(pt);
+      lookHelper.lookAt(pt.clone().add(nm));
+      orientation.copy(lookHelper.rotation);
+
+      var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
+
+      try {
+        var oldGeom = decalMesh.geometry;
+        decalMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
+        if (oldGeom) oldGeom.dispose();
+      } catch (err) { /* silent */ }
+      return;
+    }
+
+    // Plane fallback
+    var off = nm.clone().multiplyScalar(0.015);
+    decalMesh.position.copy(currentModel.worldToLocal(pt.clone().add(off)));
+    decalMesh.lookAt(currentModel.worldToLocal(pt.clone().add(nm)));
+  }
+
+  if (joystick) {
+    function onJoystickStart(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      joystickActive = true;
+      var p = getJoystickPoint(e);
+      setKnobPosition(p.x, p.y);
+      if (joystickRAF) cancelAnimationFrame(joystickRAF);
+      joystickRAF = requestAnimationFrame(moveDecalByJoystick);
+    }
+    function onJoystickMove(e) {
+      if (!joystickActive) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var p = getJoystickPoint(e);
+      setKnobPosition(p.x, p.y);
+    }
+    function onJoystickEnd(e) {
+      if (!joystickActive) return;
+      e.preventDefault();
+      joystickActive = false;
+      resetKnob();
+      if (joystickRAF) { cancelAnimationFrame(joystickRAF); joystickRAF = null; }
+    }
+
+    joystick.addEventListener('touchstart', onJoystickStart, { passive: false });
+    joystick.addEventListener('touchmove', onJoystickMove, { passive: false });
+    joystick.addEventListener('touchend', onJoystickEnd, { passive: false });
+    joystick.addEventListener('touchcancel', onJoystickEnd, { passive: false });
+    // Also support mouse for testing on desktop
+    joystick.addEventListener('mousedown', onJoystickStart);
+    document.addEventListener('mousemove', function(e) { if (joystickActive) onJoystickMove(e); });
+    document.addEventListener('mouseup', onJoystickEnd);
+  }
 })();
 </script>
 <script src="visitor-tracker.js?v=1"></script>
