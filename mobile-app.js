@@ -65,7 +65,7 @@
       '<a href="press.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Press</a>' +
       '<p style="font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:#8a7f73;margin-bottom:1rem;margin-top:1.5rem;">Support</p>' +
       '<a href="trackOrder.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Track Your Order</a>' +
-      '<a href="virtualTryOn.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">📷 Virtual Try-On</a>' +
+      
       '<a href="sizingGuide.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Sizing Guide</a>' +
       '<a href="shippingReturns.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Shipping & Returns</a>' +
       '<a href="careInstructions.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Care Instructions</a>' +

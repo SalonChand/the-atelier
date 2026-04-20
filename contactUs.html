@@ -80,6 +80,7 @@
 <link rel="stylesheet" href="mobile-app.css?v=3"/>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="admin-notify.js?v=1"></script>
 <script src="firebase-sync.js?v=4"></script>
 </head>
 <body>
@@ -335,7 +336,7 @@
     </div>
     <div class="footer-col">
       <h4>Support</h4>
-      <a href="virtualTryOn.html">Virtual Try-On</a>
+      
       <a href="trackOrder.html">Track Order</a>
       <a href="sizingGuide.html">Sizing Guide</a>
       <a href="shippingReturns.html">Shipping &amp; Returns</a>
@@ -379,18 +380,23 @@
     setTimeout(function() {
       // Save inquiry to localStorage for admin dashboard
       var inquiries = JSON.parse(localStorage.getItem('atelier_inquiries') || '[]');
-      inquiries.unshift({
+      var inquiry = {
         id: 'INQ-' + Date.now(),
         name: fname + (lname ? ' ' + lname : ''),
         email: email,
+        phone: (document.getElementById('cf-phone') ? document.getElementById('cf-phone').value : '') || '',
         subject: subject || 'General',
         orderRef: orderNum || '',
         message: msg,
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
         status: 'unread'
-      });
+      };
+      inquiries.unshift(inquiry);
       localStorage.setItem('atelier_inquiries', JSON.stringify(inquiries));
+
+      // Notify both admins (email auto-sends, WhatsApp queued)
+      try { if (window.notifyAdminsOfInquiry) window.notifyAdminsOfInquiry(inquiry); } catch(e) { console.warn('notify failed:', e); }
 
       // Show success message
       document.getElementById('cf-email-confirm').textContent = email;

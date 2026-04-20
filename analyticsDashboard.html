@@ -228,6 +228,7 @@
     <div class="nav-section">
       <p class="nav-section-title">Overview</p>
       <button class="nav-item active" onclick="showPanel('dashboard',this)"><span class="icon">◈</span> Dashboard</button>
+      <button class="nav-item" onclick="showPanel('notifications',this)" id="nav-notifications" style="position:relative;"><span class="icon">🔔</span> Notifications <span id="notif-badge" style="margin-left:auto;background:#b71c1c;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
       <button class="nav-item" onclick="showPanel('analytics',this)"><span class="icon">◻</span> Analytics</button>
       <button class="nav-item" onclick="showPanel('visitors',this)" id="nav-visitors"><span class="icon">◎</span> Visitors</button>
     </div>
@@ -290,6 +291,48 @@
   <div class="bottom-grid">
     <div class="chart-card"><div class="chart-title"><span>Top Products</span></div><div id="top-products-list"></div></div>
     <div class="chart-card"><div class="chart-title"><span>Recent Activity</span></div><div id="activity-list"></div></div>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS -->
+<div class="panel" id="panel-notifications">
+  <div class="topbar"><h1 class="page-title">Notifications</h1><div class="topbar-right">
+    <button class="btn-secondary" onclick="markAllWhatsAppSent()">Mark All Sent</button>
+    <button class="btn-danger" onclick="clearNotifications()">Clear Read</button>
+  </div></div>
+
+  <div style="background:#fff9ea;border:1px solid rgba(200,184,154,0.4);padding:1rem 1.25rem;margin-bottom:1.5rem;border-radius:2px;">
+    <p style="font-size:0.7rem;line-height:1.7;color:#6b5c48;">
+      <strong>How this works:</strong> When an order is placed or inquiry submitted, both admins (Salon &amp; Tsering) automatically receive an <strong>email</strong>.
+      For <strong>WhatsApp</strong>, tap the button next to each notification to send the pre-filled message via WhatsApp (browsers cannot send WhatsApp silently — this is intentional, to prevent spam).
+    </p>
+  </div>
+
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="kpi-card"><p class="kpi-label">Pending</p><p class="kpi-value" id="notif-pending">0</p><p class="kpi-change" style="color:#8a7f73;">not yet sent via WhatsApp</p></div>
+    <div class="kpi-card"><p class="kpi-label">Orders</p><p class="kpi-value" id="notif-orders">0</p><p class="kpi-change" style="color:#8a7f73;">total order notifs</p></div>
+    <div class="kpi-card"><p class="kpi-label">Inquiries</p><p class="kpi-value" id="notif-inquiries">0</p><p class="kpi-change" style="color:#8a7f73;">customer messages</p></div>
+    <div class="kpi-card"><p class="kpi-label">Today</p><p class="kpi-value" id="notif-today">0</p><p class="kpi-change" style="color:#8a7f73;">notifications today</p></div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Recent Notifications</span>
+      <div class="table-actions">
+        <select class="filter-select" id="notif-filter" onchange="renderNotificationsPanel()">
+          <option value="all">All</option>
+          <option value="pending">Pending WhatsApp</option>
+          <option value="order">Orders</option>
+          <option value="custom-order">Custom Orders</option>
+          <option value="sticker-order">Sticker Orders</option>
+          <option value="inquiry">Inquiries</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table><thead><tr><th>Time</th><th>Type</th><th>Ref</th><th>Preview</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="notifications-tbody"></tbody></table>
+    </div>
   </div>
 </div>
 
@@ -1639,7 +1682,7 @@ function showPanel(name,btn){
   // Refresh live purchase data before rendering
   if(name==='orders') ORDERS = getOrders();
   if(name==='customers') CUSTOMERS = getCustomers();
-  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,visitors:renderVisitorsPanel,abandoned:renderAbandonedCartsPanel,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[name]?.();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,visitors:renderVisitorsPanel,abandoned:renderAbandonedCartsPanel,notifications:renderNotificationsPanel,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[name]?.();
 }
 
 function toast(msg){
@@ -3516,6 +3559,168 @@ window.addEventListener('atelier-data-updated', function(e) {
 });
 
 // ── ABANDONED CARTS ───────────────────────────────────────────
+// ── ADMIN NOTIFICATIONS ───────────────────────────────────────────
+// Queue of email + WhatsApp notifications for admins.
+// Emails are sent automatically at queue time (by admin-notify.js on public pages).
+// WhatsApp needs 1-click send because browsers cannot send WhatsApp silently.
+var ATELIER_ADMINS = [
+  { name: 'Salon', email: 'sodarisalon26@gmail.com', phone: '9779742590718' },
+  { name: 'Tsering', email: 'tseringdong1@gmail.com', phone: '9779808384686' }
+];
+
+function getNotifications() {
+  try { return JSON.parse(localStorage.getItem('atelier_admin_notifications') || '[]'); } catch(e) { return []; }
+}
+function saveNotifications(list) {
+  try { localStorage.setItem('atelier_admin_notifications', JSON.stringify(list)); } catch(e) {}
+}
+
+function updateNotifBadge() {
+  var notifs = getNotifications();
+  var pending = notifs.filter(function(n) { return !n.whatsappSent; }).length;
+  var badge = document.getElementById('notif-badge');
+  if (badge) {
+    badge.textContent = pending;
+    badge.style.display = pending > 0 ? 'flex' : 'none';
+  }
+}
+
+function renderNotificationsPanel() {
+  var notifs = getNotifications();
+  var filterEl = document.getElementById('notif-filter');
+  var filter = filterEl ? filterEl.value : 'all';
+  var now = Date.now();
+  var DAY = 86400000;
+
+  // KPIs
+  var pending = notifs.filter(function(n) { return !n.whatsappSent; }).length;
+  var orders = notifs.filter(function(n) { return n.type === 'order' || n.type === 'custom-order' || n.type === 'sticker-order'; }).length;
+  var inquiries = notifs.filter(function(n) { return n.type === 'inquiry'; }).length;
+  var today = notifs.filter(function(n) { return (now - n.createdAt) < DAY; }).length;
+
+  document.getElementById('notif-pending').textContent = pending;
+  document.getElementById('notif-orders').textContent = orders;
+  document.getElementById('notif-inquiries').textContent = inquiries;
+  document.getElementById('notif-today').textContent = today;
+
+  // Filter table rows
+  var filtered = notifs.filter(function(n) {
+    if (filter === 'all') return true;
+    if (filter === 'pending') return !n.whatsappSent;
+    return n.type === filter;
+  });
+
+  var tbody = document.getElementById('notifications-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:#8a7f73;font-style:italic;">No notifications ' + (filter !== 'all' ? 'matching filter' : 'yet') + '.</td></tr>';
+    return;
+  }
+
+  var typeIcons = { 'order':'🛍️', 'custom-order':'🎨', 'sticker-order':'🏷️', 'inquiry':'✉️' };
+  var typeLabels = { 'order':'Order', 'custom-order':'Custom Order', 'sticker-order':'Sticker Order', 'inquiry':'Inquiry' };
+
+  tbody.innerHTML = filtered.map(function(n) {
+    var age = now - n.createdAt;
+    var ageText;
+    if (age < 60000) ageText = 'just now';
+    else if (age < 3600000) ageText = Math.round(age/60000) + 'm ago';
+    else if (age < DAY) ageText = Math.round(age/3600000) + 'h ago';
+    else ageText = Math.round(age/DAY) + 'd ago';
+
+    var icon = typeIcons[n.type] || '•';
+    var label = typeLabels[n.type] || n.type;
+
+    var preview = (n.message || '').replace(/\*/g, '').replace(/\n/g, ' ').substring(0, 80);
+    if ((n.message || '').length > 80) preview += '…';
+
+    var statusBadge = n.whatsappSent
+      ? '<span style="background:#dcfce7;color:#059669;padding:0.2rem 0.5rem;font-size:0.58rem;border-radius:2px;">✓ Sent</span>'
+      : '<span style="background:#fef3c7;color:#92400e;padding:0.2rem 0.5rem;font-size:0.58rem;border-radius:2px;">● Pending</span>';
+
+    return '<tr>' +
+      '<td><strong>' + ageText + '</strong><br><span style="font-size:0.58rem;color:#8a7f73;">' + new Date(n.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + '</span></td>' +
+      '<td>' + icon + ' ' + label + '</td>' +
+      '<td><strong style="font-family:monospace;font-size:0.68rem;">' + (n.refId || '—') + '</strong></td>' +
+      '<td style="font-size:0.68rem;max-width:300px;">' + preview + '</td>' +
+      '<td>' + statusBadge + '</td>' +
+      '<td>' +
+        (n.whatsappSent ? ''
+          : '<button class="btn-secondary" style="background:#25D366;color:#fff;border:none;font-size:0.55rem;padding:0.3rem 0.6rem;margin-right:0.3rem;" onclick="sendNotifWhatsApp(\'' + n.id + '\')">Send WhatsApp</button>') +
+        '<button class="btn-secondary" style="font-size:0.55rem;padding:0.3rem 0.6rem;margin-right:0.3rem;" onclick="viewNotifDetails(\'' + n.id + '\')">View</button>' +
+        '<button class="btn-secondary" style="font-size:0.55rem;padding:0.3rem 0.6rem;" onclick="deleteNotif(\'' + n.id + '\')">✕</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// Send WhatsApp to BOTH admins — opens 2 tabs (one per admin) with message pre-filled
+function sendNotifWhatsApp(notifId) {
+  var notifs = getNotifications();
+  var n = notifs.find(function(x) { return x.id === notifId; });
+  if (!n) return;
+
+  // Open WhatsApp for each admin (staggered so popup blockers allow both)
+  ATELIER_ADMINS.forEach(function(admin, i) {
+    setTimeout(function() {
+      var url = 'https://wa.me/' + admin.phone + '?text=' + encodeURIComponent(n.message);
+      window.open(url, '_blank');
+    }, i * 400);
+  });
+
+  // Mark as sent
+  n.whatsappSent = true;
+  n.whatsappSentAt = Date.now();
+  saveNotifications(notifs);
+  renderNotificationsPanel();
+  updateNotifBadge();
+  toast('WhatsApp opened for both admins');
+}
+
+function viewNotifDetails(notifId) {
+  var notifs = getNotifications();
+  var n = notifs.find(function(x) { return x.id === notifId; });
+  if (!n) return;
+  alert(n.subject + '\n\n' + n.message);
+}
+
+function deleteNotif(notifId) {
+  if (!confirm('Delete this notification?')) return;
+  var notifs = getNotifications().filter(function(n) { return n.id !== notifId; });
+  saveNotifications(notifs);
+  renderNotificationsPanel();
+  updateNotifBadge();
+}
+
+function markAllWhatsAppSent() {
+  if (!confirm('Mark all notifications as WhatsApp sent? (Use this if you already messaged via WhatsApp elsewhere)')) return;
+  var notifs = getNotifications();
+  notifs.forEach(function(n) { if (!n.whatsappSent) { n.whatsappSent = true; n.whatsappSentAt = Date.now(); } });
+  saveNotifications(notifs);
+  renderNotificationsPanel();
+  updateNotifBadge();
+  toast('All marked as sent');
+}
+
+function clearNotifications() {
+  if (!confirm('Remove all notifications that have been marked as WhatsApp sent?')) return;
+  var notifs = getNotifications().filter(function(n) { return !n.whatsappSent; });
+  saveNotifications(notifs);
+  renderNotificationsPanel();
+  updateNotifBadge();
+  toast('Sent notifications cleared');
+}
+
+// Auto-refresh badge every 30s + when notifications change
+setTimeout(updateNotifBadge, 1000);
+setInterval(updateNotifBadge, 30000);
+window.addEventListener('atelier-data-updated', function(e) {
+  if (e.detail && e.detail.key === 'atelier_admin_notifications') {
+    updateNotifBadge();
+    var panel = document.getElementById('panel-notifications');
+    if (panel && panel.classList.contains('active')) renderNotificationsPanel();
+  }
+});
+
 function getPendingCarts() {
   try { return JSON.parse(localStorage.getItem('atelier_pending_carts') || '[]'); } catch(e) { return []; }
 }

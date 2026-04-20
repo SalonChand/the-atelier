@@ -183,6 +183,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 <link rel="stylesheet" href="mobile-app.css?v=3"/>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="admin-notify.js?v=1"></script>
 <script src="firebase-sync.js?v=4"></script>
 </head>
 <body>
@@ -932,6 +933,9 @@ function placeCustomOrder() {
   var orders = JSON.parse(localStorage.getItem('atelier_custom_orders') || '[]');
   orders.unshift(order);
   localStorage.setItem('atelier_custom_orders', JSON.stringify(orders));
+
+  // Notify both admins (email silent, WhatsApp queued to dashboard)
+  try { if (window.notifyAdminsOfCustomOrder) window.notifyAdminsOfCustomOrder(order); } catch(e) { console.warn('notify failed:', e); }
 
   // Show success
   document.getElementById('success-ref').textContent = 'Reference: ' + order.id;

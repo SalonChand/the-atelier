@@ -41,7 +41,8 @@
     'atelier_sticker_orders': 'sticker_orders',
     'atelier_brands':          'brands',
     'atelier_visitors':        'visitors',
-    'atelier_pending_carts':   'pendingCarts'
+    'atelier_pending_carts':   'pendingCarts',
+    'atelier_admin_notifications': 'adminNotifications'
   };
   var PATH_TO_KEY = {};
   for (var k in SYNC_KEYS) { PATH_TO_KEY[SYNC_KEYS[k]] = k; }
