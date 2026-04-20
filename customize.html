@@ -27,11 +27,11 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 
 .customizer-wrap { display: grid; grid-template-columns: 1fr 380px; min-height: calc(100vh - 64px); margin-top: 64px; }
 @media (max-width: 900px) {
-  .customizer-wrap { grid-template-columns: 1fr; padding-top: 50vh; }
+  .customizer-wrap { grid-template-columns: 1fr; padding-top: calc(50vh + 70px); }
   /* On mobile: 3D viewer is FIXED at top (always visible), controls scroll below */
   .canvas-area {
     position: fixed !important;
-    top: 64px;
+    top: 70px;
     left: 0;
     right: 0;
     z-index: 20;
@@ -50,8 +50,9 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
   .controls { max-height: none !important; overflow-y: visible !important; }
 }
 @media (max-width: 500px) {
-  .customizer-wrap { padding-top: 45vh; }
+  .customizer-wrap { padding-top: calc(45vh + 64px); }
   .canvas-area {
+    top: 64px;
     height: 45vh;
     max-height: 45vh;
     padding: 0.5rem !important;
@@ -375,9 +376,9 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
         <img id="preview-thumb" src="" alt="Preview" style="display:none;"/>
         <div id="img-controls" style="display:none;margin-top:0.75rem;">
           <label style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Design Size</label>
-          <input type="range" id="design-scale" min="0.05" max="1" step="0.01" value="0.6" style="width:100%;" oninput="updateCanvas()"/>
+          <input type="range" id="design-scale" min="0.05" max="1" step="0.01" value="0.6" style="width:100%;" oninput="updateCanvas2DOnly()"/>
           <label style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-top:0.6rem;margin-bottom:0.4rem;">Opacity</label>
-          <input type="range" id="design-opacity" min="0.1" max="1" step="0.05" value="1" style="width:100%;" oninput="updateCanvas()"/>
+          <input type="range" id="design-opacity" min="0.1" max="1" step="0.05" value="1" style="width:100%;" oninput="updateCanvas2DOnly()"/>
           <button onclick="clearAllDesigns()" style="margin-top:0.75rem;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;background:none;border:1px solid rgba(200,184,154,0.4);padding:0.35rem 0.75rem;cursor:pointer;color:#8a7f73;font-family:'Jost';">Remove All Images</button>
         </div>
       </div>
@@ -698,6 +699,16 @@ function updateCanvas() {
   updateSummary();
 }
 
+// For sliders: only update the 2D canvas view (3D decal is updated by its own smooth handlers)
+// This prevents double-work during rapid slider drags
+function updateCanvas2DOnly() {
+  if (!window.is3DActiveRef || !window.is3DActiveRef()) {
+    updateCanvas();
+  } else {
+    updateSummary();
+  }
+}
+
 // ── CONTROLS ──────────────────────────────────────────────────────────────
 function selectGarment(g, btn) {
   state.garment = g;
@@ -948,6 +959,8 @@ updateCanvas();
   var scene, camera, renderer, controls, loader3D;
   var currentModel = null, currentKey = '';
   var loadedModels = {}, is3DActive = false;
+  // Expose 3D active state for external handlers
+  window.is3DActiveRef = function() { return is3DActive; };
   var viewer3d = document.getElementById('viewer-3d');
   var threeCanvas = document.getElementById('three-canvas');
   var canvas2d = document.getElementById('garment-canvas');
@@ -1367,19 +1380,29 @@ updateCanvas();
   window.clearDesign = window.clearAllDesigns;
 
   // ── SMOOTH SLIDER UPDATES ─────────────────────────────────────
-  // Size slider: rebuilds decal geometry → throttled with requestAnimationFrame
-  // Opacity slider: just changes material.opacity → no rebuild needed, instant
-  var _scaleRafPending = false;
-  function smoothScaleUpdate() {
-    if (_scaleRafPending) return;
-    _scaleRafPending = true;
-    requestAnimationFrame(function() {
-      _scaleRafPending = false;
-      if (is3DActive) updateDecal();
-    });
+  // For smooth performance: 
+  // - Scale slider: just scale the existing decal mesh (no rebuild!)
+  // - Opacity slider: just change material.opacity (no rebuild!)
+  // - Only rebuild when user STOPS dragging (on 'change' event)
+  var _rebuildTimeout = null;
+  function deferredRebuild() {
+    clearTimeout(_rebuildTimeout);
+    _rebuildTimeout = setTimeout(function() { if (is3DActive) updateDecal(); }, 200);
   }
 
-  // Fast opacity update: no geometry rebuild, just tweak the material
+  function fastScaleUpdate() {
+    if (!is3DActive || !decalMesh) { deferredRebuild(); return; }
+    var sliderEl = document.getElementById('design-scale');
+    if (!sliderEl) return;
+    var sliderVal = parseFloat(sliderEl.value);
+    // Just set scale on the existing mesh — instantly smooth
+    // Normalize so base decal (0.5 slider) = 1.0x
+    var scale = (0.2 + sliderVal * 1.6) / (0.2 + 0.5 * 1.6);
+    decalMesh.scale.set(scale, scale, scale);
+    // After dragging stops, rebuild with correct geometry for sharper texture
+    deferredRebuild();
+  }
+
   function fastOpacityUpdate() {
     if (!is3DActive || !decalMesh || !decalMesh.material) return;
     var opacityEl = document.getElementById('design-opacity');
@@ -1390,7 +1413,7 @@ updateCanvas();
     decalMesh.material.needsUpdate = true;
   }
 
-  // Throttled text updates (rebuild needed since text texture changes)
+  // Text updates still need a rebuild (texture changes), but throttle with rAF
   var _textRafPending = false;
   function smoothTextUpdate() {
     if (_textRafPending) return;
@@ -1404,8 +1427,8 @@ updateCanvas();
   var _el;
   _el = document.getElementById('design-scale');
   if (_el) {
-    _el.addEventListener('input', smoothScaleUpdate);
-    _el.addEventListener('change', smoothScaleUpdate);
+    _el.addEventListener('input', fastScaleUpdate);
+    _el.addEventListener('change', function() { if (is3DActive) updateDecal(); });
   }
   _el = document.getElementById('design-opacity');
   if (_el) {
