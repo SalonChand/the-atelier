@@ -1186,6 +1186,10 @@ updateCanvas();
       try {
         var decalGeom = new THREE.DecalGeometry(targetMesh, surfacePoint, orientation, size);
 
+        // Read current opacity slider
+        var opacityEl = document.getElementById('design-opacity');
+        var currentOpacity = opacityEl ? parseFloat(opacityEl.value) : 1;
+
         // MATERIAL — make it look "printed on" by responding to garment lighting
         // Print: slightly matte | Embroidery: slightly glossy with raised look
         var mat;
@@ -1193,6 +1197,7 @@ updateCanvas();
           mat = new THREE.MeshStandardMaterial({
             map: texture,
             transparent: true,
+            opacity: currentOpacity,
             depthTest: true,
             depthWrite: false,
             polygonOffset: true,
@@ -1208,6 +1213,7 @@ updateCanvas();
           mat = new THREE.MeshStandardMaterial({
             map: texture,
             transparent: true,
+            opacity: currentOpacity,
             depthTest: true,
             depthWrite: false,
             polygonOffset: true,
@@ -1240,9 +1246,11 @@ updateCanvas();
       decalMesh.position.copy(localPos); decalMesh.lookAt(lookTarget);
     } else {
       removeDecal();
+      var opacityEl2 = document.getElementById('design-opacity');
+      var currentOpacity2 = opacityEl2 ? parseFloat(opacityEl2.value) : 1;
       var geom = new THREE.PlaneGeometry(1,1);
       var mat2 = new THREE.MeshStandardMaterial({
-        map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+        map: texture, transparent: true, opacity: currentOpacity2, depthWrite: false, side: THREE.DoubleSide,
         polygonOffset: true, polygonOffsetFactor: -1,
         roughness: state.ctype === 'embroidery' ? 0.4 : 0.85,
         metalness: 0
@@ -1358,12 +1366,55 @@ updateCanvas();
   window.clearAllDesigns = function() { _origClearDesign(); if (is3DActive) removeDecal(); };
   window.clearDesign = window.clearAllDesigns;
 
+  // ── SMOOTH SLIDER UPDATES ─────────────────────────────────────
+  // Size slider: rebuilds decal geometry → throttled with requestAnimationFrame
+  // Opacity slider: just changes material.opacity → no rebuild needed, instant
+  var _scaleRafPending = false;
+  function smoothScaleUpdate() {
+    if (_scaleRafPending) return;
+    _scaleRafPending = true;
+    requestAnimationFrame(function() {
+      _scaleRafPending = false;
+      if (is3DActive) updateDecal();
+    });
+  }
+
+  // Fast opacity update: no geometry rebuild, just tweak the material
+  function fastOpacityUpdate() {
+    if (!is3DActive || !decalMesh || !decalMesh.material) return;
+    var opacityEl = document.getElementById('design-opacity');
+    if (!opacityEl) return;
+    var opacity = parseFloat(opacityEl.value);
+    decalMesh.material.opacity = opacity;
+    decalMesh.material.transparent = true;
+    decalMesh.material.needsUpdate = true;
+  }
+
+  // Throttled text updates (rebuild needed since text texture changes)
+  var _textRafPending = false;
+  function smoothTextUpdate() {
+    if (_textRafPending) return;
+    _textRafPending = true;
+    requestAnimationFrame(function() {
+      _textRafPending = false;
+      if (is3DActive) updateDecal();
+    });
+  }
+
   var _el;
-  _el = document.getElementById('design-scale'); if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
-  _el = document.getElementById('design-opacity'); if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
-  _el = document.getElementById('design-text'); if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
-  _el = document.getElementById('text-size'); if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
-  _el = document.getElementById('text-color'); if (_el) _el.addEventListener('input', function() { if (is3DActive) updateDecal(); });
+  _el = document.getElementById('design-scale');
+  if (_el) {
+    _el.addEventListener('input', smoothScaleUpdate);
+    _el.addEventListener('change', smoothScaleUpdate);
+  }
+  _el = document.getElementById('design-opacity');
+  if (_el) {
+    _el.addEventListener('input', fastOpacityUpdate);
+    _el.addEventListener('change', fastOpacityUpdate);
+  }
+  _el = document.getElementById('design-text'); if (_el) _el.addEventListener('input', smoothTextUpdate);
+  _el = document.getElementById('text-size'); if (_el) _el.addEventListener('input', smoothTextUpdate);
+  _el = document.getElementById('text-color'); if (_el) _el.addEventListener('input', smoothTextUpdate);
 
   var _origSwitchDesignTab = window.switchDesignTab;
   window.switchDesignTab = function(tab) { _origSwitchDesignTab(tab); if (is3DActive) updateDecal(); };
