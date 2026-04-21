@@ -42,16 +42,37 @@
       return fetch('https://formsubmit.co/ajax/' + encodeURIComponent(adminEmail), {
         method: 'POST',
         body: fd
-      }).then(function(r) { return r.json(); })
+      }).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
         .then(function(d) {
-          console.log('[AdminNotify] Email sent to ' + adminEmail + ':', d && d.success ? 'OK' : 'maybe pending activation');
+          if (d && d.success) {
+            console.log('[AdminNotify] ✓ Email queued for ' + adminEmail);
+          } else {
+            console.warn('[AdminNotify] ⚠ Email to ' + adminEmail + ' — needs Formsubmit activation:', d);
+            // Log a user-visible warning in the queue so admin sees it
+            try {
+              var notifs = JSON.parse(localStorage.getItem('atelier_admin_notifications') || '[]');
+              notifs.unshift({
+                id: 'sys-' + Date.now(),
+                type: 'system',
+                subject: '⚠ Email activation needed',
+                message: 'Formsubmit.co needs to be activated for ' + adminEmail + '. Check the inbox (and spam folder) for an activation email from noreply@formsubmit.co and click the Activate link. See Notifications panel for details.',
+                createdAt: Date.now(),
+                whatsappSent: true // not a WhatsApp item
+              });
+              if (notifs.length > 200) notifs = notifs.slice(0, 200);
+              localStorage.setItem('atelier_admin_notifications', JSON.stringify(notifs));
+            } catch(e) {}
+          }
           return d;
         })
         .catch(function(e) {
-          console.warn('[AdminNotify] Email to ' + adminEmail + ' failed:', e);
+          console.error('[AdminNotify] ✗ Email to ' + adminEmail + ' FAILED:', e.message || e);
         });
     } catch(e) {
-      console.warn('[AdminNotify] sendAdminEmail exception:', e);
+      console.error('[AdminNotify] sendAdminEmail exception:', e);
     }
   }
 

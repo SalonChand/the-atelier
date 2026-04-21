@@ -298,9 +298,28 @@
 <!-- NOTIFICATIONS -->
 <div class="panel" id="panel-notifications">
   <div class="topbar"><h1 class="page-title">Notifications</h1><div class="topbar-right">
+    <button class="btn-primary" onclick="sendTestEmails()">Send Test Email</button>
     <button class="btn-secondary" onclick="markAllWhatsAppSent()">Mark All Sent</button>
     <button class="btn-danger" onclick="clearNotifications()">Clear Read</button>
   </div></div>
+
+  <!-- EMAIL SETUP STATUS -->
+  <div id="email-setup-card" style="background:#fef3c7;border:1px solid #f59e0b;padding:1.25rem 1.5rem;margin-bottom:1.5rem;border-radius:2px;">
+    <p style="font-size:0.8rem;font-weight:600;color:#92400e;margin-bottom:0.5rem;">⚠️ Important: Activate Email Delivery (one-time setup)</p>
+    <p style="font-size:0.72rem;line-height:1.7;color:#78350f;margin-bottom:0.9rem;">
+      The email system uses Formsubmit.co (free, no backend). The FIRST time an email is sent to each admin address, Formsubmit holds it and sends an <strong>activation link</strong>. Until both admins click that link, <strong>no emails arrive</strong>. This is a one-time setup — do it once, emails flow forever after.
+    </p>
+    <p style="font-size:0.72rem;line-height:1.7;color:#78350f;margin-bottom:0.9rem;">
+      <strong>Steps to activate:</strong><br/>
+      1. Click <strong>"Send Test Email"</strong> above (it triggers one email to each admin)<br/>
+      2. Both admins (Salon &amp; Tsering) check their Gmail inbox <strong>AND spam folder</strong> for an email from <code style="background:#fde68a;padding:0.1rem 0.3rem;border-radius:2px;">noreply@formsubmit.co</code><br/>
+      3. Click the blue <strong>"Activate"</strong> button in that email<br/>
+      4. Done! All future order/inquiry emails will arrive automatically
+    </p>
+    <p style="font-size:0.65rem;color:#92400e;font-style:italic;">
+      After you complete this, place a test order — you should receive the order email within 15 seconds.
+    </p>
+  </div>
 
   <div style="background:#fff9ea;border:1px solid rgba(200,184,154,0.4);padding:1rem 1.25rem;margin-bottom:1.5rem;border-radius:2px;">
     <p style="font-size:0.7rem;line-height:1.7;color:#6b5c48;">
@@ -3824,6 +3843,83 @@ function clearNotifications() {
   renderNotificationsPanel();
   updateNotifBadge();
   toast('Sent notifications cleared');
+}
+
+// Send a test email to both admins — useful for verifying Formsubmit activation
+function sendTestEmails() {
+  var admins = window.ATELIER_ADMINS_CONTACTS || [
+    { name: 'Salon', email: 'sodarisalon26@gmail.com' },
+    { name: 'Tsering', email: 'tseringdong1@gmail.com' }
+  ];
+
+  if (!confirm('This will send a test email to:\n\n• ' + admins.map(function(a){ return a.name + ' (' + a.email + ')'; }).join('\n• ') + '\n\nIf this is the FIRST time, each admin will receive an activation link from Formsubmit.co that must be clicked. Continue?')) return;
+
+  toast('Sending test emails…');
+
+  var results = [];
+  var pending = admins.length;
+
+  admins.forEach(function(admin) {
+    var fd = new FormData();
+    fd.append('_subject', '✓ The Atelier — Email System Test');
+    fd.append('_captcha', 'false');
+    fd.append('_template', 'box');
+    fd.append('name', 'The Atelier Site');
+    fd.append('email', 'noreply@theatelier-ta.com');
+    fd.append('message',
+      'Hi ' + admin.name + ',\n\n' +
+      'This is a test email from The Atelier admin notification system.\n\n' +
+      'If you received this email, it means email delivery is working correctly ✓\n\n' +
+      'You will receive emails like this automatically when:\n' +
+      '• A customer places an order (regular, custom, or sticker)\n' +
+      '• A customer submits an inquiry via contact form\n' +
+      '• A product runs low on stock\n' +
+      '• The weekly business digest is due (every Monday morning)\n\n' +
+      'If this is the FIRST email Formsubmit has sent to your address, you should have also received an ACTIVATION email from noreply@formsubmit.co — please click the activation link in it. Until you do, future emails will be held up to 30 days.\n\n' +
+      'Timestamp: ' + new Date().toLocaleString() + '\n\n' +
+      '— The Atelier Admin System'
+    );
+
+    fetch('https://formsubmit.co/ajax/' + encodeURIComponent(admin.email), {
+      method: 'POST',
+      body: fd
+    }).then(function(r) { return r.json(); })
+      .then(function(d) {
+        pending--;
+        results.push({ admin: admin, success: d && d.success, response: d });
+        console.log('[TestEmail] ' + admin.email + ':', d);
+        if (pending === 0) showTestResults(results);
+      })
+      .catch(function(e) {
+        pending--;
+        results.push({ admin: admin, success: false, error: e.message });
+        console.warn('[TestEmail] ' + admin.email + ' failed:', e);
+        if (pending === 0) showTestResults(results);
+      });
+  });
+}
+
+function showTestResults(results) {
+  var allSuccess = results.every(function(r) { return r.success; });
+  var msg = 'Test email results:\n\n';
+  results.forEach(function(r) {
+    msg += (r.success ? '✓' : '✗') + ' ' + r.admin.name + ' (' + r.admin.email + ')';
+    if (r.success) {
+      msg += '\n   → ' + (r.response && r.response.message ? r.response.message : 'Sent') + '\n\n';
+    } else {
+      msg += '\n   → ' + (r.error || 'Unknown error') + '\n\n';
+    }
+  });
+
+  if (allSuccess) {
+    msg += '\nALL SENT SUCCESSFULLY.\n\n';
+    msg += 'IMPORTANT: If this is the first time, check BOTH inboxes (and spam folders) for an ACTIVATION email from noreply@formsubmit.co. Click the "Activate" button in each. Until then, no order emails will arrive.\n\n';
+    msg += 'After activation, test again — you should receive the test email directly in your inbox within 15 seconds.';
+  } else {
+    msg += '\nSome emails failed. Check browser console (F12) for details.';
+  }
+
+  alert(msg);
 }
 
 // Auto-refresh badge every 30s + when notifications change
