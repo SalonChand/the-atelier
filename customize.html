@@ -1152,15 +1152,95 @@ updateCanvas();
     var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
     var decalSize = baseSize * (0.2 + sliderVal * 1.6);
 
-    // Raycast to find the surface point on the garment
-    var rayOrigin = new THREE.Vector3(), rayDir = new THREE.Vector3();
-    var chestY = mCenter.y + mSize.y * 0.15;
-    switch (decalState.side) {
-      case 'front': rayOrigin.set(mCenter.x, chestY, mCenter.z + mSize.z*3); rayDir.set(0,0,-1); break;
-      case 'back':  rayOrigin.set(mCenter.x, chestY, mCenter.z - mSize.z*3); rayDir.set(0,0,1); break;
-      case 'left':  rayOrigin.set(mCenter.x - mSize.x*3, chestY, mCenter.z); rayDir.set(1,0,0); break;
-      case 'right': rayOrigin.set(mCenter.x + mSize.x*3, chestY, mCenter.z); rayDir.set(-1,0,0); break;
+    // ── Per-placement raycast targeting ───────────────────────────
+    // Build a ray that originates OUTSIDE the model and points INTO the
+    // specific placement location (chest-left, chest-center, sleeve-right, etc.)
+    //
+    // Strategy: use the current CAMERA position to define what "front" means
+    // relative to what the user sees. This works regardless of the model's
+    // original GLB orientation — because it's always relative to the user's view.
+    //
+    //   - For front-facing placements (chest-*): use camera direction
+    //   - For back placement (back-center): use opposite of camera direction
+    //   - For sleeve placements (sleeve-*): perpendicular to camera direction
+    var placement = state.placement || 'chest-center';
+    var view = decalState.side || 'front';
+
+    // Camera's horizontal axes (ignoring Y / up)
+    var camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    camDir.y = 0;
+    camDir.normalize();
+    // Camera's right (in horizontal plane) = up × camDir
+    var camRight = new THREE.Vector3(0, 1, 0).cross(camDir).normalize();
+
+    // Vertical offset for chest vs sleeve
+    var chestY = mCenter.y + mSize.y * 0.18;
+    var sleeveY = mCenter.y + mSize.y * 0.25;
+    var hipY = mCenter.y - mSize.y * 0.1;
+
+    // How far sideways to offset for left/right placements
+    var halfWidth = mSize.x * 0.5;
+    var shoulderOffset = halfWidth * 0.45;   // for chest-left/right
+    var sleeveOffset = halfWidth * 0.75;     // for sleeve-left/right (further out)
+
+    // Ray origin (outside the model) and direction (pointing into it)
+    var rayOrigin = new THREE.Vector3();
+    var rayDir = new THREE.Vector3();
+    var dist = Math.max(mSize.x, mSize.y, mSize.z) * 3;
+
+    switch (placement) {
+      case 'chest-left':
+        // Left side of the user's chest (which is camera's right side, because user faces us)
+        // Shoot ray from in front of left-chest toward the model
+        rayDir.copy(camDir); // forward into the model
+        rayOrigin.copy(mCenter)
+          .add(camDir.clone().negate().multiplyScalar(dist))    // start in front (opposite of camDir)
+          .add(camRight.clone().multiplyScalar(-shoulderOffset)); // offset to user's-left = our right-negative
+        rayOrigin.y = chestY;
+        break;
+
+      case 'chest-center':
+        rayDir.copy(camDir);
+        rayOrigin.copy(mCenter).add(camDir.clone().negate().multiplyScalar(dist));
+        rayOrigin.y = chestY;
+        break;
+
+      case 'chest-right':
+        rayDir.copy(camDir);
+        rayOrigin.copy(mCenter)
+          .add(camDir.clone().negate().multiplyScalar(dist))
+          .add(camRight.clone().multiplyScalar(shoulderOffset));
+        rayOrigin.y = chestY;
+        break;
+
+      case 'back-center':
+        // Opposite of camera — shoot from behind the model into its back
+        rayDir.copy(camDir).negate();
+        rayOrigin.copy(mCenter).add(camDir.clone().multiplyScalar(dist));
+        rayOrigin.y = chestY;
+        break;
+
+      case 'sleeve-left':
+        // Sleeve is off to the side — ray comes from user's-left side
+        rayDir.copy(camRight); // shoot from left-of-camera toward the model
+        rayOrigin.copy(mCenter)
+          .add(camRight.clone().negate().multiplyScalar(dist));
+        rayOrigin.y = sleeveY;
+        break;
+
+      case 'sleeve-right':
+        rayDir.copy(camRight).negate();
+        rayOrigin.copy(mCenter).add(camRight.clone().multiplyScalar(dist));
+        rayOrigin.y = sleeveY;
+        break;
+
+      default:
+        rayDir.copy(camDir);
+        rayOrigin.copy(mCenter).add(camDir.clone().negate().multiplyScalar(dist));
+        rayOrigin.y = chestY;
     }
+
     raycaster.set(rayOrigin, rayDir.normalize());
     var meshes = [];
     currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh && !c.userData.isDecal) meshes.push(c); });
@@ -1173,8 +1253,9 @@ updateCanvas();
       surfaceNormal.transformDirection(hits[0].object.matrixWorld);
       targetMesh = hits[0].object;
     } else {
-      surfacePoint = new THREE.Vector3(mCenter.x, chestY, mCenter.z + mSize.z*0.5);
-      surfaceNormal = new THREE.Vector3(0,0,1);
+      // Fallback: put decal at approx placement location using camera plane
+      surfacePoint = rayOrigin.clone().add(rayDir.clone().multiplyScalar(dist));
+      surfaceNormal = rayDir.clone().negate();
       targetMesh = meshes[0];
     }
 
@@ -1375,7 +1456,30 @@ updateCanvas();
   var _origSetView = window.setView;
   window.setView = function(v, btn) { _origSetView(v, btn); if (is3DActive) setCam(v); };
   var _origSelectPlacement = window.selectPlacement;
-  window.selectPlacement = function(p, btn) { _origSelectPlacement(p, btn); if (!is3DActive) return; var sideMap = {'chest-left':'front','chest-center':'front','chest-right':'front','back-center':'back','sleeve-left':'left','sleeve-right':'right'}; decalState.side = sideMap[p]||'front'; updateDecal(); setCam(decalState.side); };
+  window.selectPlacement = function(p, btn) {
+    _origSelectPlacement(p, btn);
+    if (!is3DActive) return;
+    // Map placement to the best viewing angle, then rotate camera THERE first
+    // so the updateDecal raycast uses the correct camera-relative direction
+    var sideMap = {
+      'chest-left':'front',
+      'chest-center':'front',
+      'chest-right':'front',
+      'back-center':'back',
+      'sleeve-left':'left',
+      'sleeve-right':'right'
+    };
+    decalState.side = sideMap[p] || 'front';
+    setCam(decalState.side);
+    // Wait one frame for camera to update, then place decal
+    // (updateDecal uses current camera direction to pick the raycast target)
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        controls.update();
+        updateDecal();
+      });
+    });
+  };
   var _origHandleImageUpload = window.handleMultiImageUpload || window.handleImageUpload;
   window.handleMultiImageUpload = function(e) { _origHandleImageUpload(e); setTimeout(function() { if (is3DActive) { updateDecal(); showJoystickIfMobile(); } }, 300); };
   window.handleImageUpload = window.handleMultiImageUpload;
