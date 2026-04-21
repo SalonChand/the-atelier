@@ -107,10 +107,26 @@
       (function(localKey, fbPath) {
         db.ref(fbPath).on('value', function(snapshot) {
           var val = snapshot.val();
-          if (val === null || val === undefined) return;
+          // val can be null when the path was deleted or an array becomes empty.
+          // In that case, sync an empty array locally too (so deletes propagate correctly).
           _suppressSync = true;
           try {
-            _origSetItem(localKey, typeof val === 'string' ? val : JSON.stringify(val));
+            if (val === null || val === undefined) {
+              _origSetItem(localKey, '[]');
+            } else {
+              // Firebase returns arrays as objects with numeric keys; convert back to array
+              if (typeof val === 'object' && !Array.isArray(val)) {
+                // Check if it's array-like (keys are 0,1,2,...)
+                var keys = Object.keys(val);
+                var isArrayLike = keys.length > 0 && keys.every(function(k) { return /^\d+$/.test(k); });
+                if (isArrayLike) {
+                  var arr = [];
+                  keys.sort(function(a, b) { return +a - +b; }).forEach(function(k) { arr[+k] = val[k]; });
+                  val = arr.filter(function(x) { return x != null; });
+                }
+              }
+              _origSetItem(localKey, typeof val === 'string' ? val : JSON.stringify(val));
+            }
           } catch(e) {}
           _suppressSync = false;
           window.dispatchEvent(new CustomEvent('atelier-data-updated', { detail: { key: localKey } }));

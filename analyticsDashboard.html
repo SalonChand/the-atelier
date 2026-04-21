@@ -1631,21 +1631,61 @@ function showFullOrderDetails(o) {
   // Three columns: Product | Customer | Shipping
   html += '<div style="display:grid;grid-template-columns:1fr;gap:1.25rem;margin-bottom:1.5rem;">';
 
-  // PRODUCT
+  // PRODUCTS (could be multiple items in cart)
   html += '<div style="border:1px solid rgba(200,184,154,0.3);padding:1.25rem;">';
-  html += '<p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.8rem;">Product</p>';
-  html += '<div style="display:flex;gap:1rem;align-items:flex-start;">';
-  if (o.productImage) {
-    html += '<img src="' + o.productImage + '" style="width:120px;height:120px;object-fit:cover;border:1px solid rgba(200,184,154,0.3);cursor:pointer;flex-shrink:0;" onclick="openImgViewer([\'' + o.productImage.replace(/'/g, "\\'") + '\'], \'' + (o.product || '').replace(/'/g, "\\'") + '\')" />';
+  html += '<p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;margin-bottom:0.8rem;">Items Ordered</p>';
+
+  var orderItems = [];
+  if (o.items && o.items.length) {
+    orderItems = o.items;
+  } else if (o.product) {
+    // Fallback — synthesize single item from legacy fields
+    orderItems = [{ name: o.product, image: o.productImage, price: o.amount || 0, qty: o.qty || o.quantity || 1, size: o.size, color: o.color, id: o.sku }];
   }
-  html += '<div style="flex:1;min-width:0;">';
-  html += '<p style="font-size:1rem;font-weight:500;margin-bottom:0.3rem;">' + (o.product || '—') + '</p>';
-  if (o.sku) html += '<p style="font-family:monospace;font-size:0.68rem;color:var(--accent);margin-bottom:0.4rem;">SKU: ' + o.sku + '</p>';
-  if (o.size) html += '<p style="font-size:0.72rem;color:#6b6258;">Size: <strong>' + o.size + '</strong></p>';
-  if (o.color) html += '<p style="font-size:0.72rem;color:#6b6258;">Color: <strong>' + o.color + '</strong></p>';
-  html += '<p style="font-size:0.72rem;color:#6b6258;">Quantity: <strong>' + (o.qty || o.quantity || 1) + '</strong></p>';
-  html += '<p style="font-size:0.72rem;color:#6b6258;">Unit price: <strong>NRs. ' + Math.round(o.price || o.amount || 0).toLocaleString() + '</strong></p>';
-  html += '</div></div></div>';
+
+  if (!orderItems.length) {
+    html += '<p style="color:#a89e94;font-style:italic;font-size:0.75rem;">No item details available.</p>';
+  } else {
+    orderItems.forEach(function(item, itemIdx) {
+      var itemImg = item.image || (itemIdx === 0 ? o.productImage : '');
+      var itemQty = item.qty || item.quantity || 1;
+      var itemPrice = item.price || 0;
+
+      html += '<div style="display:flex;gap:1rem;align-items:flex-start;padding:' + (itemIdx > 0 ? '1rem 0 0' : '0') + ';' + (itemIdx > 0 ? 'border-top:1px solid rgba(200,184,154,0.2);margin-top:1rem;' : '') + '">';
+
+      // Product image
+      if (itemImg) {
+        html += '<img src="' + itemImg + '" style="width:100px;height:100px;object-fit:cover;border:1px solid rgba(200,184,154,0.3);cursor:pointer;flex-shrink:0;" onclick="openImgViewer([\'' + itemImg.replace(/'/g, "\\'") + '\'], \'' + (item.name || 'Item').replace(/'/g, "\\'") + '\')" onerror="this.style.display=\'none\'"/>';
+      } else {
+        html += '<div style="width:100px;height:100px;background:rgba(200,184,154,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.65rem;color:#a89e94;text-align:center;padding:0.5rem;">No image</div>';
+      }
+
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<p style="font-size:0.95rem;font-weight:500;margin-bottom:0.3rem;">' + (item.name || '—') + '</p>';
+
+      // Parse size from item ID (format: "productId-SIZE") if size not stored directly
+      var itemSize = item.size;
+      if (!itemSize && item.id) {
+        var sizeMatch = String(item.id).match(/-([A-Z]+)$/);
+        if (sizeMatch) itemSize = sizeMatch[1];
+      }
+
+      var metaRows = [];
+      if (item.id && !String(item.id).includes('-')) metaRows.push('SKU: <strong>' + item.id + '</strong>');
+      if (itemSize) metaRows.push('Size: <strong>' + itemSize + '</strong>');
+      if (item.color) metaRows.push('Color: <strong>' + item.color + '</strong>');
+      metaRows.push('Quantity: <strong>' + itemQty + '</strong>');
+      metaRows.push('Unit price: <strong>NRs. ' + Math.round(itemPrice).toLocaleString() + '</strong>');
+      metaRows.push('<span style="color:var(--accent);">Subtotal: <strong>NRs. ' + Math.round(itemPrice * itemQty).toLocaleString() + '</strong></span>');
+
+      metaRows.forEach(function(row) {
+        html += '<p style="font-size:0.72rem;color:#6b6258;margin-bottom:0.2rem;">' + row + '</p>';
+      });
+
+      html += '</div></div>';
+    });
+  }
+  html += '</div>';
 
   // CUSTOMER INFO
   html += '<div style="border:1px solid rgba(200,184,154,0.3);padding:1.25rem;">';
@@ -1765,6 +1805,8 @@ function deleteOrder(orderId) {
   orders.splice(idx, 1);
   saveOrders(orders);
   ORDERS = orders;
+  // Force-push deletion to Firebase so it doesn't resurrect
+  try { if (window.AtelierSync && window.AtelierSync.forcePush) window.AtelierSync.forcePush(); } catch(e) {}
   closeModal('modal-full-order');
   renderOrdersTable();
   toast('Order deleted');
@@ -1919,6 +1961,7 @@ function deleteCustomer(email) {
   customers = customers.filter(function(c) { return (c.email || '').toLowerCase() !== email.toLowerCase(); });
   try { localStorage.setItem('atelier_admin_customers', JSON.stringify(customers)); } catch(e) {}
   CUSTOMERS = customers;
+  try { if (window.AtelierSync && window.AtelierSync.forcePush) window.AtelierSync.forcePush(); } catch(e) {}
   closeModal('modal-full-customer');
   renderCustomersTable();
   toast('Customer deleted');
@@ -2921,6 +2964,7 @@ function deleteInquiry(id) {
   if (!confirm('Delete this inquiry? This cannot be undone.')) return;
   let inquiries = getInquiries().filter(i => i.id !== id);
   saveInquiries(inquiries);
+  try { if (window.AtelierSync && window.AtelierSync.forcePush) window.AtelierSync.forcePush(); } catch(e) {}
   renderInquiriesTable();
   toast('Inquiry deleted');
 }
@@ -4445,6 +4489,7 @@ function deletePendingCart(cartId) {
   if (!confirm('Delete this abandoned cart?\n\nThis removes it from the list. Cannot be undone.')) return;
   var carts = getPendingCarts().filter(function(c) { return c.id !== cartId; });
   savePendingCarts(carts);
+  try { if (window.AtelierSync && window.AtelierSync.forcePush) window.AtelierSync.forcePush(); } catch(e) {}
   renderAbandonedCartsPanel();
   updateAbandonedBadge();
   toast('Cart deleted');

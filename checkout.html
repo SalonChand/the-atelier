@@ -171,7 +171,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="admin-notify.js?v=2"></script>
 <script src="admin-automations.js?v=1"></script>
-<script src="firebase-sync.js?v=4"></script>
+<script src="firebase-sync.js?v=5"></script>
 </head>
 <body>
 <!-- ANNOUNCEMENT BANNER -->
@@ -902,8 +902,8 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
     phone: customer.phone,
     address: customer.address,
     product: productSummary,
-    productImage: '',
-    items: cart.map(function(i) { return { name: i.name, price: i.price, qty: i.quantity }; }),
+    productImage: firstProductImage,
+    items: cart.map(function(i) { return { id: i.id, name: i.name, price: i.price, qty: i.quantity, quantity: i.quantity, image: i.image || '' }; }),
     date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
     amount: subtotalVal,
     status: 'awaiting-verification',
