@@ -116,7 +116,6 @@
             } else {
               // Firebase returns arrays as objects with numeric keys; convert back to array
               if (typeof val === 'object' && !Array.isArray(val)) {
-                // Check if it's array-like (keys are 0,1,2,...)
                 var keys = Object.keys(val);
                 var isArrayLike = keys.length > 0 && keys.every(function(k) { return /^\d+$/.test(k); });
                 if (isArrayLike) {
@@ -130,6 +129,11 @@
           } catch(e) {}
           _suppressSync = false;
           window.dispatchEvent(new CustomEvent('atelier-data-updated', { detail: { key: localKey } }));
+        }, function(errorObject) {
+          // Permission denied or other read error — log loudly so admin knows why data is missing
+          console.error('[Firebase] Read FAILED on path "' + fbPath + '": ' + (errorObject.message || errorObject));
+          console.warn('[Firebase] This usually means you need to sign in as admin. Go to adminLogin.html and sign in.');
+          window.dispatchEvent(new CustomEvent('atelier-sync-error', { detail: { path: fbPath, error: errorObject.message || String(errorObject) } }));
         });
       })(lsKey, SYNC_KEYS[lsKey]);
     }

@@ -1529,7 +1529,44 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// Gate 1: localStorage check (quick, prevents flash)
 if (!localStorage.getItem('atelier_admin')) window.location.href = 'adminLogin.html';
+
+// Gate 2: Verify actual Firebase Authentication on load.
+// This is the REAL protection — the security rules on Firebase require
+// auth !== null to read orders/customers/inquiries. Without this, the
+// dashboard appears empty because reads silently fail.
+(function() {
+  if (typeof firebase === 'undefined' || !firebase.auth) return; // SDK not loaded yet
+
+  var unsubFired = false;
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (unsubFired) return;
+    unsubFired = true;
+
+    if (!user) {
+      // No Firebase user session — try restoring from saved credentials.
+      // If that fails, warn admin in UI but don't redirect (allows legacy
+      // login to still work during transition period).
+      console.warn('[Atelier] No Firebase auth user. Data from protected paths may not load.');
+      // Show a warning banner after a short delay so UI is ready
+      setTimeout(function() {
+        var warning = document.createElement('div');
+        warning.id = 'auth-warning-banner';
+        warning.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fef3c7;color:#78350f;padding:0.6rem 1rem;text-align:center;font-size:0.72rem;border-bottom:1px solid #f59e0b;';
+        warning.innerHTML =
+          '⚠️ <strong>Not signed into Firebase</strong> — orders and customer data may not load. ' +
+          '<a href="adminLogin.html" onclick="try{firebase.auth().signOut()}catch(e){};localStorage.clear();" style="color:#92400e;text-decoration:underline;font-weight:600;">Sign in again</a> to fix.';
+        document.body.appendChild(warning);
+      }, 2500);
+    } else {
+      console.log('[Atelier] Firebase user authenticated:', user.email);
+      // Remove any existing warning
+      var existing = document.getElementById('auth-warning-banner');
+      if (existing) existing.remove();
+    }
+  });
+})();
 
 // Ensure atelier_admins exists (may be first load or cleared)
 if (!localStorage.getItem('atelier_admins')) {

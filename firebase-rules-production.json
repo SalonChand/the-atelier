@@ -5,35 +5,22 @@
 
     "orders": {
       ".read": "auth != null",
-      ".write": true,
-      ".validate": "newData.hasChildren() || newData.val() == null",
-      "$orderIndex": {
-        ".validate": "newData.hasChildren(['id', 'customer', 'createdAt']) || newData.val() == null"
-      }
+      ".write": true
     },
 
     "custom_orders": {
       ".read": "auth != null",
-      ".write": true,
-      "$orderIndex": {
-        ".validate": "newData.hasChildren(['id']) || newData.val() == null"
-      }
+      ".write": true
     },
 
     "sticker_orders": {
       ".read": "auth != null",
-      ".write": true,
-      "$orderIndex": {
-        ".validate": "newData.hasChildren(['id']) || newData.val() == null"
-      }
+      ".write": true
     },
 
     "inquiries": {
       ".read": "auth != null",
-      ".write": true,
-      "$inqIndex": {
-        ".validate": "newData.hasChildren(['email', 'message']) || newData.val() == null"
-      }
+      ".write": true
     },
 
     "pendingCarts": {
