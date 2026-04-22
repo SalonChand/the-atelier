@@ -18,6 +18,11 @@
       ".write": true
     },
 
+    "sticker_purchases": {
+      ".read": "auth != null",
+      ".write": true
+    },
+
     "inquiries": {
       ".read": "auth != null",
       ".write": true
@@ -75,7 +80,7 @@
 
     "inventory": {
       ".read": "auth != null",
-      ".write": true
+      ".write": "auth != null"
     },
 
     "payment_settings": {

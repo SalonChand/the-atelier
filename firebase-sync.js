@@ -91,11 +91,40 @@
         firebase.initializeApp(FIREBASE_CONFIG);
       }
       db = firebase.database();
-      isReady = true;
-      console.log('[Firebase] Connected');
-      setupListeners();
-      initialSync();
-      flushPendingWrites();
+
+      // Wait for auth state to resolve before setting up listeners.
+      // This prevents spurious permission_denied errors for paths that
+      // require auth — we wait so the user's auth token is attached.
+      if (firebase.auth) {
+        var authResolved = false;
+        firebase.auth().onAuthStateChanged(function(user) {
+          if (authResolved) return;
+          authResolved = true;
+          isReady = true;
+          console.log('[Firebase] Connected (auth:', user ? user.email : 'anonymous/public', ')');
+          setupListeners();
+          initialSync();
+          flushPendingWrites();
+        });
+        // Failsafe: if auth takes >3s, proceed anyway (public reads still work)
+        setTimeout(function() {
+          if (!authResolved) {
+            authResolved = true;
+            isReady = true;
+            console.log('[Firebase] Connected (auth timeout — public mode)');
+            setupListeners();
+            initialSync();
+            flushPendingWrites();
+          }
+        }, 3000);
+      } else {
+        // No auth SDK loaded — proceed without auth
+        isReady = true;
+        console.log('[Firebase] Connected (no auth SDK)');
+        setupListeners();
+        initialSync();
+        flushPendingWrites();
+      }
     } catch(e) {
       console.error('[Firebase] Init error:', e);
     }
@@ -130,10 +159,16 @@
           _suppressSync = false;
           window.dispatchEvent(new CustomEvent('atelier-data-updated', { detail: { key: localKey } }));
         }, function(errorObject) {
-          // Permission denied or other read error — log loudly so admin knows why data is missing
-          console.error('[Firebase] Read FAILED on path "' + fbPath + '": ' + (errorObject.message || errorObject));
-          console.warn('[Firebase] This usually means you need to sign in as admin. Go to adminLogin.html and sign in.');
-          window.dispatchEvent(new CustomEvent('atelier-sync-error', { detail: { path: fbPath, error: errorObject.message || String(errorObject) } }));
+          // Permission denied or other read error
+          var errMsg = errorObject.message || String(errorObject);
+          var isAuthed = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
+          console.error('[Firebase] Read FAILED on path "' + fbPath + '": ' + errMsg);
+          if (!isAuthed) {
+            console.warn('[Firebase] You are not signed in. Go to adminLogin.html and sign in with Firebase credentials.');
+          } else {
+            console.warn('[Firebase] You ARE authenticated as ' + firebase.auth().currentUser.email + ' but the path "' + fbPath + '" is still denied. This likely means the Firebase security rule for this path is missing or wrong.');
+          }
+          window.dispatchEvent(new CustomEvent('atelier-sync-error', { detail: { path: fbPath, error: errMsg } }));
         });
       })(lsKey, SYNC_KEYS[lsKey]);
     }
