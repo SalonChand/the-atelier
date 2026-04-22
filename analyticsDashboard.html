@@ -215,6 +215,7 @@
   .sidebar-overlay.open { display: block; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="admin-automations.js?v=1"></script>
 <script src="firebase-sync.js?v=5"></script>
@@ -270,7 +271,7 @@
   </nav>
   <div class="sidebar-footer">
     <a href="index.html" target="_blank" style="margin-bottom:0.75rem;">← View Store</a>
-    <a href="adminLogin.html" onclick="localStorage.removeItem('atelier_admin');localStorage.removeItem('atelier_current_user');localStorage.removeItem('atelier_current_role')">Sign Out</a>
+    <a href="adminLogin.html" onclick="try{if(firebase&&firebase.auth)firebase.auth().signOut();}catch(e){}localStorage.removeItem('atelier_admin');localStorage.removeItem('atelier_current_user');localStorage.removeItem('atelier_current_role');localStorage.removeItem('atelier_auth_legacy');">Sign Out</a>
   </div>
 </aside>
 

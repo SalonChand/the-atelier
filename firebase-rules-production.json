@@ -1,0 +1,109 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "orders": {
+      ".read": "auth != null",
+      ".write": true,
+      ".validate": "newData.hasChildren() || newData.val() == null",
+      "$orderIndex": {
+        ".validate": "newData.hasChildren(['id', 'customer', 'createdAt']) || newData.val() == null"
+      }
+    },
+
+    "custom_orders": {
+      ".read": "auth != null",
+      ".write": true,
+      "$orderIndex": {
+        ".validate": "newData.hasChildren(['id']) || newData.val() == null"
+      }
+    },
+
+    "sticker_orders": {
+      ".read": "auth != null",
+      ".write": true,
+      "$orderIndex": {
+        ".validate": "newData.hasChildren(['id']) || newData.val() == null"
+      }
+    },
+
+    "inquiries": {
+      ".read": "auth != null",
+      ".write": true,
+      "$inqIndex": {
+        ".validate": "newData.hasChildren(['email', 'message']) || newData.val() == null"
+      }
+    },
+
+    "pendingCarts": {
+      ".read": "auth != null",
+      ".write": true
+    },
+
+    "customers": {
+      ".read": "auth != null",
+      ".write": true
+    },
+
+    "adminNotifications": {
+      ".read": "auth != null",
+      ".write": true
+    },
+
+    "products": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "collections": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "promotions": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "reviews": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "announcements": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "stickers": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "brands": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "inventory": {
+      ".read": "auth != null",
+      ".write": true
+    },
+
+    "payment_settings": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "admins": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "visitors": {
+      ".read": "auth != null",
+      ".write": true
+    }
+  }
+}

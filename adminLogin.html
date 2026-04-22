@@ -70,6 +70,7 @@
 </style>
 <link rel="stylesheet" href="mobile-app.css?v=3"/>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="firebase-sync.js?v=5"></script>
 </head>
@@ -108,21 +109,38 @@
 </div>
 
 <script>
-  // Always ensure the correct superadmin exists (fixes stale localStorage)
-  (function() {
-    const admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
-    const hasCorrect = admins.find(function(a) { return a.email.toLowerCase() === 'admin@theatelier.com'; });
-    if (!hasCorrect) {
-      admins.unshift({ email: 'admin@theatelier.com', password: 'atelier2025', role: 'superadmin' });
-      localStorage.setItem('atelier_admins', JSON.stringify(admins));
+  // Add a link for password reset / enable the forgot link
+  document.querySelector('.forgot-link').addEventListener('click', function(e) {
+    e.preventDefault();
+    var email = document.getElementById('email').value.trim();
+    if (!email) {
+      document.getElementById('error-msg').textContent = 'Enter your email first, then click "Forgot password?"';
+      document.getElementById('email').focus();
+      return;
     }
-  })();
+    var err = document.getElementById('error-msg');
+    err.textContent = 'Sending password reset email…';
+    err.style.color = '#8a7f73';
+    if (typeof firebase === 'undefined' || !firebase.auth) {
+      err.textContent = 'Password reset unavailable — contact support.';
+      err.style.color = '';
+      return;
+    }
+    firebase.auth().sendPasswordResetEmail(email).then(function() {
+      err.textContent = '✓ Password reset email sent to ' + email;
+      err.style.color = '#3a6b3c';
+    }).catch(function(e2) {
+      err.textContent = e2.message || 'Failed to send reset email.';
+      err.style.color = '';
+    });
+  });
 
   function doLogin() {
     var email = document.getElementById('email').value.trim();
     var password = document.getElementById('password').value;
     var btn = document.getElementById('login-btn');
     var err = document.getElementById('error-msg');
+    err.style.color = '';
 
     if (!email || !password) {
       err.textContent = 'Please enter your credentials.';
@@ -133,6 +151,56 @@
     btn.textContent = 'Signing in...';
     err.textContent = '';
 
+    // ── PRIMARY: Firebase Authentication ─────────────────────────
+    // Proper server-verified auth. Protects Firebase DB via security rules.
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then(function(cred) {
+          // Successful Firebase auth
+          localStorage.setItem('atelier_admin', '1');
+          localStorage.setItem('atelier_current_user', cred.user.email);
+          localStorage.setItem('atelier_current_role', 'admin');
+          window.location.href = 'analyticsDashboard.html';
+        })
+        .catch(function(fbErr) {
+          // Firebase auth failed — try legacy localStorage check as FALLBACK
+          // (this handles initial setup phase before admin accounts are created in Firebase)
+          var admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
+          var user = null;
+          for (var i = 0; i < admins.length; i++) {
+            if (admins[i].email.toLowerCase() === email.toLowerCase() && admins[i].password === password) {
+              user = admins[i];
+              break;
+            }
+          }
+          if (user) {
+            // Legacy login succeeded — warn user to migrate
+            localStorage.setItem('atelier_admin', '1');
+            localStorage.setItem('atelier_current_user', user.email);
+            localStorage.setItem('atelier_current_role', user.role);
+            localStorage.setItem('atelier_auth_legacy', '1');
+            window.location.href = 'analyticsDashboard.html';
+            return;
+          }
+          // Both auth methods failed
+          var msg = 'Incorrect email or password.';
+          if (fbErr.code === 'auth/network-request-failed') {
+            msg = 'Network error. Check your connection.';
+          } else if (fbErr.code === 'auth/too-many-requests') {
+            msg = 'Too many attempts. Try again in a few minutes.';
+          } else if (fbErr.code === 'auth/user-disabled') {
+            msg = 'This account has been disabled.';
+          }
+          err.textContent = msg;
+          document.getElementById('email').classList.add('invalid');
+          document.getElementById('password').classList.add('invalid');
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+        });
+      return;
+    }
+
+    // FALLBACK: Firebase Auth SDK not loaded — legacy check only
     setTimeout(function() {
       var admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
       var user = null;
@@ -142,11 +210,11 @@
           break;
         }
       }
-
       if (user) {
         localStorage.setItem('atelier_admin', '1');
         localStorage.setItem('atelier_current_user', user.email);
         localStorage.setItem('atelier_current_role', user.role);
+        localStorage.setItem('atelier_auth_legacy', '1');
         window.location.href = 'analyticsDashboard.html';
       } else {
         err.textContent = 'Incorrect email or password.';
@@ -155,17 +223,15 @@
         btn.disabled = false;
         btn.textContent = 'Sign In';
       }
-    }, 1000);
+    }, 500);
   }
 
   document.getElementById('login-btn').addEventListener('click', doLogin);
 
-  // Allow Enter key
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') doLogin();
   });
 
-  // Remove invalid state on typing
   ['email', 'password'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function() {
       this.classList.remove('invalid');
