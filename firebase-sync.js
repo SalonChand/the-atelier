@@ -92,33 +92,42 @@
       }
       db = firebase.database();
 
-      // Wait for auth state to resolve before setting up listeners.
-      // This prevents spurious permission_denied errors for paths that
-      // require auth — we wait so the user's auth token is attached.
       if (firebase.auth) {
         var authResolved = false;
-        firebase.auth().onAuthStateChanged(function(user) {
-          if (authResolved) return;
+        var lastAuthedUser = null;
+        var proceed = function(user) {
+          if (authResolved) {
+            // If auth state CHANGED to authenticated after initial sync was
+            // set up without auth, tear down and re-setup listeners so they
+            // use the new auth token.
+            if (user && !lastAuthedUser) {
+              console.log('[Firebase] Auth arrived late — re-syncing with auth token as ' + user.email);
+              lastAuthedUser = user;
+              teardownListeners();
+              setupListeners();
+              initialSync();
+            }
+            return;
+          }
           authResolved = true;
+          lastAuthedUser = user;
           isReady = true;
-          console.log('[Firebase] Connected (auth:', user ? user.email : 'anonymous/public', ')');
+          if (user) {
+            console.log('[Firebase] Connected & authenticated as ' + user.email);
+          } else {
+            console.log('[Firebase] Connected (no user — public pages only)');
+          }
           setupListeners();
           initialSync();
           flushPendingWrites();
-        });
-        // Failsafe: if auth takes >3s, proceed anyway (public reads still work)
-        setTimeout(function() {
-          if (!authResolved) {
-            authResolved = true;
-            isReady = true;
-            console.log('[Firebase] Connected (auth timeout — public mode)');
-            setupListeners();
-            initialSync();
-            flushPendingWrites();
-          }
-        }, 3000);
+        };
+
+        // Subscribe to auth state — fires on initial resolution AND on sign-in/sign-out
+        firebase.auth().onAuthStateChanged(proceed);
+
+        // Long failsafe
+        setTimeout(function() { proceed(firebase.auth().currentUser); }, 10000);
       } else {
-        // No auth SDK loaded — proceed without auth
         isReady = true;
         console.log('[Firebase] Connected (no auth SDK)');
         setupListeners();
@@ -130,11 +139,20 @@
     }
   }
 
+  // Tear down all real-time listeners (used when auth state changes)
+  var _activeRefs = [];
+  function teardownListeners() {
+    _activeRefs.forEach(function(r) { try { r.off(); } catch(e) {} });
+    _activeRefs = [];
+  }
+
   // ── REAL-TIME LISTENERS ────────────────────────────────────────────────
   function setupListeners() {
     for (var lsKey in SYNC_KEYS) {
       (function(localKey, fbPath) {
-        db.ref(fbPath).on('value', function(snapshot) {
+        var ref = db.ref(fbPath);
+        _activeRefs.push(ref);
+        ref.on('value', function(snapshot) {
           var val = snapshot.val();
           // val can be null when the path was deleted or an array becomes empty.
           // In that case, sync an empty array locally too (so deletes propagate correctly).
