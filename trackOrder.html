@@ -113,14 +113,19 @@ nav { position: sticky; top: 0; z-index: 100; background: var(--cream); border-b
 
 <div class="page-wrap">
   <h1 class="page-title">Track Your Order</h1>
-  <p class="page-sub">Enter your order ID to see live status</p>
+  <p class="page-sub">Enter your order ID and email to see live status</p>
 
-  <div class="search-box">
-    <input type="text" id="order-input" placeholder="e.g. ATL-2025-4821" autocomplete="off" autocapitalize="characters"/>
-    <button onclick="trackOrder()">Track</button>
+  <div class="search-box" style="flex-direction:column;border:none;gap:0.6rem;">
+    <input type="text" id="order-input" placeholder="Order ID — e.g. ATL-1776xxxxxx" autocomplete="off" autocapitalize="characters" style="border:1px solid rgba(14,14,13,0.2);padding:1rem 1.25rem;font-family:'Jost',sans-serif;font-size:0.8rem;outline:none;width:100%;"/>
+    <input type="email" id="email-input" placeholder="Email used at checkout" autocomplete="email" style="border:1px solid rgba(14,14,13,0.2);padding:1rem 1.25rem;font-family:'Jost',sans-serif;font-size:0.8rem;outline:none;width:100%;"/>
+    <button onclick="trackOrder()" style="background:var(--ink);color:var(--cream);border:none;padding:1rem 1.75rem;font-family:'Jost',sans-serif;font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;width:100%;transition:opacity 0.2s;">Track Order</button>
   </div>
 
-  <div class="error-msg" id="error-msg">No order found with that ID. Please check and try again.</div>
+  <p style="font-size:0.62rem;color:#8a7f73;margin-bottom:2rem;line-height:1.6;">
+    For your privacy, we verify both your order ID and email before showing order details.
+  </p>
+
+  <div class="error-msg" id="error-msg">No order found with that ID and email combination. Please check both and try again.</div>
 
   <!-- RESULT -->
   <div class="result-card" id="result-card">
@@ -201,20 +206,33 @@ function getDB() {
   return _db;
 }
 
-function findOrderInFirebase(orderId, callback) {
-  // Use REST API - same as checkout, no SDK conflict
+// Build the same lookup key as checkout.html — must stay in sync
+function buildLookupKey(orderId, email) {
+  var raw = (orderId || '').toLowerCase() + '|' + (email || '').toLowerCase().trim();
+  try {
+    return btoa(raw).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 200);
+  } catch(e) {
+    return raw.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 200);
+  }
+}
+
+function findOrderInFirebase(orderId, email, callback) {
+  // Use the public lookup endpoint — only finds the record if BOTH
+  // orderId and email match what was submitted at checkout.
   var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
-  fetch(DB_URL + '/orders.json')
-    .then(function(r){ return r.json(); })
-    .then(function(val) {
-      if (!val) { callback(null); return; }
-      var orders = Array.isArray(val) ? val : Object.values(val);
-      var found = orders.find(function(o) {
-        return o && (o.id||'').toUpperCase() === orderId.toUpperCase();
-      });
-      callback(found || null);
+  var key = buildLookupKey(orderId, email);
+  fetch(DB_URL + '/order_lookup/' + encodeURIComponent(key) + '.json')
+    .then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
     })
-    .catch(function() { callback(null); });
+    .then(function(val) {
+      callback(val || null);
+    })
+    .catch(function(e) {
+      console.warn('Lookup failed:', e.message);
+      callback(null);
+    });
 }
 </script>
 <script>
@@ -240,62 +258,55 @@ const BADGE_MAP = {
   'payment-rejected':      ['Payment Rejected',      'badge-payment-rejected']
 };
 
-// Pre-fill from URL param
+// Pre-fill from URL params (?id=ATL-xxx&email=foo@bar.com)
 window.addEventListener('DOMContentLoaded', function() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
-  if (id) {
-    document.getElementById('order-input').value = id;
-    // Wait for Firebase to load then search
-    setTimeout(trackOrder, 1200);
+  const email = params.get('email');
+  if (id) document.getElementById('order-input').value = id;
+  if (email) document.getElementById('email-input').value = email;
+  if (id && email) {
+    setTimeout(trackOrder, 600);
   }
 
   // Allow Enter key
-  document.getElementById('order-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') trackOrder();
+  ['order-input', 'email-input'].forEach(function(elId) {
+    document.getElementById(elId).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') trackOrder();
+    });
   });
 });
 
-function getOrders() {
-  try { return JSON.parse(localStorage.getItem('atelier_admin_orders') || '[]'); } catch(e) { return []; }
-}
-
-function matchOrder(orders, input) {
-  return orders.find(function(o) {
-    if (!o) return false;
-    const id = (o.id || '').toUpperCase();
-    return id === input || id === ('ATL-' + input) || ('ATL-' + id) === input;
-  });
-}
-
 function trackOrder() {
-  const input = document.getElementById('order-input').value.trim().toUpperCase();
-  if (!input) return;
+  const orderId = document.getElementById('order-input').value.trim();
+  const email = document.getElementById('email-input').value.trim();
+  if (!orderId || !email) {
+    const err = document.getElementById('error-msg');
+    err.textContent = 'Please enter both your order ID and email.';
+    err.classList.add('show');
+    return;
+  }
+  if (!email.includes('@')) {
+    const err = document.getElementById('error-msg');
+    err.textContent = 'Please enter a valid email address.';
+    err.classList.add('show');
+    return;
+  }
 
   const errorEl = document.getElementById('error-msg');
   const resultEl = document.getElementById('result-card');
 
-  // Show loading state
   errorEl.classList.remove('show');
-  document.getElementById('track-btn-text') && (document.getElementById('track-btn-text').textContent = 'Searching...');
+  resultEl.classList.remove('show');
 
-  // 1. Try localStorage first (fast)
-  const localOrders = getOrders();
-  const localOrder = matchOrder(localOrders, input);
-  if (localOrder) {
-    errorEl.classList.remove('show');
-    renderResult(localOrder);
-    resultEl.classList.add('show');
-    return;
-  }
-
-  // 2. Not in localStorage — search Firebase directly
-  findOrderInFirebase(input, function(order) {
+  // Search Firebase via the public lookup endpoint
+  findOrderInFirebase(orderId, email, function(order) {
     if (order) {
       errorEl.classList.remove('show');
       renderResult(order);
       resultEl.classList.add('show');
     } else {
+      errorEl.textContent = 'No order found with that ID and email combination. Please check both and try again.';
       errorEl.classList.add('show');
       resultEl.classList.remove('show');
     }
@@ -382,8 +393,9 @@ function renderTimeline(status, order) {
 
 // Re-check when Firebase delivers fresh data
 window.addEventListener('atelier-data-updated', function() {
-  const input = document.getElementById('order-input').value.trim();
-  if (input && document.getElementById('result-card').classList.contains('show')) {
+  const orderId = document.getElementById('order-input').value.trim();
+  const email = document.getElementById('email-input').value.trim();
+  if (orderId && email && document.getElementById('result-card').classList.contains('show')) {
     trackOrder();
   }
 });

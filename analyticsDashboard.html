@@ -2295,6 +2295,8 @@ function saveOrder(){
     toast('Order cancelled — stock restored');
   }
   saveOrders(ORDERS);
+  // Mirror status to public order_lookup record (customer-facing tracking)
+  try { syncOrderToLookup(ORDERS[idx]); } catch(e) { console.warn('lookup sync failed:', e); }
   closeModal('modal-order');
   renderOrdersTable();
   toast('Order updated');
@@ -2302,6 +2304,40 @@ function saveOrder(){
   if(prevStatus !== ORDERS[idx].status){
     sendAutoEmail(ORDERS[idx]);
   }
+}
+
+// Build the same lookup key used by checkout.html
+function buildOrderLookupKey(orderId, email) {
+  var raw = (orderId || '').toLowerCase() + '|' + (email || '').toLowerCase().trim();
+  try { return btoa(raw).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 200); }
+  catch(e) { return raw.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 200); }
+}
+
+// Update the public-facing order_lookup record so customer's tracking page
+// shows live status changes (no payment proof, no internal notes — just
+// what's safe to display to the customer)
+function syncOrderToLookup(order) {
+  if (!order || !order.id || !order.email) return;
+  var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+  var key = buildOrderLookupKey(order.id, order.email);
+  var lookupRec = {
+    id: order.id,
+    customer: order.customer || '',
+    product: order.product || '',
+    productImage: order.productImage || '',
+    date: order.date || '',
+    amount: order.amount || 0,
+    status: order.status || 'awaiting-verification',
+    tracking: order.tracking || '',
+    notes: order.notes || '',
+    createdAt: order.createdAt || 0,
+    updatedAt: Date.now()
+  };
+  fetch(DB_URL + '/order_lookup/' + encodeURIComponent(key) + '.json', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(lookupRec)
+  }).catch(function(e) { console.warn('Lookup sync failed:', e); });
 }
 
 // ── FULFILLMENT CHECKLIST UI ─────────────────────────────────────

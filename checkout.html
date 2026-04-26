@@ -911,11 +911,28 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
     createdAt: Date.now()
   };
 
-  // Save order ID so confirmation page can link to tracking
-  try { localStorage.setItem('atelier_last_order_id', orderId); } catch(e) {}
+  // Save order ID + email so confirmation page can build a 1-click tracking link
+  try {
+    localStorage.setItem('atelier_last_order_id', orderId);
+    localStorage.setItem('atelier_last_order_email', customer.email || '');
+  } catch(e) {}
 
   // ── WRITE DIRECTLY TO FIREBASE ──────────────────────────────────────────
   // This works from ANY device — customer's phone, desktop, anywhere
+  // Helper: build lookup key from orderId + email (case-insensitive)
+  // Anyone who knows BOTH can fetch the public-safe lookup record.
+  // Anyone who knows only one (or neither) cannot.
+  function buildLookupKey(orderId, email) {
+    var raw = (orderId || '').toLowerCase() + '|' + (email || '').toLowerCase().trim();
+    // Use btoa (base64) — Firebase keys can't contain . / # $ [ ] / + so strip them
+    try {
+      return btoa(raw).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 200);
+    } catch(e) {
+      // Fallback: simple safe-char encoding
+      return raw.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 200);
+    }
+  }
+
   // Write order using Firebase REST API
   // Uses POST (push) so we DON'T need to read existing orders first.
   // This works with security rules that allow public WRITE but require
@@ -933,6 +950,35 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
       .then(function(r){
         if (!r.ok) throw new Error('Order write failed: HTTP ' + r.status);
         return r.json();
+      })
+      .then(function() {
+        // Step 1b: Write a public-safe lookup record so customer can track
+        // This contains ONLY safe-to-display info (no payment proof, no
+        // full address, no internal notes). Keyed by hash(orderId+email)
+        // so only someone with both pieces can find it.
+        var lookupKey = buildLookupKey(orderObj.id, orderObj.email);
+        var lookupRec = {
+          id: orderObj.id,
+          customer: orderObj.customer,
+          product: orderObj.product,
+          productImage: orderObj.productImage || '',
+          date: orderObj.date,
+          amount: orderObj.amount,
+          status: orderObj.status,
+          tracking: '',
+          notes: '',
+          createdAt: orderObj.createdAt,
+          updatedAt: orderObj.createdAt
+        };
+        return fetch(DB_URL + '/order_lookup/' + encodeURIComponent(lookupKey) + '.json', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lookupRec)
+        });
+      })
+      .then(function(r){
+        // Lookup write is non-fatal — order itself already saved
+        if (r && !r.ok) console.warn('Order lookup write returned HTTP ' + r.status);
       })
       .then(function() {
         // Step 2: POST customer info to /customers

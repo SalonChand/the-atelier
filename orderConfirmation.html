@@ -178,8 +178,11 @@
 </p>
 <script>
   const num = localStorage.getItem('atelier_last_order_id') || ('ATL-2025-' + Math.floor(Math.random() * 9000 + 1000));
+  const email = localStorage.getItem('atelier_last_order_email') || '';
   document.getElementById('order-num').textContent = 'Order #' + num;
-  document.getElementById('track-btn').href = 'trackOrder.html?id=' + encodeURIComponent(num);
+  var trackUrl = 'trackOrder.html?id=' + encodeURIComponent(num);
+  if (email) trackUrl += '&email=' + encodeURIComponent(email);
+  document.getElementById('track-btn').href = trackUrl;
 </script>
 <script src="visitor-tracker.js?v=1"></script>
 <script src="mobile-app.js?v=5"></script>

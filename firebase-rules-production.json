@@ -8,6 +8,15 @@
       ".write": true
     },
 
+    "order_lookup": {
+      ".read": false,
+      ".write": true,
+      "$lookupKey": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
     "custom_orders": {
       ".read": "auth != null",
       ".write": true
