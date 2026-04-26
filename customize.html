@@ -57,17 +57,23 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
 .customizer-wrap { display: grid; grid-template-columns: 1fr 380px; min-height: calc(100vh - 64px); margin-top: 64px; }
 @media (max-width: 900px) {
   .customizer-wrap { grid-template-columns: 1fr; padding-top: calc(50vh + 70px); }
-  /* On mobile: 3D viewer is FIXED at top (always visible), controls scroll below */
+  /* On mobile: 3D viewer is FIXED at top (always visible), controls scroll below.
+     Use top:0 + padding-top to safe-area-inset to flush against the navbar regardless
+     of its dynamic height (status bar, safe area inset on iPhones). */
+  nav { padding: 0.85rem 1rem !important; }
   .canvas-area {
     position: fixed !important;
-    top: 70px;
+    top: 0 !important;
+    padding-top: calc(58px + env(safe-area-inset-top, 0px)) !important;
     left: 0;
     right: 0;
     z-index: 20;
-    height: 50vh;
+    height: calc(50vh + 58px + env(safe-area-inset-top, 0px));
     min-height: unset !important;
-    max-height: 50vh;
-    padding: 0.75rem !important;
+    max-height: calc(50vh + 58px + env(safe-area-inset-top, 0px));
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
     background: #f8f5f0 !important;
     border-right: none !important;
     border-bottom: 1px solid rgba(200,184,154,0.4);
@@ -79,12 +85,14 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
   .controls { max-height: none !important; overflow-y: visible !important; }
 }
 @media (max-width: 500px) {
-  .customizer-wrap { padding-top: calc(45vh + 64px); }
+  .customizer-wrap { padding-top: calc(45vh + 58px); }
   .canvas-area {
-    top: 64px;
-    height: 45vh;
-    max-height: 45vh;
-    padding: 0.5rem !important;
+    height: calc(45vh + 56px + env(safe-area-inset-top, 0px));
+    max-height: calc(45vh + 56px + env(safe-area-inset-top, 0px));
+    padding-top: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
   }
   .view-toggle { margin-top: 0.4rem !important; }
   .view-btn { padding: 0.3rem 0.75rem; font-size: 0.52rem; }
@@ -981,9 +989,17 @@ function changeQty(delta) {
   updateSummary();
 }
 function selectFont(f, btn) {
-  state.font = f;
+  // Normalize font name — wrap multi-word fonts in quotes for canvas font property.
+  // Without this, canvas's ctx.font silently falls back to default for fonts
+  // like "Times New Roman" or "Brush Script MT" because the spec requires
+  // multi-word names to be quoted.
+  var normalized = f;
+  if (f && f.indexOf(' ') !== -1 && f.indexOf("'") === -1 && f.indexOf('"') === -1) {
+    normalized = '"' + f + '"';
+  }
+  state.font = normalized;
   document.querySelectorAll('.font-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   updateCanvas();
 }
 function switchDesignTab(tab) {
@@ -2125,9 +2141,11 @@ updateCanvas();
 
   window.addEventListener('resize', showJoystickIfMobile);
 
-  // Get pointer position relative to joystick center
+  // Cache the joystick's bounding rect during a drag — avoids per-move
+  // getBoundingClientRect() which causes layout thrash on iOS Safari
+  var _cachedRect = null;
   function getJoystickOffset(e) {
-    var rect = joystick.getBoundingClientRect();
+    var rect = _cachedRect || joystick.getBoundingClientRect();
     var cx = rect.left + rect.width / 2;
     var cy = rect.top + rect.height / 2;
     var t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
@@ -2150,28 +2168,34 @@ updateCanvas();
     knob.style.transform = 'translate(-50%, -50%)';
   }
 
-  // Smooth movement loop — just translates mesh.position, no rebuild
+  // Smooth movement loop — translates mesh.position with reused vectors
+  // (avoids per-frame allocation that causes GC stutter on mobile)
+  var _camRight = new THREE.Vector3();
+  var _camUp = new THREE.Vector3();
+  var _translation = new THREE.Vector3();
+
   function animateJoystick() {
-    if (!joystickActive) return;
+    if (!joystickActive) { joystickRAF = null; return; }
     if (!is3DActive || !currentModel || !decalMesh) {
       joystickRAF = requestAnimationFrame(animateJoystick);
       return;
     }
 
     var ox = currentOffset.x, oy = currentOffset.y;
-    if (Math.abs(ox) > 0.1 || Math.abs(oy) > 0.1) {
+    if (Math.abs(ox) > 0.08 || Math.abs(oy) > 0.08) {
       _joystickHasMoved = true;
-      // Quadratic speed curve: finer near center, faster at edges
-      var speedX = ox * Math.abs(ox) * 0.018;
-      var speedY = -oy * Math.abs(oy) * 0.018;
+      // Smooth quadratic curve: gentle near center, faster at edges
+      var speedX = ox * Math.abs(ox) * 0.022;
+      var speedY = -oy * Math.abs(oy) * 0.022;
 
-      // Get camera's screen-plane axes
-      var camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-      var camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      // Camera's screen-plane axes (reused vectors — no allocation)
+      _camRight.setFromMatrixColumn(camera.matrixWorld, 0);
+      _camUp.setFromMatrixColumn(camera.matrixWorld, 1);
 
       // Translate decal in camera's view plane
-      var translation = camRight.multiplyScalar(speedX).add(camUp.multiplyScalar(speedY));
-      decalMesh.position.add(translation);
+      _translation.copy(_camRight).multiplyScalar(speedX);
+      _translation.addScaledVector(_camUp, speedY);
+      decalMesh.position.add(_translation);
     }
 
     joystickRAF = requestAnimationFrame(animateJoystick);
@@ -2240,6 +2264,7 @@ updateCanvas();
     e.stopPropagation();
     joystickActive = true;
     _joystickHasMoved = false;
+    _cachedRect = joystick.getBoundingClientRect(); // cache for the duration of this drag
     var off = getJoystickOffset(e);
     setKnobPosition(off.x, off.y);
     if (joystickRAF) cancelAnimationFrame(joystickRAF);
@@ -2258,6 +2283,7 @@ updateCanvas();
     if (!joystickActive) return;
     if (e && e.preventDefault) e.preventDefault();
     joystickActive = false;
+    _cachedRect = null;
     resetKnob();
     if (joystickRAF) { cancelAnimationFrame(joystickRAF); joystickRAF = null; }
     reprojectDecalToSurface();
