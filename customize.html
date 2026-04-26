@@ -90,6 +90,174 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
   .view-btn { padding: 0.3rem 0.75rem; font-size: 0.52rem; }
 }
 
+/* ════════════════════════════════════════════════════════════
+   PREMIUM UPGRADE LAYER (added in customize redesign)
+   These styles refine without removing existing ones.
+   ════════════════════════════════════════════════════════════ */
+
+/* Premium feel: subtle shadows, smoother transitions, better focus */
+.controls { box-shadow: -1px 0 0 rgba(200,184,154,0.15); }
+.ctrl-section { transition: background 0.3s ease; }
+.ctrl-section:hover { background: linear-gradient(to right, rgba(244,241,236,0.4), transparent); }
+.ctrl-title {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-weight: 500;
+}
+.ctrl-title::before {
+  content: ''; width: 8px; height: 1px; background: var(--accent);
+  display: inline-block;
+}
+
+/* Garment buttons — premium hover with accent line */
+.garment-btn {
+  position: relative; border-radius: 2px;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.garment-btn::after {
+  content: ''; position: absolute; inset: 0;
+  border-bottom: 2px solid transparent; transition: border-color 0.2s ease;
+  pointer-events: none;
+}
+.garment-btn:hover { transform: translateY(-1px); }
+.garment-btn:hover::after { border-bottom-color: var(--accent); }
+.garment-btn.active::after { border-bottom-color: var(--cream); }
+
+/* Color dots — softer hover, better touch targets on mobile */
+.color-dot {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.color-dot:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.color-dot:active { transform: scale(0.95); }
+
+/* Buttons — better tactile feedback */
+.ctype-btn, .place-btn, .size-chip, .view-btn, .font-btn, .order-btn {
+  transition: all 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.ctype-btn:active, .place-btn:active, .size-chip:active, .font-btn:active {
+  transform: scale(0.97);
+}
+
+/* Order button — premium gold gradient on hover */
+.order-btn {
+  position: relative; overflow: hidden;
+}
+.order-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
+  transform: translateX(-100%); transition: transform 0.6s ease;
+  pointer-events: none;
+}
+.order-btn:hover::before { transform: translateX(100%); }
+
+/* Canvas area — premium frame with subtle shadow on desktop */
+@media (min-width: 901px) {
+  .canvas-stage {
+    box-shadow: 0 8px 40px rgba(0,0,0,0.04), 0 0 0 1px rgba(200,184,154,0.15);
+    border-radius: 2px;
+    background: white;
+  }
+}
+
+/* Loading state for 3D model */
+.model-loading {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;
+  background: rgba(248,245,240,0.96); backdrop-filter: blur(4px);
+  font-family: 'Newsreader', serif; font-style: italic; color: var(--ink);
+  pointer-events: none; opacity: 0; transition: opacity 0.25s ease;
+}
+.model-loading.show { opacity: 1; pointer-events: auto; }
+.model-loading .loader-ring {
+  width: 32px; height: 32px; border: 2px solid rgba(139,94,60,0.2);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: ringspin 0.9s linear infinite;
+}
+.model-loading .loader-text { font-size: 0.95rem; letter-spacing: 0.05em; }
+.model-loading .loader-progress {
+  font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #8a7f73; font-family: 'Jost', sans-serif; font-style: normal;
+}
+@keyframes ringspin { to { transform: rotate(360deg); } }
+
+/* Premium toast (used for save-design, share, etc.) */
+.cust-toast {
+  position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px);
+  background: var(--ink); color: var(--cream);
+  padding: 0.85rem 1.5rem; font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase;
+  border-radius: 2px; z-index: 9999;
+  opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+.cust-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Save / Share design action bar */
+.design-actions {
+  display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem;
+  border-top: 1px solid rgba(200,184,154,0.2);
+}
+.design-action-btn {
+  flex: 1; padding: 0.55rem 0.4rem;
+  border: 1px solid rgba(200,184,154,0.4); background: white;
+  font-family: 'Jost'; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink); cursor: pointer; transition: all 0.18s ease;
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+}
+.design-action-btn:hover { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.design-action-btn:active { transform: scale(0.97); }
+.design-action-btn .ico { font-size: 0.8rem; }
+
+/* Mobile-specific upgrades */
+@media (max-width: 900px) {
+  /* Bigger tap targets */
+  .color-dot { width: 34px; height: 34px; }
+  .color-dot.active { transform: scale(1.18); }
+  .ctype-btn, .place-btn, .font-btn { padding: 0.65rem 0.5rem; font-size: 0.6rem; }
+  .size-chip { padding: 0.5rem 0.85rem; font-size: 0.66rem; }
+  .garment-btn { padding: 0.7rem 0.3rem; }
+
+  /* Floating "back to top" CTA when scrolled past the form */
+  .controls { padding-bottom: 6rem; }
+
+  /* Stickier section titles for orientation */
+  .ctrl-title { position: relative; }
+}
+
+/* Smooth font switch transition */
+#text-input { transition: font-family 0.2s ease, color 0.2s ease; }
+
+/* Disabled order button visual */
+.order-btn:disabled {
+  background: #d8d2ca; color: #8a7f73; cursor: not-allowed;
+  border-color: transparent;
+}
+
+/* Better focus rings for accessibility */
+button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+button:focus { outline: none; }
+
+/* Smooth image loading on preview thumb */
+#preview-thumb { transition: opacity 0.2s ease; }
+#preview-thumb.show { display: block !important; }
+
+/* Quantity stepper — premium tweak */
+.qty-stepper { display: flex; align-items: center; gap: 0; border: 1px solid rgba(200,184,154,0.4); width: fit-content; }
+.qty-btn {
+  width: 36px; height: 36px; border: none; background: white; cursor: pointer;
+  font-family: 'Jost'; font-size: 1.1rem; color: var(--ink);
+  transition: background 0.15s;
+}
+.qty-btn:hover { background: var(--cream); }
+.qty-btn:active { background: var(--warm); }
+.qty-display {
+  min-width: 48px; height: 36px; display: flex; align-items: center; justify-content: center;
+  font-family: 'Newsreader', serif; font-size: 1rem;
+  border-left: 1px solid rgba(200,184,154,0.4); border-right: 1px solid rgba(200,184,154,0.4);
+}
+
 /* ─── CANVAS AREA ─── */
 .canvas-area {
   position: relative; background: #f8f5f0;
@@ -238,9 +406,10 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
       <!-- 3D viewer (for T-shirt) -->
       <div id="viewer-3d" style="width:100%;height:100%;display:none;position:relative;">
         <canvas id="three-canvas" style="width:100%;height:100%;display:block;cursor:grab;"></canvas>
-        <div id="loading-3d" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(248,245,240,0.9);z-index:5;">
+        <div id="loading-3d" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(248,245,240,0.96);backdrop-filter:blur(4px);z-index:5;">
           <div style="width:36px;height:36px;border:2px solid rgba(200,184,154,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin3d 0.8s linear infinite;"></div>
-          <p style="font-size:0.6rem;color:#8a7f73;letter-spacing:0.12em;margin-top:1rem;text-transform:uppercase;">Loading 3D Model…</p>
+          <p style="font-family:'Newsreader',serif;font-style:italic;font-size:1rem;margin-top:1rem;color:var(--ink);">Preparing your design</p>
+          <p id="loading-progress-text" style="font-size:0.55rem;color:#8a7f73;letter-spacing:0.18em;margin-top:0.4rem;text-transform:uppercase;">Loading 3D model…</p>
         </div>
       </div>
       <style>@keyframes spin3d { to { transform: rotate(360deg); } }</style>
@@ -426,11 +595,15 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
             <input type="range" id="text-size" min="12" max="60" value="24" style="width:100%;margin-top:0.5rem;" oninput="updateCanvas()"/>
           </div>
         </div>
-        <div class="font-row">
-          <button class="font-btn active" data-font="Jost" onclick="selectFont('Jost',this)">Modern</button>
-          <button class="font-btn" data-font="Georgia" onclick="selectFont('Georgia',this)">Serif</button>
-          <button class="font-btn" data-font="'Courier New'" onclick="selectFont('Courier New',this)">Mono</button>
-          <button class="font-btn" data-font="Impact" onclick="selectFont('Impact',this)">Bold</button>
+        <div class="font-row" style="flex-wrap:wrap;gap:0.4rem;">
+          <button class="font-btn active" data-font="Jost" onclick="selectFont('Jost',this)" style="font-family:'Jost';">Modern</button>
+          <button class="font-btn" data-font="Georgia" onclick="selectFont('Georgia',this)" style="font-family:'Georgia',serif;">Serif</button>
+          <button class="font-btn" data-font="Newsreader" onclick="selectFont('Newsreader',this)" style="font-family:'Newsreader',serif;font-style:italic;">Italic</button>
+          <button class="font-btn" data-font="'Times New Roman'" onclick="selectFont('Times New Roman',this)" style="font-family:'Times New Roman',serif;">Classic</button>
+          <button class="font-btn" data-font="Impact" onclick="selectFont('Impact',this)" style="font-family:'Impact',sans-serif;">Bold</button>
+          <button class="font-btn" data-font="'Courier New'" onclick="selectFont('Courier New',this)" style="font-family:'Courier New',monospace;">Mono</button>
+          <button class="font-btn" data-font="'Brush Script MT'" onclick="selectFont('Brush Script MT',this)" style="font-family:'Brush Script MT',cursive;font-size:0.75rem;">Script</button>
+          <button class="font-btn" data-font="Verdana" onclick="selectFont('Verdana',this)" style="font-family:'Verdana',sans-serif;">Clean</button>
         </div>
       </div>
     </div>
@@ -450,6 +623,28 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
       <div class="form-group"><label>Email *</label><input type="email" id="cust-email" placeholder="your@email.com"/></div>
       <div class="form-group"><label>Phone</label><input type="tel" id="cust-phone" placeholder="+977-98XXXXXXXX"/></div>
       <div class="form-group"><label>Delivery Address *</label><textarea id="cust-address" rows="2" placeholder="Street, City, Country"></textarea></div>
+    </div>
+
+    <!-- Design Actions: Save / Share / Reset -->
+    <div class="ctrl-section">
+      <p class="ctrl-title">Save Your Design</p>
+      <p style="font-size:0.62rem;color:#8a7f73;line-height:1.7;margin-bottom:0.75rem;">
+        Save this design to your browser, share via link, or reset to start over.
+      </p>
+      <div class="design-actions">
+        <button class="design-action-btn" onclick="saveCustomDesign()" type="button">
+          <span class="ico">💾</span><span>Save</span>
+        </button>
+        <button class="design-action-btn" onclick="loadCustomDesign()" type="button">
+          <span class="ico">📂</span><span>Load</span>
+        </button>
+        <button class="design-action-btn" onclick="shareCustomDesign()" type="button">
+          <span class="ico">🔗</span><span>Share</span>
+        </button>
+        <button class="design-action-btn" onclick="resetCustomDesign()" type="button">
+          <span class="ico">↺</span><span>Reset</span>
+        </button>
+      </div>
     </div>
 
     <!-- 10. Order Summary + CTA -->
@@ -971,6 +1166,282 @@ function placeCustomOrder() {
   document.getElementById('success-overlay').classList.add('show');
 }
 
+// ════════════════════════════════════════════════════════════════
+// PREMIUM UPGRADE FEATURES — Save, Load, Share, Reset, Toast
+// ════════════════════════════════════════════════════════════════
+
+// Toast helper — premium feedback messages
+function showCustToast(message, durationMs) {
+  durationMs = durationMs || 2200;
+  var existing = document.querySelector('.cust-toast');
+  if (existing) existing.remove();
+  var t = document.createElement('div');
+  t.className = 'cust-toast';
+  t.textContent = message;
+  document.body.appendChild(t);
+  // Force reflow then animate in
+  requestAnimationFrame(function() {
+    t.classList.add('show');
+    setTimeout(function() {
+      t.classList.remove('show');
+      setTimeout(function() { try { t.remove(); } catch(e) {} }, 350);
+    }, durationMs);
+  });
+}
+
+// Save current design state to localStorage
+function saveCustomDesign() {
+  try {
+    var snapshot = {
+      garment: state.garment,
+      gender: state.gender,
+      color: state.color,
+      size: state.size,
+      qty: state.qty,
+      ctype: state.ctype,
+      placement: state.placement,
+      designText: state.designText || (document.getElementById('text-input') ? document.getElementById('text-input').value : ''),
+      font: state.font,
+      textColor: state.textColor,
+      notes: document.getElementById('special-notes') ? document.getElementById('special-notes').value : '',
+      // Note: We don't save the uploaded image (could be large) — user re-uploads on Load
+      savedAt: Date.now()
+    };
+    localStorage.setItem('atelier_saved_design', JSON.stringify(snapshot));
+    showCustToast('✓ Design Saved');
+  } catch(e) {
+    showCustToast('Could not save design');
+    console.warn('Save failed:', e);
+  }
+}
+
+// Load design state from localStorage
+function loadCustomDesign() {
+  try {
+    var raw = localStorage.getItem('atelier_saved_design');
+    if (!raw) {
+      showCustToast('No saved design found');
+      return;
+    }
+    var s = JSON.parse(raw);
+    applyDesignState(s);
+    showCustToast('✓ Design Loaded');
+  } catch(e) {
+    showCustToast('Could not load design');
+    console.warn('Load failed:', e);
+  }
+}
+
+// Reset all options to defaults
+function resetCustomDesign() {
+  if (!confirm('Reset all customizations and start over?')) return;
+  applyDesignState({
+    garment: 'tshirt',
+    gender: 'men',
+    color: '#f4f1ec',
+    size: 'S',
+    qty: 1,
+    ctype: 'print',
+    placement: 'chest-left',
+    designText: '',
+    font: 'Jost',
+    textColor: '#0e0e0d',
+    notes: ''
+  });
+  // Clear uploaded images
+  try {
+    if (typeof uploadedImages !== 'undefined') uploadedImages.length = 0;
+    if (typeof uploadedImg !== 'undefined') uploadedImg = null;
+    var preview = document.getElementById('preview-thumb');
+    if (preview) { preview.style.display = 'none'; preview.src = ''; }
+    // Clear file input
+    var fileInput = document.getElementById('design-upload');
+    if (fileInput) fileInput.value = '';
+  } catch(e) {}
+  showCustToast('✓ Reset to Defaults');
+}
+
+// Share current design via URL with state encoded
+function shareCustomDesign() {
+  try {
+    var snapshot = {
+      g: state.garment,
+      gd: state.gender,
+      c: state.color,
+      sz: state.size,
+      q: state.qty,
+      ct: state.ctype,
+      p: state.placement,
+      t: (document.getElementById('text-input') && document.getElementById('text-input').value) || '',
+      f: state.font,
+      tc: state.textColor
+    };
+    var encoded = btoa(JSON.stringify(snapshot)).replace(/=/g, '');
+    var url = window.location.origin + window.location.pathname + '?d=' + encodeURIComponent(encoded);
+
+    // Try native share API first (mobile)
+    if (navigator.share) {
+      navigator.share({
+        title: 'My Atelier Design',
+        text: 'Check out my custom design from The Atelier',
+        url: url
+      }).then(function() {
+        showCustToast('✓ Shared');
+      }).catch(function() {
+        copyToClipboard(url);
+      });
+    } else {
+      copyToClipboard(url);
+    }
+  } catch(e) {
+    showCustToast('Could not share');
+    console.warn('Share failed:', e);
+  }
+}
+
+function copyToClipboard(text) {
+  // Modern clipboard API
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showCustToast('✓ Link Copied');
+    }).catch(function() {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showCustToast('✓ Link Copied');
+  } catch(e) {
+    showCustToast('Could not copy. Long-press the URL to copy.');
+  }
+}
+
+// Apply a saved/shared design state to the UI
+function applyDesignState(s) {
+  if (!s) return;
+  // Map share-format to full state if needed
+  var ns = {
+    garment: s.garment || s.g,
+    gender: s.gender || s.gd,
+    color: s.color || s.c,
+    size: s.size || s.sz,
+    qty: s.qty || s.q,
+    ctype: s.ctype || s.ct,
+    placement: s.placement || s.p,
+    designText: s.designText || s.t || '',
+    font: s.font || s.f,
+    textColor: s.textColor || s.tc,
+    notes: s.notes || ''
+  };
+
+  try {
+    // Garment
+    if (ns.garment) {
+      var gBtn = document.querySelector('.garment-btn[data-garment="' + ns.garment + '"]');
+      if (gBtn && typeof selectGarment === 'function') selectGarment(ns.garment, gBtn);
+    }
+    // Color
+    if (ns.color) {
+      var cDot = document.querySelector('.color-dot[style*="' + ns.color + '"]');
+      if (cDot && typeof selectColor === 'function') selectColor(ns.color, cDot);
+    }
+    // Size
+    if (ns.size) {
+      var sChip = Array.from(document.querySelectorAll('.size-chip')).find(function(b) { return b.textContent.trim() === ns.size; });
+      if (sChip && typeof selectSize === 'function') selectSize(ns.size, sChip);
+    }
+    // Quantity
+    if (ns.qty) {
+      state.qty = parseInt(ns.qty);
+      var qDisplay = document.getElementById('qty-display');
+      if (qDisplay) qDisplay.textContent = state.qty;
+    }
+    // Customization type
+    if (ns.ctype) {
+      var ctBtn = Array.from(document.querySelectorAll('.ctype-btn')).find(function(b) {
+        return b.textContent.toLowerCase().indexOf(ns.ctype.toLowerCase()) !== -1;
+      });
+      if (ctBtn && typeof selectCtype === 'function') selectCtype(ns.ctype, ctBtn);
+    }
+    // Placement
+    if (ns.placement) {
+      var pBtn = document.querySelector('.place-btn[onclick*="' + ns.placement + '"]');
+      if (pBtn && typeof selectPlacement === 'function') selectPlacement(ns.placement, pBtn);
+    }
+    // Text content
+    if (ns.designText !== undefined) {
+      var ti = document.getElementById('text-input');
+      if (ti) ti.value = ns.designText;
+      state.designText = ns.designText;
+    }
+    // Font
+    if (ns.font) {
+      var fBtn = document.querySelector('.font-btn[data-font*="' + ns.font + '"]');
+      if (fBtn && typeof selectFont === 'function') selectFont(ns.font, fBtn);
+    }
+    // Text color
+    if (ns.textColor) {
+      var tc = document.getElementById('text-color');
+      if (tc) tc.value = ns.textColor;
+      state.textColor = ns.textColor;
+    }
+    // Special notes
+    if (ns.notes) {
+      var sn = document.getElementById('special-notes');
+      if (sn) sn.value = ns.notes;
+    }
+    // Trigger redraw
+    if (typeof updateCanvas === 'function') updateCanvas();
+  } catch(e) {
+    console.warn('applyDesignState error:', e);
+  }
+}
+
+// On page load: if URL has ?d=... share param, apply that design
+(function tryLoadFromShareLink() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var d = params.get('d');
+    if (!d) return;
+    var json = atob(d);
+    var snapshot = JSON.parse(json);
+    // Wait briefly for UI to be ready
+    setTimeout(function() {
+      applyDesignState(snapshot);
+      showCustToast('✓ Design Loaded From Link');
+    }, 600);
+  } catch(e) {
+    console.warn('Could not load share link:', e);
+  }
+})();
+
+// Quantity stepper helpers (if a stepper UI exists)
+function incrementQty() {
+  if (!state) return;
+  state.qty = Math.min(99, (state.qty || 1) + 1);
+  var d = document.getElementById('qty-display');
+  if (d) d.textContent = state.qty;
+  if (typeof updateOrderSummary === 'function') updateOrderSummary();
+}
+function decrementQty() {
+  if (!state) return;
+  state.qty = Math.max(1, (state.qty || 1) - 1);
+  var d = document.getElementById('qty-display');
+  if (d) d.textContent = state.qty;
+  if (typeof updateOrderSummary === 'function') updateOrderSummary();
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────
 updateCanvas();
 </script>
@@ -1104,12 +1575,25 @@ updateCanvas();
     currentKey = key;
     if (!MODEL_FILES[key]) { show2D(); return; }
     if (loadedModels[key]) { swapModel(loadedModels[key], key); return; }
-    if (loadingEl) { loadingEl.style.display = 'flex'; var p = loadingEl.querySelector('p'); if (p) p.textContent = 'Loading ' + (GARMENT_NAMES[key]||key) + '\u2026'; }
+    if (loadingEl) {
+      loadingEl.style.display = 'flex';
+      var pt = document.getElementById('loading-progress-text');
+      if (pt) pt.textContent = 'Loading ' + (GARMENT_NAMES[key]||key) + '\u2026';
+    }
     show3D();
     loader3D.load(MODEL_FILES[key],
       function(gltf) { var c = centerAndScaleModel(gltf.scene); loadedModels[key] = c; swapModel(c, key); },
-      function(prog) { if (prog.total > 0 && loadingEl) { var p = loadingEl.querySelector('p'); if (p) p.textContent = 'Loading ' + (GARMENT_NAMES[key]||key) + '\u2026 ' + Math.round(prog.loaded/prog.total*100) + '%'; } },
-      function() { if (loadingEl) loadingEl.style.display = 'none'; show2D(); }
+      function(prog) {
+        if (prog.total > 0 && loadingEl) {
+          var pt = document.getElementById('loading-progress-text');
+          if (pt) pt.textContent = 'Loading ' + (GARMENT_NAMES[key]||key) + '\u2026 ' + Math.round(prog.loaded/prog.total*100) + '%';
+        }
+      },
+      function() {
+        if (loadingEl) loadingEl.style.display = 'none';
+        show2D();
+        showCustToast && showCustToast('Could not load 3D model — using 2D fallback');
+      }
     );
   }
 
