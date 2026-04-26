@@ -171,7 +171,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="admin-notify.js?v=2"></script>
 <script src="admin-automations.js?v=1"></script>
-<script src="firebase-sync.js?v=7"></script>
+<script src="firebase-sync.js?v=8"></script>
 </head>
 <body>
 <!-- ANNOUNCEMENT BANNER -->
@@ -917,46 +917,44 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
   // ── WRITE DIRECTLY TO FIREBASE ──────────────────────────────────────────
   // This works from ANY device — customer's phone, desktop, anywhere
   // Write order using Firebase REST API
-  // IMPORTANT: paths must match SYNC_KEYS in firebase-sync.js
-  // atelier_admin_orders -> 'orders', atelier_admin_customers -> 'customers'
+  // Uses POST (push) so we DON'T need to read existing orders first.
+  // This works with security rules that allow public WRITE but require
+  // auth for READ (which is correct: customers shouldn't be able to read
+  // other customers' orders).
   function writeOrderToFirebase(onDone) {
     var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
 
-    // Step 1: read existing orders from correct Firebase path 'orders'
-    fetch(DB_URL + '/orders.json')
-      .then(function(r){ return r.json(); })
-      .then(function(existing) {
-        var orders = Array.isArray(existing) ? existing : (existing && typeof existing === 'object' ? Object.values(existing) : []);
-        orders = orders.filter(Boolean);
-        orders.unshift(orderObj);
-        // Step 2: write back to correct path 'orders'
-        return fetch(DB_URL + '/orders.json', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orders)
-        });
+    // Step 1: POST the new order to /orders (Firebase auto-generates a key)
+    fetch(DB_URL + '/orders.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderObj)
+    })
+      .then(function(r){
+        if (!r.ok) throw new Error('Order write failed: HTTP ' + r.status);
+        return r.json();
       })
-      .then(function(r){ return r.json(); })
       .then(function() {
-        // Step 3: update customers at correct path 'customers'
-        return fetch(DB_URL + '/customers.json');
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(existing) {
-        var customers = Array.isArray(existing) ? existing : (existing && typeof existing === 'object' ? Object.values(existing) : []);
-        customers = customers.filter(Boolean);
-        var idx = customers.findIndex(function(c){ return c && (c.email||'').toLowerCase() === customer.email.toLowerCase(); });
-        if (idx >= 0) {
-          customers[idx].orders = (customers[idx].orders||0) + 1;
-          customers[idx].spent = (customers[idx].spent||0) + subtotalVal;
-        } else {
-          customers.unshift({ name: customer.name, email: customer.email, phone: customer.phone, country: customer.country, orders: 1, spent: subtotalVal, joined: new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'}) });
-        }
+        // Step 2: POST customer info to /customers
+        var customerObj = {
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          country: customer.country,
+          orders: 1,
+          spent: subtotalVal,
+          joined: new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'}),
+          lastOrderId: orderObj.id,
+          lastOrderAt: Date.now()
+        };
         return fetch(DB_URL + '/customers.json', {
-          method: 'PUT',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(customers)
+          body: JSON.stringify(customerObj)
         });
+      })
+      .then(function(r){
+        if (!r.ok) console.warn('Customer write returned HTTP ' + r.status); // non-fatal
       })
       .then(function(){ onDone(true); })
       .catch(function(err){

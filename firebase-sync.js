@@ -44,6 +44,22 @@
     'atelier_pending_carts':   'pendingCarts',
     'atelier_admin_notifications': 'adminNotifications'
   };
+  // Paths that should always be treated as arrays in localStorage
+  // (even if Firebase returns them as objects with push-id keys)
+  var LIST_PATHS = {
+    'orders': true,
+    'customers': true,
+    'inquiries': true,
+    'custom_orders': true,
+    'sticker_orders': true,
+    'sticker_purchases': true,
+    'pendingCarts': true,
+    'adminNotifications': true,
+    'visitors': true,
+    'reviews': true,
+    'announcements': true
+  };
+
   var PATH_TO_KEY = {};
   for (var k in SYNC_KEYS) { PATH_TO_KEY[SYNC_KEYS[k]] = k; }
 
@@ -161,8 +177,15 @@
             if (val === null || val === undefined) {
               _origSetItem(localKey, '[]');
             } else {
-              // Firebase returns arrays as objects with numeric keys; convert back to array
-              if (typeof val === 'object' && !Array.isArray(val)) {
+              // For list paths: convert ANY object to an array (handles both
+              // numeric-keyed legacy arrays AND push-id-keyed objects from
+              // Firebase's POST/push() writes)
+              if (LIST_PATHS[fbPath] && typeof val === 'object' && !Array.isArray(val)) {
+                val = Object.keys(val)
+                  .map(function(k) { return val[k]; })
+                  .filter(function(x) { return x != null; });
+              } else if (typeof val === 'object' && !Array.isArray(val)) {
+                // For non-list paths, only convert if it's array-like (numeric keys)
                 var keys = Object.keys(val);
                 var isArrayLike = keys.length > 0 && keys.every(function(k) { return /^\d+$/.test(k); });
                 if (isArrayLike) {
