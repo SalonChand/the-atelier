@@ -444,7 +444,12 @@
 </div>
 
 <div class="panel" id="panel-orders">
-  <div class="topbar"><h1 class="page-title">Orders</h1></div>
+  <div class="topbar">
+    <h1 class="page-title">Orders</h1>
+    <div class="topbar-right">
+      <button class="btn-primary" onclick="openManualOrderModal()" style="background:var(--accent);">+ Add Manual Order</button>
+    </div>
+  </div>
   <div class="mini-stats" id="orders-mini-stats">
     <div class="mini-stat"><div class="mini-stat-val" id="stat-orders-total">0</div><div class="mini-stat-label">Total This Month</div></div>
     <div class="mini-stat"><div class="mini-stat-val" id="stat-orders-awaiting" style="color:#8b5e3c;">0</div><div class="mini-stat-label">Awaiting Verification</div></div>
@@ -455,6 +460,15 @@
     <div class="table-header">
       <span class="table-title">All Orders</span>
       <div class="table-actions">
+        <select class="filter-select" id="order-source-filter" onchange="renderOrdersTable()">
+          <option value="">All Sources</option>
+          <option value="online">Online (Website)</option>
+          <option value="offline">Offline (Walk-in / DM)</option>
+          <option value="walkin">Walk-in</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="instagram">Instagram</option>
+          <option value="phone">Phone</option>
+        </select>
         <select class="filter-select" id="order-status-filter" onchange="renderOrdersTable()">
           <option value="">All Statuses</option>
           <option value="awaiting-verification">Awaiting Verification</option>
@@ -1299,6 +1313,123 @@
   </div>
 </div>
 
+<!-- ───────────────────────────────────────────────────────
+     MANUAL ORDER MODAL — record offline / WhatsApp / walk-in sales
+     ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-manual-order">
+  <div class="modal" style="max-width:680px;max-height:92vh;overflow-y:auto;">
+    <button class="modal-close" onclick="closeModal('modal-manual-order')">✕</button>
+    <h2 class="modal-title" style="font-family:'Newsreader',serif;font-style:italic;">Record Offline Order</h2>
+    <p style="font-size:0.7rem;color:#8a7f73;margin-bottom:1.5rem;line-height:1.6;">
+      Use this for orders received via WhatsApp, Instagram DM, walk-in, or phone. Stock is auto-deducted, customer is auto-added, invoice can be generated.
+    </p>
+
+    <!-- Source -->
+    <div style="margin-bottom:1.25rem;">
+      <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.6rem;">Order Source *</label>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+        <button type="button" class="src-btn active" data-src="walkin" onclick="setManualSource(this,'walkin')">Walk-in</button>
+        <button type="button" class="src-btn" data-src="whatsapp" onclick="setManualSource(this,'whatsapp')">WhatsApp</button>
+        <button type="button" class="src-btn" data-src="instagram" onclick="setManualSource(this,'instagram')">Instagram</button>
+        <button type="button" class="src-btn" data-src="phone" onclick="setManualSource(this,'phone')">Phone</button>
+        <button type="button" class="src-btn" data-src="other" onclick="setManualSource(this,'other')">Other</button>
+      </div>
+    </div>
+
+    <!-- Customer -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <div>
+        <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Customer Name *</label>
+        <input type="text" id="mo-name" class="modal-input" placeholder="Full name" autocomplete="off"/>
+      </div>
+      <div>
+        <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Phone *</label>
+        <input type="tel" id="mo-phone" class="modal-input" placeholder="98xxxxxxxx" autocomplete="off"/>
+      </div>
+    </div>
+    <div style="margin-bottom:1.25rem;">
+      <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Email <span style="text-transform:none;color:#a89e94;">(optional, recommended for receipts)</span></label>
+      <input type="email" id="mo-email" class="modal-input" placeholder="customer@example.com" autocomplete="off"/>
+    </div>
+
+    <!-- Items -->
+    <div style="margin-bottom:1.25rem;border-top:1px solid rgba(200,184,154,0.3);padding-top:1rem;">
+      <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.6rem;">Items in Order *</label>
+      <div id="mo-items-list" style="margin-bottom:0.75rem;"></div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button type="button" class="btn-secondary" style="font-size:0.6rem;padding:0.5rem 0.85rem;" onclick="addManualItemFromInventory()">+ From Inventory</button>
+        <button type="button" class="btn-secondary" style="font-size:0.6rem;padding:0.5rem 0.85rem;" onclick="addManualItemCustom()">+ Custom Item (no SKU)</button>
+      </div>
+    </div>
+
+    <!-- Total -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;background:#fafaf8;border:1px solid rgba(200,184,154,0.3);margin-bottom:1.25rem;">
+      <span style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;">Subtotal</span>
+      <span id="mo-subtotal" style="font-family:'Newsreader',serif;font-size:1.1rem;color:var(--accent);">NRs. 0</span>
+    </div>
+
+    <!-- Payment -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <div>
+        <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Payment Method</label>
+        <select id="mo-pay-method" class="filter-select" style="width:100%;">
+          <option value="cash">Cash</option>
+          <option value="esewa">eSewa</option>
+          <option value="khalti">Khalti</option>
+          <option value="bank">Bank Transfer</option>
+          <option value="qr">QR / Digital</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Payment Status</label>
+        <select id="mo-pay-status" class="filter-select" style="width:100%;">
+          <option value="paid">Paid in Full</option>
+          <option value="partial">Partial</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Date + Notes -->
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Order Date</label>
+      <input type="date" id="mo-date" class="modal-input"/>
+    </div>
+    <div style="margin-bottom:1.5rem;">
+      <label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Notes <span style="text-transform:none;color:#a89e94;">(optional)</span></label>
+      <textarea id="mo-notes" rows="2" class="modal-input" placeholder="e.g. Customer requested delivery before Saturday" style="resize:vertical;"></textarea>
+    </div>
+
+    <!-- Auto invoice -->
+    <div style="margin-bottom:1.5rem;padding:0.75rem 1rem;background:#fafaf8;border:1px solid rgba(200,184,154,0.3);">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.7rem;">
+        <input type="checkbox" id="mo-gen-invoice" checked/>
+        <span>Generate &amp; download invoice PDF after saving</span>
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-manual-order')">Cancel</button>
+      <button class="btn-primary" onclick="saveManualOrder()">✓ Save Order</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.src-btn { padding:0.5rem 0.85rem;border:1px solid rgba(200,184,154,0.4);background:white;color:var(--ink);font-family:'Jost';font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all 0.15s; }
+.src-btn:hover { border-color:var(--accent); }
+.src-btn.active { background:var(--ink);color:var(--cream);border-color:var(--ink); }
+.modal-input { width:100%;padding:0.65rem 0.85rem;border:1px solid rgba(200,184,154,0.4);font-family:'Jost';font-size:0.78rem;color:var(--ink);outline:none;background:white;transition:border-color 0.15s; }
+.modal-input:focus { border-color:var(--accent); }
+.mo-item-row { display:grid;grid-template-columns:1fr 70px 90px 110px 32px;gap:0.5rem;align-items:center;padding:0.55rem 0.75rem;background:#fafaf8;border:1px solid rgba(200,184,154,0.2);margin-bottom:0.4rem; }
+.mo-item-row .name { font-size:0.74rem;font-weight:500;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.mo-item-row .qty-input,.mo-item-row .price-input,.mo-item-row .size-input { padding:0.35rem 0.5rem;border:1px solid rgba(200,184,154,0.3);font-family:'Jost';font-size:0.7rem;background:white;width:100%; }
+.mo-item-row .remove-btn { width:28px;height:28px;border:1px solid rgba(183,28,28,0.4);background:white;color:#b71c1c;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center; }
+.mo-item-row .remove-btn:hover { background:#fee2e2; }
+@media (max-width:640px) { .mo-item-row { grid-template-columns:1fr 60px 32px;grid-template-areas:"name name name" "size qty rem" "price price price";gap:0.3rem; } .mo-item-row .name{grid-area:name;} .mo-item-row .size-input{grid-area:size;} .mo-item-row .qty-input{grid-area:qty;} .mo-item-row .remove-btn{grid-area:rem;} .mo-item-row .price-input{grid-area:price;} }
+</style>
+
 <div class="modal-overlay" id="modal-order">
   <div class="modal" style="max-width:640px;">
     <button class="modal-close" onclick="closeModal('modal-order')">✕</button>
@@ -1850,6 +1981,329 @@ function deleteOrder(orderId) {
   toast('Order deleted');
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// MANUAL ORDER ENTRY (offline / WhatsApp / walk-in)
+// ═══════════════════════════════════════════════════════════════════
+var MANUAL_ITEMS = []; // working state for current modal session
+var MANUAL_SOURCE = 'walkin';
+
+function openManualOrderModal() {
+  // Reset state
+  MANUAL_ITEMS = [];
+  MANUAL_SOURCE = 'walkin';
+
+  // Reset form fields
+  document.getElementById('mo-name').value = '';
+  document.getElementById('mo-phone').value = '';
+  document.getElementById('mo-email').value = '';
+  document.getElementById('mo-pay-method').value = 'cash';
+  document.getElementById('mo-pay-status').value = 'paid';
+  document.getElementById('mo-notes').value = '';
+  document.getElementById('mo-gen-invoice').checked = true;
+
+  // Default date = today
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('mo-date').value = today;
+
+  // Reset source button highlight
+  document.querySelectorAll('.src-btn').forEach(function(b) { b.classList.remove('active'); });
+  var defaultBtn = document.querySelector('.src-btn[data-src="walkin"]');
+  if (defaultBtn) defaultBtn.classList.add('active');
+
+  renderManualItems();
+  openModal('modal-manual-order');
+}
+
+function setManualSource(btn, src) {
+  MANUAL_SOURCE = src;
+  document.querySelectorAll('.src-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function renderManualItems() {
+  var container = document.getElementById('mo-items-list');
+  if (!MANUAL_ITEMS.length) {
+    container.innerHTML = '<p style="font-size:0.7rem;color:#a89e94;font-style:italic;text-align:center;padding:1rem 0;">No items yet — add at least one.</p>';
+  } else {
+    container.innerHTML = MANUAL_ITEMS.map(function(item, idx) {
+      var sizeOptions = ['XS','S','M','L','XL','XXL','-'].map(function(s) {
+        return '<option value="' + s + '"' + (item.size === s ? ' selected' : '') + '>' + s + '</option>';
+      }).join('');
+      return '<div class="mo-item-row">' +
+        '<span class="name" title="' + (item.name || '').replace(/"/g,'&quot;') + '">' + (item.name || '—') +
+          (item.fromInventory ? '' : ' <em style="color:#a89e94;font-size:0.65rem;">(custom)</em>') +
+        '</span>' +
+        '<select class="size-input" onchange="updateManualItemField(' + idx + ', \'size\', this.value)">' + sizeOptions + '</select>' +
+        '<input type="number" class="qty-input" min="1" max="999" value="' + (item.qty || 1) + '" onchange="updateManualItemField(' + idx + ', \'qty\', this.value)" placeholder="Qty"/>' +
+        '<input type="number" class="price-input" min="0" value="' + (item.price || 0) + '" onchange="updateManualItemField(' + idx + ', \'price\', this.value)" placeholder="Unit ₨"/>' +
+        '<button type="button" class="remove-btn" onclick="removeManualItem(' + idx + ')">✕</button>' +
+      '</div>';
+    }).join('');
+  }
+  // Update subtotal
+  var subtotal = MANUAL_ITEMS.reduce(function(s, it) { return s + (parseFloat(it.qty || 0) * parseFloat(it.price || 0)); }, 0);
+  document.getElementById('mo-subtotal').textContent = 'NRs. ' + Math.round(subtotal).toLocaleString();
+}
+
+function updateManualItemField(idx, field, value) {
+  if (!MANUAL_ITEMS[idx]) return;
+  if (field === 'qty' || field === 'price') value = parseFloat(value) || 0;
+  MANUAL_ITEMS[idx][field] = value;
+  renderManualItems();
+}
+
+function removeManualItem(idx) {
+  MANUAL_ITEMS.splice(idx, 1);
+  renderManualItems();
+}
+
+function addManualItemFromInventory() {
+  // Show a picker that lists active products
+  var products = [];
+  try { products = JSON.parse(localStorage.getItem('atelier_admin_products') || '[]'); } catch(e) {}
+  products = products.filter(function(p) { return p && p.name; });
+
+  if (!products.length) {
+    toast('No products in inventory yet. Use "Custom Item" instead.');
+    return;
+  }
+
+  // Build a simple chooser modal inline
+  var pickerHtml = '<div id="mo-picker-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem;" onclick="if(event.target===this)closeManualPicker()">';
+  pickerHtml += '<div style="background:white;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;padding:1.5rem;">';
+  pickerHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h3 style="font-family:\'Newsreader\',serif;font-style:italic;font-size:1.1rem;">Pick a Product</h3><button onclick="closeManualPicker()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;">✕</button></div>';
+  pickerHtml += '<input type="text" placeholder="Search products…" id="mo-picker-search" oninput="filterPicker(this.value)" style="width:100%;padding:0.6rem 0.85rem;border:1px solid rgba(200,184,154,0.4);font-family:Jost;margin-bottom:1rem;font-size:0.75rem;"/>';
+  pickerHtml += '<div id="mo-picker-list">';
+  products.forEach(function(p, i) {
+    pickerHtml += '<div class="mo-picker-item" data-name="' + (p.name||'').toLowerCase() + ' ' + (p.sku||'').toLowerCase() + '" onclick="pickInventoryProduct(' + i + ')" style="display:flex;gap:0.75rem;padding:0.65rem;cursor:pointer;border-bottom:1px solid rgba(200,184,154,0.15);align-items:center;">' +
+      (p.image ? '<img src="' + p.image + '" style="width:42px;height:42px;object-fit:cover;flex-shrink:0;"/>' : '<div style="width:42px;height:42px;background:rgba(200,184,154,0.2);flex-shrink:0;"></div>') +
+      '<div style="flex:1;min-width:0;">' +
+        '<p style="font-size:0.8rem;margin-bottom:0.15rem;">' + (p.name || '—') + '</p>' +
+        '<p style="font-size:0.62rem;color:#8a7f73;">' +
+          (p.sku ? p.sku + ' · ' : '') +
+          'NRs. ' + (p.price || 0).toLocaleString() +
+          (p.stock !== undefined ? ' · ' + p.stock + ' in stock' : '') +
+        '</p>' +
+      '</div>' +
+    '</div>';
+  });
+  pickerHtml += '</div></div></div>';
+
+  // Store products in window for picker callback
+  window._moPickerProducts = products;
+
+  var existing = document.getElementById('mo-picker-overlay');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', pickerHtml);
+
+  setTimeout(function() {
+    var s = document.getElementById('mo-picker-search');
+    if (s) s.focus();
+  }, 100);
+}
+
+function filterPicker(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.mo-picker-item').forEach(function(el) {
+    el.style.display = el.dataset.name.indexOf(q) !== -1 ? 'flex' : 'none';
+  });
+}
+
+function pickInventoryProduct(idx) {
+  var p = window._moPickerProducts[idx];
+  if (!p) return;
+  MANUAL_ITEMS.push({
+    id: p.id ? String(p.id) + '-M' : null,
+    productId: p.id || null,
+    name: p.name + (p.color ? ' (' + p.color + ')' : ''),
+    sku: p.sku || '',
+    image: p.image || '',
+    price: parseFloat(p.price || 0),
+    qty: 1,
+    size: 'M',
+    fromInventory: true
+  });
+  closeManualPicker();
+  renderManualItems();
+}
+
+function closeManualPicker() {
+  var el = document.getElementById('mo-picker-overlay');
+  if (el) el.remove();
+}
+
+function addManualItemCustom() {
+  var name = prompt('Item name:');
+  if (!name) return;
+  var price = parseFloat(prompt('Unit price (NRs.):')) || 0;
+  MANUAL_ITEMS.push({
+    id: null,
+    productId: null,
+    name: name,
+    sku: '',
+    image: '',
+    price: price,
+    qty: 1,
+    size: '-',
+    fromInventory: false
+  });
+  renderManualItems();
+}
+
+function saveManualOrder() {
+  var name = document.getElementById('mo-name').value.trim();
+  var phone = document.getElementById('mo-phone').value.trim();
+  var email = document.getElementById('mo-email').value.trim();
+
+  if (!name) { toast('Please enter customer name'); document.getElementById('mo-name').focus(); return; }
+  if (!phone) { toast('Please enter phone number'); document.getElementById('mo-phone').focus(); return; }
+  if (!MANUAL_ITEMS.length) { toast('Please add at least one item'); return; }
+
+  var subtotal = MANUAL_ITEMS.reduce(function(s, it) { return s + (parseFloat(it.qty || 0) * parseFloat(it.price || 0)); }, 0);
+  if (subtotal <= 0) { toast('Subtotal must be greater than 0'); return; }
+
+  var payMethod = document.getElementById('mo-pay-method').value;
+  var payStatus = document.getElementById('mo-pay-status').value;
+  var orderDate = document.getElementById('mo-date').value || new Date().toISOString().split('T')[0];
+  var notes = document.getElementById('mo-notes').value.trim();
+  var genInvoice = document.getElementById('mo-gen-invoice').checked;
+
+  // Build order ID — different prefix for offline orders so they're recognizable
+  var sourcePrefix = { walkin: 'WI', whatsapp: 'WA', instagram: 'IG', phone: 'PH', other: 'OF' };
+  var prefix = sourcePrefix[MANUAL_SOURCE] || 'OF';
+  var orderId = 'TA-' + prefix + '-' + Date.now().toString().slice(-7);
+
+  // Determine status — paid offline orders are typically already 'completed'
+  var status = payStatus === 'paid' ? 'completed' : (payStatus === 'partial' ? 'processing' : 'awaiting-verification');
+
+  // Format date pretty
+  var dateObj = new Date(orderDate);
+  var prettyDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  // First item summary for the legacy "product" field
+  var firstItem = MANUAL_ITEMS[0];
+  var productSummary = MANUAL_ITEMS.length === 1
+    ? firstItem.name
+    : firstItem.name + (MANUAL_ITEMS.length > 1 ? ' + ' + (MANUAL_ITEMS.length - 1) + ' more' : '');
+
+  var orderObj = {
+    id: orderId,
+    source: MANUAL_SOURCE,            // 'walkin' / 'whatsapp' / 'instagram' / 'phone' / 'other'
+    sourceLabel: 'offline',           // generic flag for filters
+    customer: name,
+    email: email,
+    phone: phone,
+    product: productSummary,
+    productImage: firstItem.image || '',
+    items: MANUAL_ITEMS.map(function(it) {
+      return {
+        id: it.id || (it.name + '-' + it.size).toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        productId: it.productId,
+        name: it.name,
+        sku: it.sku || '',
+        image: it.image || '',
+        price: it.price,
+        qty: it.qty,
+        quantity: it.qty,
+        size: it.size,
+        fromInventory: !!it.fromInventory
+      };
+    }),
+    qty: MANUAL_ITEMS.reduce(function(s, it) { return s + parseInt(it.qty || 1); }, 0),
+    size: firstItem.size || '-',
+    amount: subtotal,
+    total: subtotal,
+    payment: { method: payMethod, status: payStatus },
+    paymentMethod: payMethod,
+    paymentVerified: payStatus === 'paid',
+    status: status,
+    date: prettyDate,
+    notes: notes,
+    createdAt: dateObj.getTime(),
+    completedAt: payStatus === 'paid' ? Date.now() : 0
+  };
+
+  // 1. Save to Firebase + local
+  var orders = getOrders();
+  orders.unshift(orderObj);
+  saveOrders(orders);
+  ORDERS = orders;
+  try { if (window.AtelierSync && window.AtelierSync.forcePush) window.AtelierSync.forcePush(); } catch(e) {}
+
+  // 2. Auto-deduct stock for items from inventory
+  try {
+    var cartLikeItems = orderObj.items.filter(function(it) { return it.fromInventory && it.productId; }).map(function(it) {
+      return { id: it.productId + '-' + it.size, quantity: it.qty };
+    });
+    if (cartLikeItems.length && window.deductStockForOrder) window.deductStockForOrder(cartLikeItems);
+  } catch(e) { console.warn('Stock deduct failed:', e); }
+
+  // 3. Auto-add/update customer record
+  try {
+    var customers = getCustomers();
+    var existingIdx = email ? customers.findIndex(function(c) { return (c.email || '').toLowerCase() === email.toLowerCase(); }) : -1;
+    if (existingIdx >= 0) {
+      customers[existingIdx].orders = (customers[existingIdx].orders || 0) + 1;
+      customers[existingIdx].spent = (customers[existingIdx].spent || 0) + subtotal;
+      customers[existingIdx].lastOrderId = orderId;
+      customers[existingIdx].lastOrderAt = Date.now();
+    } else {
+      customers.unshift({
+        name: name,
+        email: email,
+        phone: phone,
+        country: 'NP',
+        orders: 1,
+        spent: subtotal,
+        joined: new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
+        lastOrderId: orderId,
+        lastOrderAt: Date.now(),
+        source: MANUAL_SOURCE
+      });
+    }
+    localStorage.setItem('atelier_admin_customers', JSON.stringify(customers));
+    CUSTOMERS = customers;
+  } catch(e) { console.warn('Customer save failed:', e); }
+
+  // 4. Update mirror in /order_lookup so customer can track if they have email
+  try {
+    if (email) {
+      var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+      var raw = (orderId || '').toLowerCase() + '|' + email.toLowerCase();
+      var key = btoa(raw).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 200);
+      fetch(DB_URL + '/order_lookup/' + encodeURIComponent(key) + '.json', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: orderId, customer: name, product: productSummary,
+          productImage: orderObj.productImage, date: prettyDate,
+          amount: subtotal, status: status, tracking: '', notes: '',
+          createdAt: orderObj.createdAt, updatedAt: Date.now()
+        })
+      }).catch(function() {});
+    }
+  } catch(e) {}
+
+  // 5. Generate invoice if requested
+  if (genInvoice && window.generateInvoicePDF) {
+    window.generateInvoicePDF(orderObj).then(function(blob) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'invoice-' + orderId + '.pdf';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+      toast('✓ Order saved + invoice downloaded');
+    }).catch(function() {
+      toast('✓ Order saved (invoice generation failed)');
+    });
+  } else {
+    toast('✓ Offline order saved');
+  }
+
+  closeModal('modal-manual-order');
+  renderOrdersTable();
+}
+
 function viewCustomerOrders(idx) {
   var customers = getCustomers();
   var c = customers[idx]; if (!c) return;
@@ -2164,7 +2618,21 @@ function renderOrdersTable(){
   ORDERS = getOrders();
   const q=(document.getElementById('order-search')?.value||'').toLowerCase();
   const sf=document.getElementById('order-status-filter')?.value||'';
-  let list=ORDERS.filter(o=>(!sf||o.status===sf)&&(!q||[o.id,o.customer,o.product,o.sku||'',o.email||''].some(v=>String(v).toLowerCase().includes(q))));
+  const srcf=document.getElementById('order-source-filter')?.value||'';
+  let list=ORDERS.filter(function(o){
+    if (!o) return false;
+    if (sf && o.status !== sf) return false;
+    if (srcf) {
+      // Filter logic: 'online' = no source/source!=offline; 'offline' = source set & not 'online';
+      // specific source = matches o.source
+      var src = o.source || 'online';
+      if (srcf === 'online' && src !== 'online') return false;
+      if (srcf === 'offline' && src === 'online') return false;
+      if (srcf !== 'online' && srcf !== 'offline' && src !== srcf) return false;
+    }
+    if (q && ![o.id, o.customer, o.product, o.sku||'', o.email||''].some(function(v){ return String(v).toLowerCase().includes(q); })) return false;
+    return true;
+  });
   if(sortState.orders){const{col,dir}=sortState.orders;list=[...list].sort((a,b)=>typeof a[col]==='string'?dir*a[col].localeCompare(b[col]):dir*(a[col]-b[col]));}
 
   // Update mini-stats
@@ -2176,7 +2644,7 @@ function renderOrdersTable(){
   if(document.getElementById('stat-orders-cancelled')) document.getElementById('stat-orders-cancelled').textContent = ORDERS.filter(o=>o.status==='cancelled'||o.status==='payment-rejected').length;
 
   document.getElementById('orders-tbody').innerHTML = list.length === 0
-    ? '<tr><td colspan="8" style="text-align:center;color:#8a7f73;padding:2.5rem;font-size:0.75rem;">No orders yet. Orders placed in the shop will appear here automatically.</td></tr>'
+    ? '<tr><td colspan="8" style="text-align:center;color:#8a7f73;padding:2.5rem;font-size:0.75rem;">No orders match these filters.</td></tr>'
     : list.map(o=>{
       const idx=ORDERS.indexOf(o);
       const skuBadge = o.sku ? `<span style="font-family:monospace;font-size:0.6rem;color:var(--accent);">${o.sku}</span>` : '';
@@ -2184,9 +2652,19 @@ function renderOrdersTable(){
       const proofIcon = hasProof ? '<span title="Payment proof attached" style="cursor:help;">📎</span>' : '<span title="No proof" style="opacity:0.3;cursor:help;">—</span>';
       const statusLabel = o.status === 'awaiting-verification' ? 'Awaiting Verification' : o.status === 'payment-rejected' ? 'Payment Rejected' : o.status;
       const isUrgent = o.status === 'awaiting-verification';
+
+      // Source badge — shows for offline orders
+      var src = o.source || 'online';
+      var srcBadge = '';
+      if (src !== 'online') {
+        var srcLabels = { walkin: 'Walk-in', whatsapp: 'WhatsApp', instagram: 'Instagram', phone: 'Phone', other: 'Offline' };
+        var srcColors = { walkin: '#8b5e3c', whatsapp: '#25D366', instagram: '#C13584', phone: '#0e0e0d', other: '#6b6258' };
+        srcBadge = '<span style="display:inline-block;font-size:0.55rem;letter-spacing:0.08em;text-transform:uppercase;background:' + (srcColors[src]||'#6b6258') + ';color:#fff;padding:0.12rem 0.4rem;border-radius:2px;margin-left:0.4rem;vertical-align:middle;">' + (srcLabels[src]||src) + '</span>';
+      }
+
       return`<tr${isUrgent?' style="background:rgba(255,243,224,0.35);"':''}>
-        <td style="font-family:'Newsreader',serif;font-style:italic;">${o.id}</td>
-        <td><div style="font-weight:500;">${o.customer}</div><div style="font-size:0.6rem;color:#8a7f73;">${o.email||''}</div></td>
+        <td style="font-family:'Newsreader',serif;font-style:italic;">${o.id}${srcBadge}</td>
+        <td><div style="font-weight:500;">${o.customer}</div><div style="font-size:0.6rem;color:#8a7f73;">${o.email||o.phone||''}</div></td>
         <td><div style="display:flex;align-items:center;gap:0.5rem;">${o.productImage?'<img src="'+o.productImage+'" style="width:36px;height:36px;object-fit:cover;border:1px solid rgba(200,184,154,0.2);flex-shrink:0;" onerror="this.style.display=\'none\'"/>':''}<div><span style="color:#6b6258;">${o.product}</span><br/>${skuBadge}</div></div></td>
         <td style="color:#8a7f73;">${o.date}</td>
         <td style="font-weight:500;">NRs. ${(o.amount||0).toLocaleString()}</td>
