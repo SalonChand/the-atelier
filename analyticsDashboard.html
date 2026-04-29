@@ -1423,11 +1423,11 @@
 .modal-input { width:100%;padding:0.65rem 0.85rem;border:1px solid rgba(200,184,154,0.4);font-family:'Jost';font-size:0.78rem;color:var(--ink);outline:none;background:white;transition:border-color 0.15s; }
 .modal-input:focus { border-color:var(--accent); }
 .mo-item-row { display:grid;grid-template-columns:1fr 70px 90px 110px 32px;gap:0.5rem;align-items:center;padding:0.55rem 0.75rem;background:#fafaf8;border:1px solid rgba(200,184,154,0.2);margin-bottom:0.4rem; }
-.mo-item-row .name { font-size:0.74rem;font-weight:500;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.mo-item-row .name { font-size:0.74rem;font-weight:500;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block; }
 .mo-item-row .qty-input,.mo-item-row .price-input,.mo-item-row .size-input { padding:0.35rem 0.5rem;border:1px solid rgba(200,184,154,0.3);font-family:'Jost';font-size:0.7rem;background:white;width:100%; }
 .mo-item-row .remove-btn { width:28px;height:28px;border:1px solid rgba(183,28,28,0.4);background:white;color:#b71c1c;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center; }
 .mo-item-row .remove-btn:hover { background:#fee2e2; }
-@media (max-width:640px) { .mo-item-row { grid-template-columns:1fr 60px 32px;grid-template-areas:"name name name" "size qty rem" "price price price";gap:0.3rem; } .mo-item-row .name{grid-area:name;} .mo-item-row .size-input{grid-area:size;} .mo-item-row .qty-input{grid-area:qty;} .mo-item-row .remove-btn{grid-area:rem;} .mo-item-row .price-input{grid-area:price;} }
+@media (max-width:640px) { .mo-item-row { grid-template-columns:1fr 60px 32px;grid-template-areas:"thumb thumb thumb" "size qty rem" "price price price";gap:0.3rem; } .mo-item-row > div:first-child{grid-area:thumb;} .mo-item-row .size-input{grid-area:size;} .mo-item-row .qty-input{grid-area:qty;} .mo-item-row .remove-btn{grid-area:rem;} .mo-item-row .price-input{grid-area:price;} }
 </style>
 
 <div class="modal-overlay" id="modal-order">
@@ -2029,10 +2029,24 @@ function renderManualItems() {
       var sizeOptions = ['XS','S','M','L','XL','XXL','-'].map(function(s) {
         return '<option value="' + s + '"' + (item.size === s ? ' selected' : '') + '>' + s + '</option>';
       }).join('');
+
+      // Thumbnail block — image if available, otherwise upload prompt for non-inventory items
+      var thumbHtml;
+      if (item.image) {
+        thumbHtml = '<img src="' + item.image + '" alt="" style="width:42px;height:42px;object-fit:cover;border:1px solid rgba(200,184,154,0.3);flex-shrink:0;cursor:pointer;" title="Click to replace image" onclick="replaceManualItemImage(' + idx + ')"/>';
+      } else if (!item.fromInventory) {
+        thumbHtml = '<button type="button" onclick="replaceManualItemImage(' + idx + ')" title="Add image" style="width:42px;height:42px;background:rgba(200,184,154,0.15);border:1px dashed rgba(200,184,154,0.5);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;color:#8a7f73;padding:0;">📷</button>';
+      } else {
+        thumbHtml = '<div style="width:42px;height:42px;background:rgba(200,184,154,0.15);border:1px solid rgba(200,184,154,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:#a89e94;">—</div>';
+      }
+
       return '<div class="mo-item-row">' +
-        '<span class="name" title="' + (item.name || '').replace(/"/g,'&quot;') + '">' + (item.name || '—') +
-          (item.fromInventory ? '' : ' <em style="color:#a89e94;font-size:0.65rem;">(custom)</em>') +
-        '</span>' +
+        '<div style="display:flex;align-items:center;gap:0.6rem;min-width:0;">' +
+          thumbHtml +
+          '<span class="name" title="' + (item.name || '').replace(/"/g,'&quot;') + '">' + (item.name || '—') +
+          (item.fromInventory ? '' : ' <em style="color:#a89e94;font-size:0.62rem;">(custom)</em>') +
+          '</span>' +
+        '</div>' +
         '<select class="size-input" onchange="updateManualItemField(' + idx + ', \'size\', this.value)">' + sizeOptions + '</select>' +
         '<input type="number" class="qty-input" min="1" max="999" value="' + (item.qty || 1) + '" onchange="updateManualItemField(' + idx + ', \'qty\', this.value)" placeholder="Qty"/>' +
         '<input type="number" class="price-input" min="0" value="' + (item.price || 0) + '" onchange="updateManualItemField(' + idx + ', \'price\', this.value)" placeholder="Unit ₨"/>' +
@@ -2043,6 +2057,50 @@ function renderManualItems() {
   // Update subtotal
   var subtotal = MANUAL_ITEMS.reduce(function(s, it) { return s + (parseFloat(it.qty || 0) * parseFloat(it.price || 0)); }, 0);
   document.getElementById('mo-subtotal').textContent = 'NRs. ' + Math.round(subtotal).toLocaleString();
+}
+
+// Replace image for an existing manual item (or add one if none)
+function replaceManualItemImage(idx) {
+  if (!MANUAL_ITEMS[idx]) return;
+  // Trigger a hidden file input
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.style.display = 'none';
+  input.onchange = function() {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast('Image too large (max 10MB).');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var maxW = 800;
+          var w = img.width, h = img.height;
+          if (w > maxW) { h = h * (maxW / w); w = maxW; }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          MANUAL_ITEMS[idx].image = canvas.toDataURL('image/jpeg', 0.7);
+          renderManualItems();
+          toast('✓ Image attached');
+        } catch(err) {
+          toast('Could not process image');
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  document.body.appendChild(input);
+  input.click();
+  setTimeout(function() { try { document.body.removeChild(input); } catch(e) {} }, 1000);
 }
 
 function updateManualItemField(idx, field, value) {
@@ -2133,21 +2191,158 @@ function closeManualPicker() {
 }
 
 function addManualItemCustom() {
-  var name = prompt('Item name:');
-  if (!name) return;
-  var price = parseFloat(prompt('Unit price (NRs.):')) || 0;
+  // Build a proper modal so we can upload an image
+  var existing = document.getElementById('mo-custom-overlay');
+  if (existing) existing.remove();
+
+  var html = '<div id="mo-custom-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;padding:1rem;" onclick="if(event.target===this)closeManualCustomModal()">';
+  html += '<div style="background:white;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;padding:1.75rem;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;"><h3 style="font-family:\'Newsreader\',serif;font-style:italic;font-size:1.2rem;">Add Custom Item</h3><button onclick="closeManualCustomModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;">✕</button></div>';
+
+  html += '<p style="font-size:0.7rem;color:#8a7f73;margin-bottom:1.25rem;line-height:1.6;">For pieces not in your inventory — alterations, custom requests, or items from a WhatsApp photo.</p>';
+
+  // Image upload
+  html += '<div style="margin-bottom:1rem;">';
+  html += '<label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Reference Image <span style="text-transform:none;color:#a89e94;">(optional)</span></label>';
+  html += '<div id="mo-custom-img-preview" style="margin-bottom:0.5rem;display:none;">';
+  html += '<img id="mo-custom-img" src="" style="max-width:100%;max-height:180px;border:1px solid rgba(200,184,154,0.3);display:block;"/>';
+  html += '<button type="button" onclick="clearManualCustomImage()" style="margin-top:0.5rem;font-size:0.6rem;padding:0.35rem 0.6rem;background:white;border:1px solid rgba(183,28,28,0.4);color:#b71c1c;cursor:pointer;">Remove image</button>';
+  html += '</div>';
+  html += '<label for="mo-custom-img-input" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.85rem;border:2px dashed rgba(200,184,154,0.5);background:#fafaf8;cursor:pointer;font-size:0.7rem;color:#8a7f73;transition:border-color 0.15s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'rgba(200,184,154,0.5)\'">';
+  html += '<span style="font-size:1.1rem;">📷</span><span>Tap to upload (camera or gallery)</span>';
+  html += '</label>';
+  html += '<input type="file" id="mo-custom-img-input" accept="image/*" capture="environment" style="display:none;" onchange="handleManualCustomImage(this)"/>';
+  html += '</div>';
+
+  // Name
+  html += '<div style="margin-bottom:1rem;">';
+  html += '<label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Item Name *</label>';
+  html += '<input type="text" id="mo-custom-name" class="modal-input" placeholder="e.g. Custom embroidered jacket" autofocus/>';
+  html += '</div>';
+
+  // Description (optional, useful for special details)
+  html += '<div style="margin-bottom:1rem;">';
+  html += '<label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Description <span style="text-transform:none;color:#a89e94;">(optional)</span></label>';
+  html += '<textarea id="mo-custom-desc" rows="2" class="modal-input" placeholder="e.g. Floral embroidery on collar, navy blue silk" style="resize:vertical;"></textarea>';
+  html += '</div>';
+
+  // Price + qty + size
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:0.6rem;margin-bottom:1.5rem;">';
+  html += '<div><label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Unit Price *</label>';
+  html += '<input type="number" id="mo-custom-price" class="modal-input" placeholder="NRs." min="0"/></div>';
+  html += '<div><label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Quantity</label>';
+  html += '<input type="number" id="mo-custom-qty" class="modal-input" value="1" min="1" max="999"/></div>';
+  html += '<div><label style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;display:block;margin-bottom:0.4rem;">Size</label>';
+  html += '<select id="mo-custom-size" class="modal-input">';
+  ['-','XS','S','M','L','XL','XXL'].forEach(function(s) {
+    html += '<option value="' + s + '"' + (s === '-' ? ' selected' : '') + '>' + s + '</option>';
+  });
+  html += '</select></div>';
+  html += '</div>';
+
+  html += '<div style="display:flex;gap:0.5rem;justify-content:flex-end;">';
+  html += '<button class="btn-secondary" onclick="closeManualCustomModal()">Cancel</button>';
+  html += '<button class="btn-primary" onclick="confirmAddCustomItem()">+ Add to Order</button>';
+  html += '</div>';
+
+  html += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  // Reset working image
+  window._moCustomImageData = '';
+
+  setTimeout(function() {
+    var n = document.getElementById('mo-custom-name');
+    if (n) n.focus();
+  }, 100);
+}
+
+// Handle image upload — compress to keep storage reasonable
+function handleManualCustomImage(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    toast('Image too large (max 10MB). Please pick a smaller one.');
+    input.value = '';
+    return;
+  }
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    // Compress via canvas — max 800px wide, JPEG 0.7 quality
+    var img = new Image();
+    img.onload = function() {
+      try {
+        var maxW = 800;
+        var w = img.width, h = img.height;
+        if (w > maxW) { h = h * (maxW / w); w = maxW; }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        // White background for transparent images
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        var compressed = canvas.toDataURL('image/jpeg', 0.7);
+        window._moCustomImageData = compressed;
+        // Show preview
+        var prev = document.getElementById('mo-custom-img-preview');
+        var imgEl = document.getElementById('mo-custom-img');
+        if (prev && imgEl) {
+          imgEl.src = compressed;
+          prev.style.display = 'block';
+        }
+      } catch(err) {
+        console.warn('Image compression failed:', err);
+        toast('Could not process image — try a different one.');
+      }
+    };
+    img.onerror = function() { toast('Could not read image file.'); };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() { toast('Could not read file.'); };
+  reader.readAsDataURL(file);
+}
+
+function clearManualCustomImage() {
+  window._moCustomImageData = '';
+  var prev = document.getElementById('mo-custom-img-preview');
+  var imgEl = document.getElementById('mo-custom-img');
+  var input = document.getElementById('mo-custom-img-input');
+  if (prev) prev.style.display = 'none';
+  if (imgEl) imgEl.src = '';
+  if (input) input.value = '';
+}
+
+function confirmAddCustomItem() {
+  var name = (document.getElementById('mo-custom-name').value || '').trim();
+  var desc = (document.getElementById('mo-custom-desc').value || '').trim();
+  var price = parseFloat(document.getElementById('mo-custom-price').value) || 0;
+  var qty = parseInt(document.getElementById('mo-custom-qty').value) || 1;
+  var size = document.getElementById('mo-custom-size').value || '-';
+
+  if (!name) { toast('Please enter item name'); document.getElementById('mo-custom-name').focus(); return; }
+  if (price <= 0) { toast('Please enter unit price'); document.getElementById('mo-custom-price').focus(); return; }
+
   MANUAL_ITEMS.push({
     id: null,
     productId: null,
-    name: name,
+    name: desc ? (name + ' — ' + desc) : name,
     sku: '',
-    image: '',
+    image: window._moCustomImageData || '',
     price: price,
-    qty: 1,
-    size: '-',
+    qty: qty,
+    size: size,
     fromInventory: false
   });
+
+  closeManualCustomModal();
   renderManualItems();
+}
+
+function closeManualCustomModal() {
+  var el = document.getElementById('mo-custom-overlay');
+  if (el) el.remove();
+  window._moCustomImageData = '';
 }
 
 function saveManualOrder() {
