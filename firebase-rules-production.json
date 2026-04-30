@@ -119,6 +119,11 @@
       ".write": "auth != null"
     },
 
+    "admin_login_enabled": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
     "visitors": {
       ".read": "auth != null",
       ".write": true

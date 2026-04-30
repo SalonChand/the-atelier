@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" type="image/png" href="favicon.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0e0e0d"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="The Atelier"/>
+<link rel="apple-touch-icon" href="logo.png"/>
+<link rel="manifest" href="manifest.json"/>
+<title>Admin Login | THE ATELIER</title>
+<meta name="description" content="Staff portal login for The Atelier administration."/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; --error: #8b1a1a; }
+  body { font-family: 'Jost', sans-serif; background: var(--ink); color: var(--cream); min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 768px) { body { grid-template-columns: 1fr; } .side-art { display: none; } }
+
+  .side-art {
+    position: relative; overflow: hidden;
+    background: #1a1714;
+  }
+  .side-art img { width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
+  .side-art-caption {
+    position: absolute; bottom: 3rem; left: 3rem;
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: 2.5rem; color: rgba(244,241,236,0.8);
+    line-height: 1.1; max-width: 300px;
+  }
+
+  .login-panel { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 4rem 3rem; }
+  .login-logo { text-decoration: none; margin-bottom: 0.5rem; display:flex;justify-content:center; }
+  .login-subtitle { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: #8a7f73; margin-bottom: 4rem; }
+
+  .login-box { width: 100%; max-width: 360px; }
+  .login-title { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: #6b6258; margin-bottom: 2.5rem; }
+
+  .form-group { margin-bottom: 1.5rem; }
+  label { display: block; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6b6258; margin-bottom: 0.5rem; }
+  input {
+    width: 100%; padding: 0.8rem 0; background: transparent;
+    border: none; border-bottom: 1px solid rgba(200,184,154,0.25);
+    font-family: 'Jost'; font-size: 0.85rem; color: var(--cream); outline: none;
+    transition: border-color 0.2s;
+  }
+  input::placeholder { color: #4a453f; }
+  input:focus { border-color: var(--warm); }
+  input.invalid { border-color: var(--error); }
+
+  .error-msg { font-size: 0.65rem; color: #e8a0a0; text-align: center; margin-bottom: 1rem; min-height: 1rem; }
+
+  .login-btn {
+    width: 100%; padding: 1.1rem; background: var(--cream); color: var(--ink);
+    border: none; font-family: 'Jost'; font-size: 0.6rem; letter-spacing: 0.22em;
+    text-transform: uppercase; cursor: pointer; transition: all 0.3s; margin-top: 1rem;
+  }
+  .login-btn:hover { background: var(--warm); }
+  .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .forgot-link { display: block; text-align: center; margin-top: 1.5rem; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #6b6258; text-decoration: none; transition: color 0.2s; }
+  .forgot-link:hover { color: var(--warm); }
+
+  .back-link { margin-top: 3rem; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #4a453f; text-decoration: none; display: block; text-align: center; transition: color 0.2s; }
+  .back-link:hover { color: var(--warm); }
+
+
+</style>
+<link rel="stylesheet" href="mobile-app.css?v=3"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="firebase-sync.js?v=8"></script>
+</head>
+<body>
+
+<div class="side-art">
+  <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuD58X9mNKlcoMnVue7EQjJDzmq-BCc3Z5Y9VpeGv-Pg53ycWRzD9i_2ntIxKdW7sbPAzrPiUOU7akCjlfPTNlpYw7ljLET_EUTFlA2iW8d0Z3XIcs9USdeFL0Zqiweq6oh81hPYxEHiAvA3NkEnHE-bAgZoPe8BHhBSHa5Wi8cxh-m3P_Rsldy2gJyzi2EDiKL-Uw-OIQ6YLU8vezuERQEyaqmPwGLwLyG5QqjaFpn5Dj17uVS_yzWyfnLWg-w9q1jFI_4YMVD0kDTp" alt="Atelier"/>
+  <div class="side-art-caption">The House<br/>of<br/>The Atelier</div>
+</div>
+
+<div class="login-panel">
+  <a href="index.html" class="login-logo"><img src="logo.png" alt="The Atelier" style="height:72px;width:auto;object-fit:contain;filter:brightness(1.1);"/></a>
+  <p class="login-subtitle">Administration Portal</p>
+
+  <!-- Kill-switch overlay: shown when admin_login_enabled = false -->
+  <div id="login-locked" style="display:none;text-align:center;padding:2.5rem 1.5rem;border:1px solid rgba(139,26,26,0.3);background:rgba(139,26,26,0.08);">
+    <div style="font-size:2.5rem;color:#8b1a1a;margin-bottom:1rem;">🔒</div>
+    <p style="font-family:'Newsreader',serif;font-style:italic;font-size:1.5rem;margin-bottom:0.6rem;color:var(--cream);">Login Disabled</p>
+    <p style="font-size:0.78rem;color:rgba(244,241,236,0.7);line-height:1.7;margin-bottom:1.25rem;">Admin login has been temporarily disabled by an administrator. If you need urgent access, contact <strong style="color:var(--accent);">sodarisalon26@gmail.com</strong>.</p>
+    <p style="font-size:0.62rem;color:rgba(244,241,236,0.4);letter-spacing:0.1em;">This login attempt has been logged.</p>
+  </div>
+
+  <!-- Recovery banner: shown when ?recover=... is used -->
+  <div id="recovery-banner" style="display:none;background:rgba(212,165,116,0.15);border:1px solid rgba(212,165,116,0.4);padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.7rem;color:var(--cream);line-height:1.6;">
+    <strong style="color:var(--accent);">⚠ Recovery mode</strong> — kill switch is being bypassed. After signing in, re-enable login from the dashboard if you locked yourself out by mistake.
+  </div>
+
+  <!-- Loading state while checking switch -->
+  <div id="login-checking" style="text-align:center;padding:2rem 0;">
+    <div style="width:30px;height:30px;border:2px solid rgba(244,241,236,0.2);border-top-color:var(--accent);border-radius:50%;margin:0 auto 1rem;animation:spin 0.9s linear infinite;"></div>
+    <p style="font-size:0.7rem;color:rgba(244,241,236,0.5);letter-spacing:0.15em;">Checking…</p>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+  <!-- Login form (hidden until switch check passes) -->
+  <div class="login-box" id="login-box" style="display:none;">
+    <p class="login-title">Sign in to continue</p>
+
+    <p class="error-msg" id="error-msg"></p>
+
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" placeholder="admin@theatelier.com"/>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••"/>
+    </div>
+
+    <button class="login-btn" id="login-btn">Sign In</button>
+    <a href="#" class="forgot-link">Forgot password?</a>
+
+
+
+    <a href="index.html" class="back-link">← Return to Store</a>
+  </div>
+</div>
+
+<script>
+  // ─────────── KILL-SWITCH CHECK ───────────
+  // Before showing the login form, check if admin login has been disabled.
+  // The check reads /admin_login_enabled from Firebase. If false, the form
+  // is replaced with a "Login Disabled" overlay.
+  // BYPASS: ?recover=ATELIER_RECOVERY_2026 — for use if you accidentally
+  // disable login and lock yourself out.
+  (function checkKillSwitch() {
+    var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+    var RECOVERY_CODE = 'ATELIER_RECOVERY_2026';
+
+    function showLoginForm() {
+      document.getElementById('login-checking').style.display = 'none';
+      document.getElementById('login-box').style.display = 'block';
+    }
+    function showLocked() {
+      document.getElementById('login-checking').style.display = 'none';
+      document.getElementById('login-locked').style.display = 'block';
+    }
+    function showRecovery() {
+      document.getElementById('recovery-banner').style.display = 'block';
+      showLoginForm();
+    }
+
+    // Check URL for recovery bypass
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('recover') === RECOVERY_CODE) {
+        showRecovery();
+        return;
+      }
+    } catch(e) {}
+
+    // Otherwise check the Firebase flag (default to ENABLED if it doesn't exist yet)
+    fetch(DB_URL + '/admin_login_enabled.json')
+      .then(function(r) { return r.json(); })
+      .then(function(val) {
+        // val === false means explicitly disabled. Anything else = enabled.
+        if (val === false) {
+          showLocked();
+        } else {
+          showLoginForm();
+        }
+      })
+      .catch(function() {
+        // If Firebase check fails (network down, etc), default to enabled —
+        // we don't want a network glitch to lock you out
+        showLoginForm();
+      });
+  })();
+
+  // Add a link for password reset / enable the forgot link
+  document.querySelector('.forgot-link').addEventListener('click', function(e) {
+    e.preventDefault();
+    var email = document.getElementById('email').value.trim();
+    if (!email) {
+      document.getElementById('error-msg').textContent = 'Enter your email first, then click "Forgot password?"';
+      document.getElementById('email').focus();
+      return;
+    }
+    var err = document.getElementById('error-msg');
+    err.textContent = 'Sending password reset email…';
+    err.style.color = '#8a7f73';
+    if (typeof firebase === 'undefined' || !firebase.auth) {
+      err.textContent = 'Password reset unavailable — contact support.';
+      err.style.color = '';
+      return;
+    }
+    firebase.auth().sendPasswordResetEmail(email).then(function() {
+      err.textContent = '✓ Password reset email sent to ' + email;
+      err.style.color = '#3a6b3c';
+    }).catch(function(e2) {
+      err.textContent = e2.message || 'Failed to send reset email.';
+      err.style.color = '';
+    });
+  });
+
+  function doLogin() {
+    var email = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+    var btn = document.getElementById('login-btn');
+    var err = document.getElementById('error-msg');
+    err.style.color = '';
+
+    if (!email || !password) {
+      err.textContent = 'Please enter your credentials.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+    err.textContent = '';
+
+    // ── PRIMARY: Firebase Authentication ─────────────────────────
+    // Proper server-verified auth. Protects Firebase DB via security rules.
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then(function(cred) {
+          // Successful Firebase auth
+          localStorage.setItem('atelier_admin', '1');
+          localStorage.setItem('atelier_current_user', cred.user.email);
+          localStorage.setItem('atelier_current_role', 'admin');
+          window.location.href = 'analyticsDashboard.html';
+        })
+        .catch(function(fbErr) {
+          // Firebase auth failed — try legacy localStorage check as FALLBACK
+          // (this handles initial setup phase before admin accounts are created in Firebase)
+          var admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
+          var user = null;
+          for (var i = 0; i < admins.length; i++) {
+            if (admins[i].email.toLowerCase() === email.toLowerCase() && admins[i].password === password) {
+              user = admins[i];
+              break;
+            }
+          }
+          if (user) {
+            // Legacy login succeeded — warn user to migrate
+            localStorage.setItem('atelier_admin', '1');
+            localStorage.setItem('atelier_current_user', user.email);
+            localStorage.setItem('atelier_current_role', user.role);
+            localStorage.setItem('atelier_auth_legacy', '1');
+            window.location.href = 'analyticsDashboard.html';
+            return;
+          }
+          // Both auth methods failed
+          var msg = 'Incorrect email or password.';
+          if (fbErr.code === 'auth/network-request-failed') {
+            msg = 'Network error. Check your connection.';
+          } else if (fbErr.code === 'auth/too-many-requests') {
+            msg = 'Too many attempts. Try again in a few minutes.';
+          } else if (fbErr.code === 'auth/user-disabled') {
+            msg = 'This account has been disabled.';
+          }
+          err.textContent = msg;
+          document.getElementById('email').classList.add('invalid');
+          document.getElementById('password').classList.add('invalid');
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+        });
+      return;
+    }
+
+    // FALLBACK: Firebase Auth SDK not loaded — legacy check only
+    setTimeout(function() {
+      var admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
+      var user = null;
+      for (var i = 0; i < admins.length; i++) {
+        if (admins[i].email.toLowerCase() === email.toLowerCase() && admins[i].password === password) {
+          user = admins[i];
+          break;
+        }
+      }
+      if (user) {
+        localStorage.setItem('atelier_admin', '1');
+        localStorage.setItem('atelier_current_user', user.email);
+        localStorage.setItem('atelier_current_role', user.role);
+        localStorage.setItem('atelier_auth_legacy', '1');
+        window.location.href = 'analyticsDashboard.html';
+      } else {
+        err.textContent = 'Incorrect email or password.';
+        document.getElementById('email').classList.add('invalid');
+        document.getElementById('password').classList.add('invalid');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    }, 500);
+  }
+
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  ['email', 'password'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', function() {
+      this.classList.remove('invalid');
+      document.getElementById('error-msg').textContent = '';
+    });
+  });
+
+</script>
+<script src="mobile-app.js?v=6"></script>
+</body>
+</html>

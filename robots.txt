@@ -4,10 +4,14 @@ Allow: /
 # Don't index admin pages or private flows
 Disallow: /analyticsDashboard.html
 Disallow: /adminLogin.html
+Disallow: /atelier-ta-portal-x7k2m9.html
 Disallow: /checkout.html
 Disallow: /orderConfirmation.html
 Disallow: /trackOrder.html
 Disallow: /leaveReview.html
+Disallow: /customerLogin.html
+Disallow: /customerAuth.html
+Disallow: /myOrders.html
 
 # Standard sitemap location
 Sitemap: https://theatelier-ta.com/sitemap.xml

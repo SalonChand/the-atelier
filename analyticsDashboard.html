@@ -257,6 +257,7 @@
     <div class="nav-section">
       <p class="nav-section-title">Access</p>
       <button class="nav-item" onclick="showPanel('administrators',this)"><span class="icon">◱</span> Administrators</button>
+      <button class="nav-item" onclick="showPanel('security',this)"><span class="icon">🔒</span> Security</button>
     </div>
     <div class="nav-section">
       <p class="nav-section-title">Custom Studio</p>
@@ -621,6 +622,66 @@
       <thead><tr><th>Email</th><th>Role</th><th>Password</th><th>Actions</th></tr></thead>
       <tbody id="admins-tbody"></tbody>
     </table></div>
+  </div>
+</div>
+
+<!-- SECURITY -->
+<div class="panel" id="panel-security">
+  <div class="topbar"><h1 class="page-title">Security</h1></div>
+
+  <!-- Login Kill Switch Card -->
+  <div style="background:white;border:1px solid rgba(200,184,154,0.3);padding:2rem;margin-bottom:1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:280px;">
+        <h2 style="font-family:'Newsreader',serif;font-style:italic;font-size:1.6rem;margin-bottom:0.5rem;">Admin Login Kill Switch</h2>
+        <p style="font-size:0.78rem;color:#6b6258;line-height:1.7;margin-bottom:0.85rem;">When OFF, the admin login page will refuse all sign-in attempts. Use this if you suspect a security incident, or after-hours when no one should be logging in.</p>
+        <p style="font-size:0.7rem;color:#a89e94;line-height:1.7;background:#fafaf8;padding:0.75rem 0.95rem;border-left:2px solid var(--accent);">
+          ⚠ <strong style="color:#6b6258;">Important:</strong> If you turn this OFF and then sign out, you may lock yourself out. Use the recovery URL below to bypass it if that happens.
+        </p>
+      </div>
+
+      <!-- Toggle switch -->
+      <div style="text-align:center;flex-shrink:0;min-width:140px;">
+        <label class="security-toggle" style="display:inline-block;position:relative;width:80px;height:40px;cursor:pointer;">
+          <input type="checkbox" id="kill-switch-toggle" style="opacity:0;width:0;height:0;" onchange="toggleKillSwitch()"/>
+          <span class="slider" style="position:absolute;inset:0;background:#b71c1c;transition:0.3s;border-radius:40px;">
+            <span class="slider-knob" style="position:absolute;height:32px;width:32px;left:4px;top:4px;background:white;transition:0.3s;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;">🔒</span>
+          </span>
+        </label>
+        <div id="switch-status" style="margin-top:0.85rem;font-family:'Jost';font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:#b71c1c;font-weight:500;">Disabled</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secret URL Card -->
+  <div style="background:white;border:1px solid rgba(200,184,154,0.3);padding:2rem;margin-bottom:1.5rem;">
+    <h2 style="font-family:'Newsreader',serif;font-style:italic;font-size:1.6rem;margin-bottom:0.5rem;">Admin Login URL</h2>
+    <p style="font-size:0.78rem;color:#6b6258;line-height:1.7;margin-bottom:1rem;">This is your private login URL. Bookmark it. Don't share it. Don't post it anywhere public.</p>
+    <div style="display:flex;align-items:center;gap:0.6rem;background:#0e0e0d;color:#f4f1ec;padding:1rem 1.25rem;font-family:'Courier New',monospace;font-size:0.78rem;border-radius:2px;flex-wrap:wrap;">
+      <span style="opacity:0.5;">🔗</span>
+      <span style="word-break:break-all;flex:1;min-width:200px;" id="secret-url-display">https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html</span>
+      <button class="btn-primary" style="padding:0.45rem 0.85rem;font-size:0.55rem;flex-shrink:0;" onclick="copySecretUrl()">Copy</button>
+    </div>
+    <p style="font-size:0.65rem;color:#a89e94;margin-top:0.85rem;line-height:1.7;">Old URL <code style="background:#fafaf8;padding:0.1rem 0.4rem;font-size:0.7rem;">/adminLogin.html</code> now shows a 404 to public visitors.</p>
+  </div>
+
+  <!-- Recovery URL Card -->
+  <div style="background:white;border:1px solid rgba(200,184,154,0.3);padding:2rem;margin-bottom:1.5rem;">
+    <h2 style="font-family:'Newsreader',serif;font-style:italic;font-size:1.6rem;margin-bottom:0.5rem;">Recovery URL <span style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:#b71c1c;font-style:normal;font-family:Jost;background:#fee2e2;padding:0.2rem 0.5rem;margin-left:0.6rem;vertical-align:middle;">Emergency Only</span></h2>
+    <p style="font-size:0.78rem;color:#6b6258;line-height:1.7;margin-bottom:1rem;">If you accidentally turn the kill switch OFF and lock yourself out, use this URL — it bypasses the kill switch. Memorize the recovery code or save it somewhere safe.</p>
+    <div style="display:flex;align-items:center;gap:0.6rem;background:#fee2e2;color:#7f1d1d;padding:1rem 1.25rem;font-family:'Courier New',monospace;font-size:0.78rem;border-radius:2px;border:1px solid rgba(183,28,28,0.3);flex-wrap:wrap;">
+      <span>🚨</span>
+      <span style="word-break:break-all;flex:1;min-width:200px;" id="recovery-url-display">https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html?recover=ATELIER_RECOVERY_2026</span>
+      <button class="btn-primary" style="padding:0.45rem 0.85rem;font-size:0.55rem;flex-shrink:0;background:#7f1d1d;border-color:#7f1d1d;" onclick="copyRecoveryUrl()">Copy</button>
+    </div>
+  </div>
+
+  <!-- Session Info -->
+  <div style="background:white;border:1px solid rgba(200,184,154,0.3);padding:2rem;">
+    <h2 style="font-family:'Newsreader',serif;font-style:italic;font-size:1.6rem;margin-bottom:0.5rem;">Your Session</h2>
+    <p style="font-size:0.78rem;color:#6b6258;line-height:1.7;margin-bottom:1rem;">Currently signed in as:</p>
+    <div style="font-family:'Courier New',monospace;font-size:0.85rem;color:var(--ink);background:#fafaf8;padding:0.85rem 1rem;border-left:3px solid var(--accent);" id="current-session-email">—</div>
+    <p style="font-size:0.65rem;color:#a89e94;margin-top:0.85rem;line-height:1.7;">Sessions persist across browser restarts unless you sign out. To revoke an admin's access entirely, delete their account from <a href="#" onclick="showPanel('administrators',document.querySelector('[onclick*=administrators]'));return false;" style="color:var(--accent);">Administrators</a>.</p>
   </div>
 </div>
 
@@ -2525,6 +2586,143 @@ function viewCustomerOrders(idx) {
   showFullCustomerDetails(c);
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// SECURITY PANEL — Kill switch + URL management
+// ═══════════════════════════════════════════════════════════════════
+
+function loadSecurityPanel() {
+  // Show current signed-in email
+  try {
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      var user = firebase.auth().currentUser;
+      var emailEl = document.getElementById('current-session-email');
+      if (emailEl && user) emailEl.textContent = user.email || '(no email)';
+    }
+  } catch(e) {}
+
+  // Load current kill-switch state
+  var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+  fetch(DB_URL + '/admin_login_enabled.json')
+    .then(function(r) { return r.json(); })
+    .then(function(val) {
+      // val === false means disabled. Anything else (true/null) = enabled
+      var isEnabled = (val !== false);
+      updateKillSwitchUI(isEnabled);
+    })
+    .catch(function() {
+      // If we can't read it, assume enabled
+      updateKillSwitchUI(true);
+    });
+}
+
+function updateKillSwitchUI(isEnabled) {
+  var toggle = document.getElementById('kill-switch-toggle');
+  var slider = toggle ? toggle.parentElement.querySelector('.slider') : null;
+  var knob = toggle ? toggle.parentElement.querySelector('.slider-knob') : null;
+  var status = document.getElementById('switch-status');
+  if (!toggle || !slider || !knob || !status) return;
+
+  toggle.checked = isEnabled;
+  if (isEnabled) {
+    slider.style.background = '#2e7d32'; // green
+    knob.style.left = 'calc(100% - 36px)';
+    knob.textContent = '🔓';
+    status.textContent = 'Login Enabled';
+    status.style.color = '#2e7d32';
+  } else {
+    slider.style.background = '#b71c1c'; // red
+    knob.style.left = '4px';
+    knob.textContent = '🔒';
+    status.textContent = 'Login Disabled';
+    status.style.color = '#b71c1c';
+  }
+}
+
+function toggleKillSwitch() {
+  var toggle = document.getElementById('kill-switch-toggle');
+  var newVal = toggle.checked; // checked = enabled
+
+  // If turning OFF, ask for confirmation (lockout risk)
+  if (!newVal) {
+    var confirmed = confirm(
+      '⚠ Disable Admin Login?\n\n' +
+      'When disabled, the admin login page will refuse all sign-in attempts. ' +
+      'You and other admins will not be able to log in.\n\n' +
+      'If you accidentally lock yourself out, use the Recovery URL on this page.\n\n' +
+      'Continue?'
+    );
+    if (!confirmed) {
+      toggle.checked = true; // revert
+      return;
+    }
+  }
+
+  // Optimistic UI update
+  updateKillSwitchUI(newVal);
+
+  // Get auth token (only authenticated admin can write this value per Firebase rules)
+  if (typeof firebase === 'undefined' || !firebase.auth || !firebase.auth().currentUser) {
+    toast('You must be signed in to change this setting.');
+    updateKillSwitchUI(!newVal); // revert
+    return;
+  }
+
+  firebase.auth().currentUser.getIdToken().then(function(idToken) {
+    var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+    fetch(DB_URL + '/admin_login_enabled.json?auth=' + idToken, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newVal)
+    })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function() {
+        toast(newVal ? '✓ Login enabled' : '✓ Login disabled');
+      })
+      .catch(function(err) {
+        console.error('Kill switch save failed:', err);
+        toast('Could not save. Check Firebase rules and try again.');
+        updateKillSwitchUI(!newVal); // revert
+      });
+  });
+}
+
+function copySecretUrl() {
+  var url = 'https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html';
+  copyToClipboard(url, 'Login URL copied');
+}
+
+function copyRecoveryUrl() {
+  var url = 'https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html?recover=ATELIER_RECOVERY_2026';
+  copyToClipboard(url, 'Recovery URL copied');
+}
+
+function copyToClipboard(text, successMessage) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(function() { toast('✓ ' + successMessage); })
+      .catch(function() { fallbackCopy(text, successMessage); });
+  } else {
+    fallbackCopy(text, successMessage);
+  }
+}
+
+function fallbackCopy(text, successMessage) {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('✓ ' + successMessage);
+  } catch(e) {
+    toast('Could not copy. Long-press and copy manually.');
+  }
+}
+
 // ── FULL CUSTOMER DETAILS MODAL ──────────────────────────────────
 function showFullCustomerDetails(c) {
   if (!c) return;
@@ -2790,7 +2988,7 @@ function showPanel(name,btn){
   // Refresh live purchase data before rendering
   if(name==='orders') ORDERS = getOrders();
   if(name==='customers') CUSTOMERS = getCustomers();
-  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,visitors:renderVisitorsPanel,abandoned:renderAbandonedCartsPanel,notifications:renderNotificationsPanel,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel})[name]?.();
+  ({orders:renderOrdersTable,products:renderProductsTable,inventory:renderInventoryTable,customers:renderCustomersTable,collections:renderCollectionsTable,promotions:renderPromotionsTable,reviews:renderReviewsTable,analytics:initAnalytics,visitors:renderVisitorsPanel,abandoned:renderAbandonedCartsPanel,notifications:renderNotificationsPanel,administrators:renderAdminsTable,inquiries:renderInquiriesTable,announcements:renderAnnouncementsTable,customorders:renderCustomOrdersTable,paymentsettings:loadPaymentSettingsForm,stickers:renderStickersTable,stickerorders:renderStickerOrdersTable,brands:renderBrandsPanel,sync:renderSyncPanel,security:loadSecurityPanel})[name]?.();
 }
 
 function toast(msg){
