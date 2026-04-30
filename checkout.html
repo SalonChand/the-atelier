@@ -991,6 +991,22 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
       .then(function(r){
         // Lookup write is non-fatal — order itself already saved
         if (r && !r.ok) console.warn('Order lookup write returned HTTP ' + r.status);
+        // Write to /customer_orders/{emailHash}/{lookupKey} so the customer's
+        // signed-in "My Orders" page can find this order.
+        var emailHash = btoa((orderObj.email || '').toLowerCase()).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 200);
+        var lookupKey2 = buildLookupKey(orderObj.id, orderObj.email);
+        return fetch(DB_URL + '/customer_orders/' + encodeURIComponent(emailHash) + '/' + encodeURIComponent(lookupKey2) + '.json', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: orderObj.id,
+            type: 'regular',
+            createdAt: orderObj.createdAt
+          })
+        });
+      })
+      .then(function(r){
+        if (r && !r.ok) console.warn('customer_orders index write returned HTTP ' + r.status);
       })
       .then(function() {
         // Step 2: POST customer info to /customers

@@ -2486,6 +2486,15 @@ function saveManualOrder() {
           createdAt: orderObj.createdAt, updatedAt: Date.now()
         })
       }).catch(function() {});
+
+      // Write customer_orders index entry so customer can find this order
+      // when signed in to their My Orders page
+      var emailHash = btoa(email.toLowerCase()).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 200);
+      fetch(DB_URL + '/customer_orders/' + encodeURIComponent(emailHash) + '/' + encodeURIComponent(key) + '.json', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: orderId, type: 'manual', createdAt: orderObj.createdAt })
+      }).catch(function() {});
     }
   } catch(e) {}
 

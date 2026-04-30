@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0e0e0d"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="The Atelier"/>
+<link rel="icon" type="image/png" href="favicon.png"/>
+<link rel="apple-touch-icon" href="logo.png"/>
+<link rel="manifest" href="manifest.json"/>
+<title>My Orders | THE ATELIER</title>
+<meta name="description" content="View your order history, track deliveries, and manage your wardrobe at The Atelier."/>
+<meta name="robots" content="noindex, nofollow"/>
+<link rel="canonical" href="https://theatelier-ta.com/myOrders.html"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300;1,6..72,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="mobile-app.css?v=3"/>
+<style>
+:root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; --gold: #d4a574; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+/* Canonical Atelier navbar */
+nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; background: rgba(244,241,236,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(200,184,154,0.25); }
+.nav-logo { text-decoration: none; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; }
+.nav-logo-text { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; white-space: nowrap; }
+.nav-links { display: flex; gap: 2.5rem; }
+.nav-links a { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6b6258; text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover, .nav-links a.active { color: var(--ink); }
+.nav-icons a { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink); text-decoration: none; position: relative; }
+.cart-badge { position: absolute; top: -8px; right: -10px; background: var(--accent); color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: none; align-items: center; justify-content: center; }
+.hamburger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px; z-index: 200; }
+.hamburger span { width: 22px; height: 1.5px; background: var(--ink); transition: all 0.3s; }
+.hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+.mobile-nav { display: none; position: fixed; inset: 0; z-index: 150; background: rgba(244,241,236,0.98); backdrop-filter: blur(20px); flex-direction: column; align-items: center; justify-content: center; gap: 2.5rem; }
+.mobile-nav.open { display: flex; }
+.mobile-nav a { font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
+.mobile-nav a:hover { color: var(--accent); }
+@media (max-width: 800px) {
+  .nav-links { display: none; }
+  nav { padding: 1.2rem 1.5rem; }
+  .hamburger { display: flex; }
+}
+
+/* Page layout */
+.page-wrap { max-width: 1100px; margin: 0 auto; padding: 9rem 2rem 6rem; }
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(200,184,154,0.3); margin-bottom: 3rem; }
+.page-title { font-family: 'Newsreader', serif; font-style: italic; font-size: clamp(2.8rem, 6vw, 4.5rem); line-height: 1; letter-spacing: -0.01em; }
+.page-sub { font-size: 0.78rem; color: #6b6258; letter-spacing: 0.05em; line-height: 1.6; margin-top: 0.6rem; }
+.account-info { font-size: 0.7rem; color: #8a7f73; letter-spacing: 0.05em; }
+.account-info strong { color: var(--ink); font-weight: 500; }
+.signout-btn { background: none; border: 1px solid rgba(200,184,154,0.4); padding: 0.6rem 1.2rem; font-family: 'Jost'; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; color: var(--ink); margin-top: 0.5rem; transition: all 0.15s; }
+.signout-btn:hover { background: var(--ink); color: var(--cream); }
+
+@media (max-width: 700px) {
+  .page-wrap { padding: 8rem 1.25rem 4rem; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
+
+/* Stats row */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: rgba(200,184,154,0.3); margin-bottom: 3rem; border: 1px solid rgba(200,184,154,0.3); }
+.stat { background: white; padding: 1.5rem 1.25rem; }
+.stat-val { font-family: 'Newsreader', serif; font-size: 2rem; line-height: 1; color: var(--ink); margin-bottom: 0.4rem; }
+.stat-label { font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase; color: #8a7f73; }
+
+/* Filter chips */
+.filter-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
+.filter-chip { padding: 0.5rem 1rem; font-family: 'Jost'; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; background: white; border: 1px solid rgba(200,184,154,0.4); cursor: pointer; transition: all 0.15s; color: var(--ink); }
+.filter-chip:hover { border-color: var(--accent); }
+.filter-chip.active { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+
+/* Order card */
+.orders-list { display: flex; flex-direction: column; gap: 1.25rem; }
+.order-card { background: white; border: 1px solid rgba(200,184,154,0.3); padding: 1.75rem; transition: border-color 0.2s; }
+.order-card:hover { border-color: rgba(200,184,154,0.6); }
+.order-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid rgba(200,184,154,0.2); }
+.order-id-block { }
+.order-id { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.3rem; color: var(--ink); margin-bottom: 0.2rem; }
+.order-date { font-size: 0.65rem; color: #8a7f73; letter-spacing: 0.1em; text-transform: uppercase; }
+.order-amount { font-family: 'Newsreader', serif; font-size: 1.4rem; color: var(--accent); }
+
+.order-body { display: flex; gap: 1.25rem; align-items: flex-start; }
+.order-img { width: 96px; height: 96px; flex-shrink: 0; background: rgba(200,184,154,0.15); border: 1px solid rgba(200,184,154,0.2); object-fit: cover; }
+.order-product { flex: 1; min-width: 0; }
+.product-name { font-size: 0.9rem; font-weight: 500; margin-bottom: 0.3rem; color: var(--ink); }
+.product-meta { font-size: 0.7rem; color: #8a7f73; line-height: 1.7; }
+
+/* Status badge */
+.status-badge { display: inline-block; padding: 0.25rem 0.7rem; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 500; }
+.status-badge.awaiting-verification, .status-badge.pending { background: #fff3e0; color: #8b5e3c; border: 1px solid rgba(139,94,60,0.3); }
+.status-badge.processing, .status-badge.preparing { background: #e3f2fd; color: #1565c0; border: 1px solid rgba(21,101,192,0.3); }
+.status-badge.shipped, .status-badge.out-for-delivery { background: #e8f5e9; color: #2e7d32; border: 1px solid rgba(46,125,50,0.3); }
+.status-badge.completed, .status-badge.delivered { background: rgba(212,165,116,0.2); color: var(--accent); border: 1px solid rgba(139,94,60,0.3); }
+.status-badge.cancelled, .status-badge.payment-rejected { background: #ffebee; color: #c62828; border: 1px solid rgba(198,40,40,0.3); }
+
+.order-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(200,184,154,0.2); }
+.action-btn { padding: 0.55rem 1rem; font-family: 'Jost'; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; background: white; border: 1px solid rgba(200,184,154,0.4); color: var(--ink); cursor: pointer; text-decoration: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 0.4rem; }
+.action-btn:hover { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.action-btn.primary { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.action-btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+.action-btn.review { background: var(--accent); color: white; border-color: var(--accent); }
+.action-btn.review:hover { background: var(--ink); border-color: var(--ink); }
+
+@media (max-width: 600px) {
+  .order-card { padding: 1.25rem; }
+  .order-body { flex-direction: column; }
+  .order-img { width: 100%; height: 200px; }
+}
+
+/* Empty state */
+.empty-state { text-align: center; padding: 5rem 1rem; }
+.empty-state .icon { font-size: 3rem; color: var(--warm); margin-bottom: 1rem; }
+.empty-state h3 { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.6rem; margin-bottom: 0.75rem; }
+.empty-state p { font-size: 0.78rem; color: #6b6258; line-height: 1.7; max-width: 480px; margin: 0 auto 2rem; }
+.empty-state a { display: inline-block; padding: 0.85rem 2rem; background: var(--ink); color: var(--cream); text-decoration: none; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; }
+
+/* Loading state */
+.loading-state { text-align: center; padding: 5rem 1rem; }
+.loading-spinner { width: 36px; height: 36px; border: 2px solid rgba(200,184,154,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; margin: 0 auto 1.5rem; }
+.loading-state p { font-family: 'Newsreader', serif; font-style: italic; color: #8a7f73; font-size: 1rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<nav>
+  <button class="hamburger" id="hamburger" onclick="document.getElementById('hamburger').classList.toggle('open');document.getElementById('mobile-nav').classList.toggle('open');">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="nav-links">
+    <a href="collection.html">Shop</a>
+    <a href="collection.html">Collections</a>
+    <a href="stickers.html">Stickers</a>
+  </div>
+  <a href="index.html" class="nav-logo"><img src="logo.png" alt="The Atelier" style="height:52px;width:auto;object-fit:contain;"/><span class="nav-logo-text">The Atelier</span></a>
+  <div class="nav-icons">
+    <a href="shoppingCart.html" style="position:relative;">Bag<span class="cart-badge" id="cart-count">0</span></a>
+  </div>
+</nav>
+
+<div class="mobile-nav" id="mobile-nav">
+  <a href="collection.html">Shop</a>
+  <a href="collection.html">Collections</a>
+  <a href="stickers.html">Stickers</a>
+  <a href="myOrders.html">My Orders</a>
+  <a href="shoppingCart.html">Bag</a>
+</div>
+
+<div class="page-wrap">
+
+  <!-- Loading state — visible until auth resolves -->
+  <div class="loading-state" id="loading-state">
+    <div class="loading-spinner"></div>
+    <p>Loading your orders…</p>
+  </div>
+
+  <!-- Main content — populated after auth resolves -->
+  <div id="main-content" style="display:none;">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">My Orders</h1>
+        <p class="page-sub">Your wardrobe history, all in one place.</p>
+      </div>
+      <div class="account-info" style="text-align:right;">
+        <div>Signed in as <strong id="account-email">—</strong></div>
+        <button class="signout-btn" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+
+    <div class="stats-row" id="stats-row">
+      <div class="stat"><div class="stat-val" id="stat-total">0</div><div class="stat-label">Total Orders</div></div>
+      <div class="stat"><div class="stat-val" id="stat-spent">NRs. 0</div><div class="stat-label">Total Spent</div></div>
+      <div class="stat"><div class="stat-val" id="stat-active">0</div><div class="stat-label">Active</div></div>
+      <div class="stat"><div class="stat-val" id="stat-completed">0</div><div class="stat-label">Completed</div></div>
+    </div>
+
+    <div class="filter-row">
+      <button class="filter-chip active" data-filter="all" onclick="filterOrders('all', this)">All Orders</button>
+      <button class="filter-chip" data-filter="active" onclick="filterOrders('active', this)">Active</button>
+      <button class="filter-chip" data-filter="completed" onclick="filterOrders('completed', this)">Completed</button>
+      <button class="filter-chip" data-filter="cancelled" onclick="filterOrders('cancelled', this)">Cancelled</button>
+    </div>
+
+    <div class="orders-list" id="orders-list"></div>
+
+    <div class="empty-state" id="empty-state" style="display:none;">
+      <div class="icon">⌗</div>
+      <h3>No Orders Yet</h3>
+      <p>You haven't placed any orders matching this email. When you do, they'll appear here for easy tracking.</p>
+      <a href="collection.html">Browse Collection</a>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+// Initialize Firebase (same project)
+var firebaseConfig = {
+  apiKey: "AIzaSyA1cxoCcKkqzC_F1bnCgTfSwHKMmtFBPLg",
+  authDomain: "the-atelier-ce832.firebaseapp.com",
+  databaseURL: "https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "the-atelier-ce832",
+  storageBucket: "the-atelier-ce832.firebasestorage.app",
+  messagingSenderId: "743321820538",
+  appId: "1:743321820538:web:8a7fc5dc3a37e72b91e9e1"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+var ALL_ORDERS = [];   // all this user's orders (regular + custom + sticker)
+var ACTIVE_FILTER = 'all';
+
+// Status categorization
+var ACTIVE_STATUSES = ['awaiting-verification', 'processing', 'preparing', 'shipped', 'out-for-delivery', 'pending'];
+var COMPLETED_STATUSES = ['completed', 'delivered'];
+var CANCELLED_STATUSES = ['cancelled', 'payment-rejected'];
+
+// On auth state change
+firebase.auth().onAuthStateChanged(function(user) {
+  if (!user || !user.email) {
+    // Not signed in — save current page so we redirect back after login
+    try { sessionStorage.setItem('atelier_redirect_after_login', 'myOrders.html'); } catch(e) {}
+    window.location.href = 'customerLogin.html';
+    return;
+  }
+  document.getElementById('account-email').textContent = user.email;
+  loadCustomerOrders(user.email);
+});
+
+function signOut() {
+  firebase.auth().signOut().then(function() {
+    try { localStorage.removeItem('atelier_customer_email'); } catch(e) {}
+    window.location.href = 'index.html';
+  });
+}
+
+// Load orders matching this customer's email from /order_lookup
+// Per-key reads work without enumeration permission, but we don't know the
+// keys — so we use a different approach: query /orders where the customer
+// is now authenticated they can read their own orders if rules allow.
+//
+// Strategy: signed-in customer can read /customer_orders/{emailHash} — a
+// flat list of order_lookup keys keyed by their email hash. Then fetch
+// each lookup record individually.
+//
+// FALLBACK: if /customer_orders index missing, attempt to read /orders
+// directly (admin rules may block this — that's OK, we just show empty
+// state).
+function loadCustomerOrders(email) {
+  var emailLower = email.toLowerCase();
+  var emailHash = btoa(emailLower).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 200);
+
+  // Get the user's auth ID token to authorize reads
+  firebase.auth().currentUser.getIdToken().then(function(idToken) {
+    // First, try the customer_orders index
+    fetch(DB_URL + '/customer_orders/' + encodeURIComponent(emailHash) + '.json?auth=' + idToken)
+      .then(function(r) { return r.json(); })
+      .then(function(indexData) {
+        if (!indexData) {
+          // No index yet for this user — attempt to scan their orders by
+          // filtering /orders directly (this works only if rules allow)
+          loadOrdersDirectly(emailLower, idToken);
+          return;
+        }
+
+        // Index is a map of { lookupKey: { orderId, type, createdAt } }
+        var lookupKeys = Object.keys(indexData);
+        if (!lookupKeys.length) { showOrders([]); return; }
+
+        // Fetch each lookup record in parallel
+        Promise.all(lookupKeys.map(function(k) {
+          return fetch(DB_URL + '/order_lookup/' + encodeURIComponent(k) + '.json')
+            .then(function(r) { return r.json(); })
+            .catch(function() { return null; });
+        })).then(function(records) {
+          var orders = records.filter(function(r) { return r && r.id; });
+          // Sort newest first
+          orders.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+          showOrders(orders);
+        });
+      })
+      .catch(function(err) {
+        console.warn('customer_orders read failed:', err);
+        loadOrdersDirectly(emailLower, idToken);
+      });
+  }).catch(function() {
+    showOrders([]);
+  });
+}
+
+// Fallback: try direct /orders read (works only if signed-in customer's email matches)
+function loadOrdersDirectly(emailLower, idToken) {
+  fetch(DB_URL + '/orders.json?auth=' + idToken)
+    .then(function(r) {
+      if (!r.ok) throw new Error('forbidden');
+      return r.json();
+    })
+    .then(function(data) {
+      if (!data) { showOrders([]); return; }
+      var arr = Array.isArray(data) ? data : Object.values(data);
+      // Filter to this customer
+      var mine = arr.filter(function(o) {
+        return o && o.email && o.email.toLowerCase() === emailLower;
+      });
+      mine.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+      showOrders(mine);
+    })
+    .catch(function() { showOrders([]); });
+}
+
+function showOrders(orders) {
+  ALL_ORDERS = orders;
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+
+  // Compute stats
+  var totalSpent = orders.reduce(function(s, o) { return s + (parseFloat(o.amount) || 0); }, 0);
+  var activeCount = orders.filter(function(o) { return ACTIVE_STATUSES.indexOf(o.status) !== -1; }).length;
+  var completedCount = orders.filter(function(o) { return COMPLETED_STATUSES.indexOf(o.status) !== -1; }).length;
+
+  document.getElementById('stat-total').textContent = orders.length;
+  document.getElementById('stat-spent').textContent = 'NRs. ' + Math.round(totalSpent).toLocaleString();
+  document.getElementById('stat-active').textContent = activeCount;
+  document.getElementById('stat-completed').textContent = completedCount;
+
+  renderOrders();
+}
+
+function filterOrders(filter, btn) {
+  ACTIVE_FILTER = filter;
+  document.querySelectorAll('.filter-chip').forEach(function(c) { c.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderOrders();
+}
+
+function renderOrders() {
+  var list = ALL_ORDERS.slice();
+  if (ACTIVE_FILTER === 'active') list = list.filter(function(o) { return ACTIVE_STATUSES.indexOf(o.status) !== -1; });
+  else if (ACTIVE_FILTER === 'completed') list = list.filter(function(o) { return COMPLETED_STATUSES.indexOf(o.status) !== -1; });
+  else if (ACTIVE_FILTER === 'cancelled') list = list.filter(function(o) { return CANCELLED_STATUSES.indexOf(o.status) !== -1; });
+
+  var listEl = document.getElementById('orders-list');
+  var emptyEl = document.getElementById('empty-state');
+
+  if (!list.length) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = ALL_ORDERS.length === 0 ? 'block' : 'none';
+    if (ALL_ORDERS.length > 0) {
+      listEl.innerHTML = '<p style="text-align:center;color:#8a7f73;padding:3rem 1rem;font-size:0.78rem;font-style:italic;">No orders match this filter.</p>';
+    }
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  listEl.innerHTML = list.map(function(o) {
+    var statusLabel = (o.status || 'pending').replace(/-/g, ' ');
+    var amt = parseFloat(o.amount) || 0;
+    var prettyDate = o.date || '—';
+    var img = o.productImage || o.image || '';
+    var productName = o.product || 'Order';
+    var trackingHtml = o.tracking ? '<div class="product-meta" style="margin-top:0.5rem;">Tracking: <strong>' + escapeHtml(o.tracking) + '</strong></div>' : '';
+    var notesHtml = o.notes ? '<div class="product-meta" style="margin-top:0.5rem;font-style:italic;color:#a89e94;">' + escapeHtml(o.notes) + '</div>' : '';
+
+    // Action buttons
+    var actions = [];
+    actions.push('<a class="action-btn primary" href="trackOrder.html?id=' + encodeURIComponent(o.id) + '&email=' + encodeURIComponent(getCurrentEmail()) + '">Track Order</a>');
+    if (COMPLETED_STATUSES.indexOf(o.status) !== -1) {
+      actions.push('<a class="action-btn review" href="leaveReview.html?order=' + encodeURIComponent(o.id) + '&email=' + encodeURIComponent(getCurrentEmail()) + '">★ Leave a Review</a>');
+    }
+
+    return '<div class="order-card">' +
+      '<div class="order-head">' +
+        '<div class="order-id-block">' +
+          '<div class="order-id">' + escapeHtml(o.id || '—') + '</div>' +
+          '<div class="order-date">' + escapeHtml(prettyDate) + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;">' +
+          '<div class="order-amount">NRs. ' + Math.round(amt).toLocaleString() + '</div>' +
+          '<div style="margin-top:0.5rem;"><span class="status-badge ' + escapeHtml(o.status || 'pending') + '">' + escapeHtml(statusLabel) + '</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="order-body">' +
+        (img ? '<img class="order-img" src="' + escapeHtml(img) + '" alt="" onerror="this.style.display=\'none\'"/>' : '<div class="order-img"></div>') +
+        '<div class="order-product">' +
+          '<div class="product-name">' + escapeHtml(productName) + '</div>' +
+          trackingHtml +
+          notesHtml +
+        '</div>' +
+      '</div>' +
+      '<div class="order-actions">' + actions.join('') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function getCurrentEmail() {
+  var u = firebase.auth().currentUser;
+  return u ? u.email : '';
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Update cart badge
+(function updateCart() {
+  try {
+    var cart = JSON.parse(localStorage.getItem('atelier_cart') || '[]');
+    var count = cart.reduce(function(s, i) { return s + (parseInt(i.quantity) || 0); }, 0);
+    var badge = document.getElementById('cart-count');
+    if (badge && count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
+  } catch(e) {}
+})();
+</script>
+
+<script src="visitor-tracker.js?v=1"></script>
+<script src="mobile-app.js?v=5"></script>
+</body>
+</html>

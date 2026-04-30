@@ -22,6 +22,15 @@
       ".write": true
     },
 
+    "customer_orders": {
+      ".read": false,
+      ".write": false,
+      "$emailHash": {
+        ".read": "auth != null",
+        ".write": true
+      }
+    },
+
     "custom_orders": {
       ".read": "auth != null",
       ".write": true

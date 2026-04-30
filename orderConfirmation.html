@@ -176,6 +176,12 @@
 <p style="font-size:0.65rem;color:#8a7f73;margin-top:1.5rem;line-height:1.7;">
   Save your Order ID — you can use it anytime to check your order status on our <a href="trackOrder.html" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent);">tracking page</a>.
 </p>
+
+<div style="margin-top:2.5rem;padding:1.5rem;background:white;border:1px solid rgba(200,184,154,0.3);text-align:center;">
+  <p style="font-family:'Newsreader',serif;font-style:italic;font-size:1.2rem;margin-bottom:0.5rem;">Want to track all your orders in one place?</p>
+  <p style="font-size:0.7rem;color:#8a7f73;line-height:1.7;margin-bottom:1.25rem;">Sign in with just your email — no password needed. We'll send you a magic link.</p>
+  <a id="signin-btn" href="customerLogin.html" style="display:inline-block;padding:0.85rem 2rem;background:var(--ink);color:var(--cream);text-decoration:none;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;">✦ Sign In to View All My Orders</a>
+</div>
 <script>
   const num = localStorage.getItem('atelier_last_order_id') || ('ATL-2025-' + Math.floor(Math.random() * 9000 + 1000));
   const email = localStorage.getItem('atelier_last_order_email') || '';
@@ -183,7 +189,13 @@
   var trackUrl = 'trackOrder.html?id=' + encodeURIComponent(num);
   if (email) trackUrl += '&email=' + encodeURIComponent(email);
   document.getElementById('track-btn').href = trackUrl;
+  // Pre-fill sign-in button with the customer's email
+  if (email) {
+    var signinBtn = document.getElementById('signin-btn');
+    if (signinBtn) signinBtn.href = 'customerLogin.html?email=' + encodeURIComponent(email);
+  }
 </script>
+<script src="customer-auth-nav.js?v=1"></script>
 <script src="visitor-tracker.js?v=1"></script>
 <script src="mobile-app.js?v=5"></script>
 </body>
