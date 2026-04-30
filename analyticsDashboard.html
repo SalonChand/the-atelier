@@ -3655,8 +3655,34 @@ function deleteReview(idx){if(!confirm('Delete?'))return;REVIEWS.splice(idx,1);s
 // ADMINISTRATORS
 function renderAdminsTable(){
   const admins = JSON.parse(localStorage.getItem('atelier_admins') || '[]');
-  const currentUser = localStorage.getItem('atelier_current_user');
-  const currentRole = localStorage.getItem('atelier_current_role');
+
+  // Determine current user + role
+  // Priority order:
+  //   1. Firebase Auth signed-in user (most authoritative)
+  //   2. Legacy localStorage values (fallback for legacy login)
+  let currentUser = localStorage.getItem('atelier_current_user');
+  let currentRole = localStorage.getItem('atelier_current_role');
+
+  try {
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+      const fbUser = firebase.auth().currentUser;
+      const fbEmail = (fbUser.email || '').toLowerCase();
+      // Find this Firebase user in the admins list
+      const matchedAdmin = admins.find(a => (a.email || '').toLowerCase() === fbEmail);
+      if (matchedAdmin) {
+        currentUser = matchedAdmin.email;
+        currentRole = matchedAdmin.role || 'admin';
+        // Sync to localStorage so legacy code paths see the right values
+        localStorage.setItem('atelier_current_user', currentUser);
+        localStorage.setItem('atelier_current_role', currentRole);
+      } else if (fbEmail) {
+        // Firebase user signed in but not in admins list — they might be a brand-new
+        // superadmin who hasn't been seeded yet. Fall through to localStorage values
+        // (which won't match either, so the table will just show no actions).
+        currentUser = fbEmail;
+      }
+    }
+  } catch(e) { /* Firebase not loaded or no user — use localStorage values */ }
 
   // Show/hide Add button and info bar based on role
   const actionsEl = document.getElementById('admin-actions');
