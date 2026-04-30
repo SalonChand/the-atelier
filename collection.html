@@ -374,6 +374,36 @@ function addToBag(e, product) {
   setTimeout(() => { btn.textContent = 'Add to Bag'; btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; }, 1500);
 }
 
+// ─── Product ratings cache (loaded once from Firebase) ───
+var PRODUCT_RATINGS = {}; // { 'product name (lowercase)': { avg: 4.5, count: 12 } }
+
+(function loadProductRatings() {
+  var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+  fetch(DB_URL + '/reviews.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data) return;
+      var byProduct = {};
+      Object.keys(data).forEach(function(k) {
+        var r = data[k];
+        if (!r || r.status !== 'approved' || !r.product) return;
+        var key = String(r.product).toLowerCase().trim();
+        if (!byProduct[key]) byProduct[key] = { sum: 0, count: 0 };
+        byProduct[key].sum += parseInt(r.rating) || 0;
+        byProduct[key].count += 1;
+      });
+      Object.keys(byProduct).forEach(function(k) {
+        PRODUCT_RATINGS[k] = {
+          avg: byProduct[k].sum / byProduct[k].count,
+          count: byProduct[k].count
+        };
+      });
+      // Re-render to show ratings now that we have them
+      try { renderProducts(); } catch(e) {}
+    })
+    .catch(function() {});
+})();
+
 function renderProducts() {
   // Always reload live products (admin may have added new ones)
   const allProducts = (function() {
@@ -391,7 +421,11 @@ function renderProducts() {
       </div>`;
     return;
   }
-  document.getElementById('product-grid').innerHTML = filtered.map(p => `
+  document.getElementById('product-grid').innerHTML = filtered.map(p => {
+    var ratingKey = (p.name || '').toLowerCase().trim();
+    var rating = PRODUCT_RATINGS[ratingKey];
+    var ratingHtml = rating ? `<p class="rating-row" style="font-size:0.65rem;color:#d4a574;margin-top:0.3rem;letter-spacing:0.05em;">${'★'.repeat(Math.round(rating.avg))}${'☆'.repeat(5-Math.round(rating.avg))} <span style="color:#8a7f73;">(${rating.count})</span></p>` : '';
+    return `
     <div class="product-card" onclick="window.location.href='productDetail.html?id=${p.id}'">
       <div class="product-card-img">
         <img src="${p.image}" alt="${p.name}" loading="lazy"/>
@@ -399,10 +433,11 @@ function renderProducts() {
       </div>
       <h3>${p.name}</h3>
       <p class="sub">${p.color}</p>
+      ${ratingHtml}
       <p class="price">NRs. ${p.price.toLocaleString()}</p>
       <button class="add-btn" onclick="addToBag(event, ${JSON.stringify(p).replace(/"/g,'&quot;')})">Add to Bag</button>
     </div>
-  `).join('');
+  `;}).join('');
 }
 
 document.querySelectorAll('.filter-btn').forEach(btn => {

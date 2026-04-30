@@ -69,7 +69,10 @@
 
     "reviews": {
       ".read": true,
-      ".write": "auth != null"
+      ".write": "auth != null",
+      "$reviewId": {
+        ".write": "auth != null || (!data.exists() && newData.exists() && newData.child('status').val() === 'pending')"
+      }
     },
 
     "announcements": {

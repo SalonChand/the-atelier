@@ -7,6 +7,7 @@ Disallow: /adminLogin.html
 Disallow: /checkout.html
 Disallow: /orderConfirmation.html
 Disallow: /trackOrder.html
+Disallow: /leaveReview.html
 
 # Standard sitemap location
 Sitemap: https://theatelier-ta.com/sitemap.xml

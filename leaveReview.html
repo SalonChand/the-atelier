@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0e0e0d"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="The Atelier"/>
+<link rel="apple-touch-icon" href="logo.png"/>
+<link rel="manifest" href="manifest.json"/>
+<title>Leave a Review | THE ATELIER</title>
+<meta name="description" content="Share your experience with The Atelier. Your feedback helps us improve and helps other shoppers discover our pieces."/>
+<meta name="robots" content="noindex, follow"/>
+<link rel="canonical" href="https://theatelier-ta.com/leaveReview.html"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root { --ink: #0e0e0d; --cream: #f4f1ec; --warm: #c8b89a; --accent: #8b5e3c; --gold: #d4a574; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+nav { position: sticky; top: 0; z-index: 100; background: var(--cream); border-bottom: 1px solid rgba(200,184,154,0.3); padding: 0 2rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+.nav-logo { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.3rem; text-decoration: none; color: var(--ink); letter-spacing: 0.05em; }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { text-decoration: none; color: var(--ink); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; transition: opacity 0.2s; }
+.nav-links a:hover { opacity: 1; }
+@media(max-width:640px){ .nav-links { display: none; } nav { padding: 0 1.25rem; } }
+
+.page-wrap { max-width: 600px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+.page-title { font-family: 'Newsreader', serif; font-style: italic; font-size: 2.2rem; margin-bottom: 0.5rem; letter-spacing: -0.01em; }
+.page-sub { font-size: 0.78rem; color: #6b6258; margin-bottom: 2.5rem; line-height: 1.7; }
+
+.field { margin-bottom: 1.75rem; }
+.field-label { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: #8a7f73; display: block; margin-bottom: 0.6rem; }
+.field-hint { font-size: 0.65rem; color: #a89e94; margin-top: 0.45rem; line-height: 1.6; }
+.field input, .field textarea {
+  width: 100%; border: 1px solid rgba(200,184,154,0.4); padding: 0.85rem 1rem;
+  font-family: 'Jost', sans-serif; font-size: 0.78rem; color: var(--ink); background: white;
+  outline: none; transition: border-color 0.15s;
+}
+.field input:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+
+/* Star picker */
+.stars-input { display: flex; gap: 0.5rem; user-select: none; }
+.star { font-size: 2.4rem; color: rgba(200,184,154,0.4); cursor: pointer; transition: color 0.15s, transform 0.1s; }
+.star:hover, .star.lit { color: var(--gold); }
+.star:active { transform: scale(0.92); }
+.rating-label { font-size: 0.65rem; color: #8a7f73; margin-top: 0.35rem; min-height: 1em; font-style: italic; }
+
+/* Photo upload */
+.photo-uploader {
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  padding: 1.25rem; border: 2px dashed rgba(200,184,154,0.5);
+  background: white; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  font-size: 0.72rem; color: #8a7f73;
+}
+.photo-uploader:hover { border-color: var(--accent); background: #fafaf8; }
+.photo-uploader .ico { font-size: 1.3rem; }
+.photo-preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
+.photo-preview { position: relative; aspect-ratio: 1; background: white; border: 1px solid rgba(200,184,154,0.3); }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-preview .remove {
+  position: absolute; top: 4px; right: 4px; width: 22px; height: 22px;
+  background: rgba(14,14,13,0.85); color: white; border: none; cursor: pointer;
+  font-size: 0.75rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+
+.submit-btn {
+  width: 100%; background: var(--ink); color: var(--cream); border: none;
+  padding: 1.1rem; font-family: 'Jost', sans-serif; font-size: 0.65rem;
+  letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: opacity 0.2s;
+}
+.submit-btn:hover { opacity: 0.85; }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error-msg { color: #b71c1c; font-size: 0.7rem; padding: 0.85rem 1rem; background: #fee2e2; border-left: 3px solid #b71c1c; margin-bottom: 1.5rem; display: none; }
+.error-msg.show { display: block; }
+
+/* Order info card (shown when order found) */
+.order-card {
+  background: white; border: 1px solid rgba(200,184,154,0.3); padding: 1.25rem;
+  margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center;
+}
+.order-card img { width: 64px; height: 64px; object-fit: cover; flex-shrink: 0; border: 1px solid rgba(200,184,154,0.2); }
+.order-card .info { flex: 1; min-width: 0; }
+.order-card .product-name { font-family: 'Newsreader', serif; font-style: italic; font-size: 1rem; margin-bottom: 0.2rem; }
+.order-card .order-id { font-size: 0.62rem; color: #8a7f73; letter-spacing: 0.1em; }
+
+/* Success state */
+.success-screen { display: none; text-align: center; padding: 3rem 1rem; }
+.success-screen.show { display: block; }
+.success-screen .checkmark { font-size: 3.5rem; color: var(--accent); margin-bottom: 1rem; }
+.success-screen h2 { font-family: 'Newsreader', serif; font-style: italic; font-size: 1.8rem; margin-bottom: 0.75rem; }
+.success-screen p { font-size: 0.8rem; color: #6b6258; line-height: 1.7; margin-bottom: 2rem; max-width: 460px; margin-left: auto; margin-right: auto; }
+.success-screen a { display: inline-block; padding: 0.85rem 2rem; background: var(--ink); color: var(--cream); text-decoration: none; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">The Atelier</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="collection.html">Shop</a></li>
+    <li><a href="customize.html">Custom</a></li>
+    <li><a href="stickers.html">Stickers</a></li>
+    <li><a href="contactUs.html">Contact</a></li>
+  </ul>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- FORM SCREEN -->
+  <div id="form-screen">
+    <h1 class="page-title">Share Your Experience</h1>
+    <p class="page-sub">Your honest feedback helps us craft better pieces and helps fellow shoppers discover what they love. Reviews are read by both founders.</p>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <!-- Order card (filled if order ID + email match) -->
+    <div class="order-card" id="order-card" style="display:none;">
+      <img id="oc-img" src="" alt=""/>
+      <div class="info">
+        <div class="product-name" id="oc-product">—</div>
+        <div class="order-id">Order <span id="oc-id">—</span></div>
+      </div>
+    </div>
+
+    <!-- If no order context, show inputs -->
+    <div id="manual-fields" style="display:none;">
+      <div class="field">
+        <label class="field-label">Your Name *</label>
+        <input type="text" id="reviewer-name" placeholder="What should we call you?" autocomplete="name"/>
+      </div>
+      <div class="field">
+        <label class="field-label">Your Email *</label>
+        <input type="email" id="reviewer-email" placeholder="So we can verify and follow up" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label class="field-label">What did you buy? *</label>
+        <input type="text" id="reviewer-product" placeholder="Product name or order ID"/>
+      </div>
+    </div>
+
+    <!-- Star rating -->
+    <div class="field">
+      <label class="field-label">Your Rating *</label>
+      <div class="stars-input" id="stars-picker">
+        <span class="star" data-val="1">★</span>
+        <span class="star" data-val="2">★</span>
+        <span class="star" data-val="3">★</span>
+        <span class="star" data-val="4">★</span>
+        <span class="star" data-val="5">★</span>
+      </div>
+      <div class="rating-label" id="rating-label">Tap a star to rate</div>
+    </div>
+
+    <!-- Review text -->
+    <div class="field">
+      <label class="field-label">Your Review *</label>
+      <textarea id="review-text" placeholder="How does it fit? How does it feel? Did the colours match? What would you tell a friend?" maxlength="2000"></textarea>
+      <p class="field-hint">Tell us about fit, feel, quality, delivery — anything that matters to you.</p>
+    </div>
+
+    <!-- Photos -->
+    <div class="field">
+      <label class="field-label">Add Photos (optional, but lovely)</label>
+      <label for="photo-input" class="photo-uploader">
+        <span class="ico">📷</span><span>Tap to upload — up to 3 photos</span>
+      </label>
+      <input type="file" id="photo-input" accept="image/*" multiple style="display:none;" onchange="handlePhotoUpload(this)"/>
+      <div class="photo-preview-grid" id="photo-grid"></div>
+      <p class="field-hint">A photo of yourself wearing the piece is the highest compliment you can give us.</p>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitReview()">✦ Submit Review</button>
+    <p style="font-size:0.6rem;color:#a89e94;text-align:center;margin-top:1rem;line-height:1.7;">Your review will be approved by our team before appearing on the website. We never edit your words.</p>
+  </div>
+
+  <!-- SUCCESS SCREEN -->
+  <div class="success-screen" id="success-screen">
+    <div class="checkmark">✓</div>
+    <h2>Thank You</h2>
+    <p>Your review has been submitted. We'll review and publish it shortly. Your words mean the world to us.</p>
+    <a href="index.html">Continue Shopping</a>
+  </div>
+
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────
+var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+var state = {
+  rating: 0,
+  photos: [], // base64 dataURLs
+  // From URL params or order lookup
+  orderId: '',
+  email: '',
+  customerName: '',
+  productName: '',
+  productImage: ''
+};
+
+var RATING_LABELS = {
+  1: 'Poor — let us know what went wrong',
+  2: 'Fair — we can do better',
+  3: 'Good — solid choice',
+  4: 'Great — very happy',
+  5: 'Exceptional — love it'
+};
+
+// ── ON LOAD ────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  var params = new URLSearchParams(window.location.search);
+  var orderId = params.get('order') || params.get('id') || '';
+  var email = params.get('email') || '';
+
+  state.orderId = orderId;
+  state.email = email;
+
+  if (orderId && email) {
+    // Look up the order in the public order_lookup endpoint
+    fetchOrderInfo(orderId, email);
+  } else {
+    // No URL context — show manual fields
+    document.getElementById('manual-fields').style.display = 'block';
+  }
+
+  // Star picker handlers
+  var stars = document.querySelectorAll('#stars-picker .star');
+  stars.forEach(function(s) {
+    s.addEventListener('click', function() { setRating(parseInt(s.dataset.val)); });
+    s.addEventListener('mouseenter', function() { previewRating(parseInt(s.dataset.val)); });
+  });
+  document.getElementById('stars-picker').addEventListener('mouseleave', function() {
+    paintStars(state.rating);
+  });
+});
+
+function setRating(val) {
+  state.rating = val;
+  paintStars(val);
+  document.getElementById('rating-label').textContent = RATING_LABELS[val] || '';
+}
+
+function previewRating(val) {
+  paintStars(val);
+}
+
+function paintStars(val) {
+  document.querySelectorAll('#stars-picker .star').forEach(function(s, i) {
+    s.classList.toggle('lit', (i + 1) <= val);
+  });
+}
+
+// Look up order via public lookup endpoint (secure: requires both order + email)
+function fetchOrderInfo(orderId, email) {
+  try {
+    var raw = (orderId || '').toLowerCase() + '|' + (email || '').toLowerCase().trim();
+    var key = btoa(raw).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 200);
+    fetch(DB_URL + '/order_lookup/' + encodeURIComponent(key) + '.json')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data) {
+          showError('We could not find that order. Please check your link or use the manual form.');
+          document.getElementById('manual-fields').style.display = 'block';
+          return;
+        }
+        state.customerName = data.customer || '';
+        state.productName = data.product || '';
+        state.productImage = data.productImage || '';
+
+        // Fill the order card
+        var card = document.getElementById('order-card');
+        card.style.display = 'flex';
+        document.getElementById('oc-product').textContent = state.productName || '—';
+        document.getElementById('oc-id').textContent = state.orderId;
+        if (state.productImage) {
+          document.getElementById('oc-img').src = state.productImage;
+        } else {
+          document.getElementById('oc-img').style.display = 'none';
+        }
+      })
+      .catch(function() {
+        document.getElementById('manual-fields').style.display = 'block';
+      });
+  } catch(e) {
+    document.getElementById('manual-fields').style.display = 'block';
+  }
+}
+
+// ── PHOTO UPLOAD ──────────────────────────────────────────────────────
+function handlePhotoUpload(input) {
+  var files = Array.from(input.files || []);
+  var remaining = 3 - state.photos.length;
+  if (remaining <= 0) {
+    showError('You can attach up to 3 photos.');
+    input.value = '';
+    return;
+  }
+  files.slice(0, remaining).forEach(function(file) {
+    if (file.size > 10 * 1024 * 1024) {
+      showError(file.name + ' is too large (max 10MB).');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        try {
+          // Compress: max 800px wide, JPEG 0.7
+          var maxW = 800;
+          var w = img.width, h = img.height;
+          if (w > maxW) { h = h * (maxW / w); w = maxW; }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          state.photos.push(dataUrl);
+          renderPhotoGrid();
+        } catch(err) {
+          showError('Could not process ' + file.name);
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderPhotoGrid() {
+  var grid = document.getElementById('photo-grid');
+  if (!state.photos.length) { grid.innerHTML = ''; return; }
+  grid.innerHTML = state.photos.map(function(p, i) {
+    return '<div class="photo-preview"><img src="' + p + '" alt=""/><button type="button" class="remove" onclick="removePhoto(' + i + ')">✕</button></div>';
+  }).join('');
+}
+
+function removePhoto(i) {
+  state.photos.splice(i, 1);
+  renderPhotoGrid();
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────────────
+function showError(msg) {
+  var el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.classList.add('show');
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(function() { el.classList.remove('show'); }, 6000);
+}
+
+function submitReview() {
+  var btn = document.getElementById('submit-btn');
+
+  // Resolve customer info — from URL lookup OR manual fields
+  var customer = state.customerName;
+  var email = state.email;
+  var product = state.productName;
+  var manualMode = document.getElementById('manual-fields').style.display !== 'none';
+
+  if (manualMode) {
+    customer = document.getElementById('reviewer-name').value.trim();
+    email = document.getElementById('reviewer-email').value.trim();
+    product = document.getElementById('reviewer-product').value.trim();
+  }
+
+  // Validation
+  if (!customer) { showError('Please enter your name.'); return; }
+  if (!email || email.indexOf('@') === -1) { showError('Please enter a valid email address.'); return; }
+  if (!product) { showError('Please tell us what you bought.'); return; }
+  if (state.rating < 1 || state.rating > 5) { showError('Please select a star rating.'); return; }
+
+  var text = document.getElementById('review-text').value.trim();
+  if (text.length < 10) { showError('Please write at least 10 characters about your experience.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  var review = {
+    id: 'REV-' + Date.now(),
+    customer: customer,
+    email: email,
+    orderId: state.orderId || null,
+    product: product,
+    rating: state.rating,
+    text: text,
+    photos: state.photos,
+    productImage: state.productImage || '',
+    status: 'pending', // admin must approve
+    date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    createdAt: Date.now()
+  };
+
+  // POST to /reviews — Firebase auto-generates a key
+  fetch(DB_URL + '/reviews.json', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(review)
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function() {
+      // Show success
+      document.getElementById('form-screen').style.display = 'none';
+      document.getElementById('success-screen').classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    })
+    .catch(function(err) {
+      console.error('Review submit failed:', err);
+      btn.disabled = false;
+      btn.textContent = '✦ Submit Review';
+      showError('Could not submit your review. Please check your connection and try again.');
+    });
+}
+</script>
+
+<script src="visitor-tracker.js?v=1"></script>
+<script src="mobile-app.js?v=5"></script>
+</body>
+</html>

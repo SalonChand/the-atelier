@@ -558,15 +558,16 @@
   };
 
   function sendReviewRequest(order) {
+    var reviewUrl = 'https://theatelier-ta.com/leaveReview.html?order=' +
+      encodeURIComponent(order.id || '') + '&email=' + encodeURIComponent(order.email || '');
     var subject = 'How was your experience with ' + (order.product || 'your order') + '?';
     var body =
       'Hi ' + (order.customer || 'there') + ',\n\n' +
       'Thank you for choosing The Atelier. Your order ' + (order.id || '') + ' was delivered a week ago — we hope you are loving it!\n\n' +
-      'Would you mind sharing a short review? It helps us improve and lets other shoppers see real experiences.\n\n' +
-      'If you have a moment, send us:\n' +
-      '  • A photo of yourself wearing the piece (optional but lovely!)\n' +
-      '  • A few words about how it feels, fits, looks\n\n' +
-      'Just reply to this email with your thoughts — we read every message.\n\n' +
+      'Would you mind sharing a short review? It takes 30 seconds:\n\n' +
+      reviewUrl + '\n\n' +
+      'You can rate your purchase, write a few words, and (if you like) add a photo of yourself wearing the piece.\n\n' +
+      'Reviews help us improve and let other shoppers see real experiences.\n\n' +
       'With gratitude,\nThe Atelier\nsodarisalon26@gmail.com | +977-9742590718';
 
     var fd = new FormData();

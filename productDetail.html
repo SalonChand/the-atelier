@@ -373,6 +373,69 @@
   </div>
 </main>
 
+<!-- ─────────────── REVIEWS SECTION ─────────────── -->
+<style>
+  .reviews-section { max-width: 1200px; margin: 0 auto; padding: 5rem 4rem; border-top: 1px solid rgba(200,184,154,0.3); }
+  @media (max-width: 768px) { .reviews-section { padding: 3rem 1.5rem; } }
+  .reviews-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 3rem; flex-wrap: wrap; gap: 1.5rem; }
+  .reviews-title { font-family: 'Newsreader', serif; font-style: italic; font-size: 2.2rem; letter-spacing: -0.01em; }
+  .reviews-summary { display: flex; align-items: center; gap: 1rem; }
+  .reviews-summary .avg-num { font-family: 'Newsreader', serif; font-size: 2.6rem; line-height: 1; color: var(--ink); }
+  .reviews-summary .stars-row { font-size: 1.1rem; color: #d4a574; letter-spacing: 0.15em; }
+  .reviews-summary .count { font-size: 0.7rem; color: #8a7f73; margin-top: 0.25rem; }
+  .review-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+  .review-card { background: white; border: 1px solid rgba(200,184,154,0.25); padding: 1.5rem; transition: border-color 0.2s; }
+  .review-card:hover { border-color: rgba(200,184,154,0.5); }
+  .review-card .head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; gap: 0.75rem; }
+  .review-card .author { font-weight: 500; font-size: 0.85rem; color: var(--ink); }
+  .review-card .date { font-size: 0.62rem; color: #8a7f73; letter-spacing: 0.1em; text-transform: uppercase; }
+  .review-card .stars { color: #d4a574; font-size: 0.85rem; letter-spacing: 0.1em; margin-bottom: 0.85rem; }
+  .review-card .text { font-size: 0.78rem; line-height: 1.7; color: #5a5249; margin-bottom: 0.85rem; }
+  .review-card .photos { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .review-card .photos img { width: 70px; height: 70px; object-fit: cover; border: 1px solid rgba(200,184,154,0.3); cursor: pointer; transition: transform 0.15s; }
+  .review-card .photos img:hover { transform: scale(1.05); }
+  .reviews-empty { text-align: center; padding: 3rem 1rem; color: #8a7f73; font-size: 0.78rem; line-height: 1.7; font-style: italic; }
+  .write-review-btn {
+    display: inline-block; background: var(--ink); color: var(--cream); text-decoration: none;
+    padding: 0.85rem 2rem; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase;
+    transition: opacity 0.2s; margin-top: 1.5rem;
+  }
+  .write-review-btn:hover { opacity: 0.85; }
+
+  /* Lightbox for full-size review photos */
+  .review-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 2rem; cursor: zoom-out; }
+  .review-lightbox.show { display: flex; }
+  .review-lightbox img { max-width: 100%; max-height: 100%; box-shadow: 0 4px 40px rgba(0,0,0,0.5); }
+  .review-lightbox-close { position: absolute; top: 1.5rem; right: 1.5rem; background: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; }
+</style>
+
+<section class="reviews-section" id="reviews-section">
+  <div class="reviews-header">
+    <h2 class="reviews-title" id="reviews-title">Customer Reviews</h2>
+    <div class="reviews-summary" id="reviews-summary" style="display:none;">
+      <div>
+        <div class="avg-num" id="reviews-avg">—</div>
+        <div class="count" id="reviews-count">—</div>
+      </div>
+      <div>
+        <div class="stars-row" id="reviews-stars-row">★★★★★</div>
+      </div>
+    </div>
+  </div>
+  <div class="review-list" id="review-list"></div>
+  <div class="reviews-empty" id="reviews-empty" style="display:none;">
+    <p>No reviews yet. Be the first to share your experience.</p>
+  </div>
+  <div style="text-align:center;margin-top:2rem;">
+    <a class="write-review-btn" id="write-review-btn" href="leaveReview.html">✦ Write a Review</a>
+  </div>
+</section>
+
+<div class="review-lightbox" id="review-lightbox" onclick="closeReviewLightbox()">
+  <button class="review-lightbox-close" onclick="closeReviewLightbox(event)">✕</button>
+  <img id="review-lightbox-img" src="" alt=""/>
+</div>
+
 <div class="notify-bar" id="notify-bar">Added to your bag</div>
 
 <script>
@@ -582,6 +645,119 @@ window.addEventListener('atelier-data-updated', function(e) {
     }
   }
 });
+
+// ─────────────── REVIEWS LOADING ───────────────
+(function loadReviews() {
+  var DB_URL = 'https://the-atelier-ce832-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  fetch(DB_URL + '/reviews.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data) {
+        showEmpty();
+        return;
+      }
+      // Convert object to array
+      var all = Object.keys(data).map(function(k) { return Object.assign({ _key: k }, data[k]); });
+      // Filter approved + matching this product
+      var productName = product ? (product.name || '').toLowerCase() : '';
+      var productId = pid;
+      var matched = all.filter(function(r) {
+        if (!r || r.status !== 'approved') return false;
+        // Match if review's product field contains this product name OR orderId mentions it
+        if (productName && r.product && r.product.toLowerCase().indexOf(productName) !== -1) return true;
+        if (productId && r.productId === productId) return true;
+        return false;
+      });
+      // Sort newest first
+      matched.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+      renderReviews(matched);
+
+      // Wire up the Write a Review button to include order context if user just bought this
+      try {
+        var lastOrderId = localStorage.getItem('atelier_last_order_id');
+        var lastEmail = localStorage.getItem('atelier_last_order_email');
+        if (lastOrderId && lastEmail) {
+          var btn = document.getElementById('write-review-btn');
+          btn.href = 'leaveReview.html?order=' + encodeURIComponent(lastOrderId) + '&email=' + encodeURIComponent(lastEmail);
+        }
+      } catch(e) {}
+    })
+    .catch(function() {
+      showEmpty();
+    });
+
+  function renderReviews(reviews) {
+    var listEl = document.getElementById('review-list');
+    var emptyEl = document.getElementById('reviews-empty');
+    var summaryEl = document.getElementById('reviews-summary');
+
+    if (!reviews.length) {
+      showEmpty();
+      return;
+    }
+
+    // Calculate summary
+    var total = reviews.length;
+    var sum = reviews.reduce(function(s, r) { return s + (parseInt(r.rating) || 0); }, 0);
+    var avg = sum / total;
+    var avgRounded = Math.round(avg * 10) / 10;
+    summaryEl.style.display = 'flex';
+    document.getElementById('reviews-avg').textContent = avgRounded.toFixed(1);
+    document.getElementById('reviews-count').textContent = total + ' review' + (total === 1 ? '' : 's');
+    var fullStars = Math.round(avg);
+    document.getElementById('reviews-stars-row').textContent =
+      '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
+
+    // Render cards
+    listEl.innerHTML = reviews.map(function(r) {
+      var stars = '★'.repeat(r.rating || 0) + '☆'.repeat(5 - (r.rating || 0));
+      var photos = (r.photos && r.photos.length) ? r.photos : [];
+      var photosHtml = photos.length
+        ? '<div class="photos">' + photos.map(function(p) {
+            return '<img src="' + p + '" alt="" onclick="openReviewLightbox(\'' + p.replace(/'/g, '%27') + '\')"/>';
+          }).join('') + '</div>'
+        : '';
+      var customerInitial = (r.customer || 'C').charAt(0).toUpperCase();
+      var firstName = (r.customer || 'Customer').split(' ')[0];
+      return '<div class="review-card">' +
+        '<div class="head">' +
+          '<div>' +
+            '<div class="author">' + escapeHtml(firstName) + (customerInitial !== firstName.charAt(0) ? '' : '') + '</div>' +
+          '</div>' +
+          '<div class="date">' + escapeHtml(r.date || '') + '</div>' +
+        '</div>' +
+        '<div class="stars">' + stars + '</div>' +
+        '<div class="text">' + escapeHtml(r.text || '') + '</div>' +
+        photosHtml +
+      '</div>';
+    }).join('');
+  }
+
+  function showEmpty() {
+    document.getElementById('reviews-empty').style.display = 'block';
+    document.getElementById('reviews-summary').style.display = 'none';
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+})();
+
+// Lightbox handlers (global so review cards can call them)
+function openReviewLightbox(src) {
+  var lb = document.getElementById('review-lightbox');
+  document.getElementById('review-lightbox-img').src = decodeURIComponent(src);
+  lb.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeReviewLightbox(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('review-lightbox').classList.remove('show');
+  document.body.style.overflow = '';
+}
 </script>
 <script src="visitor-tracker.js?v=1"></script>
 <script src="mobile-app.js?v=5"></script>
