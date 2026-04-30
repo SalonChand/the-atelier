@@ -219,6 +219,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="admin-automations.js?v=1"></script>
 <script src="firebase-sync.js?v=8"></script>
+<script src="order-id-helper.js?v=1"></script>
 </head>
 <body>
 <button class="mobile-toggle" id="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('open');">☰</button>
@@ -2363,10 +2364,19 @@ function saveManualOrder() {
   var notes = document.getElementById('mo-notes').value.trim();
   var genInvoice = document.getElementById('mo-gen-invoice').checked;
 
-  // Build order ID — different prefix for offline orders so they're recognizable
-  var sourcePrefix = { walkin: 'WI', whatsapp: 'WA', instagram: 'IG', phone: 'PH', other: 'OF' };
-  var prefix = sourcePrefix[MANUAL_SOURCE] || 'OF';
-  var orderId = 'TA-' + prefix + '-' + Date.now().toString().slice(-7);
+  // Build order ID — clean sequential format with source suffix
+  // (ATL-2026-0042-WA, ATL-2026-0043-WI, etc) — distinguishable from online
+  var sourceSuffix = { walkin: 'WI', whatsapp: 'WA', instagram: 'IG', phone: 'PH', other: 'OF' };
+  var suffix = sourceSuffix[MANUAL_SOURCE] || 'OF';
+  var idGenManual = (typeof window.generateOrderId === 'function')
+    ? function(cb) { window.generateOrderId('ATL', suffix, cb); }
+    : function(cb) { cb('ATL-' + new Date().getFullYear() + '-' + String(Date.now() % 10000).padStart(4, '0') + '-' + suffix); };
+
+  idGenManual(function(orderId) {
+    finishManualOrder(orderId);
+  });
+
+  function finishManualOrder(orderId) {
 
   // Determine status — paid offline orders are typically already 'completed'
   var status = payStatus === 'paid' ? 'completed' : (payStatus === 'partial' ? 'processing' : 'awaiting-verification');
@@ -2497,6 +2507,7 @@ function saveManualOrder() {
 
   closeModal('modal-manual-order');
   renderOrdersTable();
+  } // end finishManualOrder
 }
 
 function viewCustomerOrders(idx) {

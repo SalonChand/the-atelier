@@ -170,6 +170,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="admin-notify.js?v=2"></script>
+<script src="order-id-helper.js?v=1"></script>
 <script src="admin-automations.js?v=1"></script>
 <script src="firebase-sync.js?v=8"></script>
 </head>
@@ -881,8 +882,19 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
     paymentInfo.sender = document.getElementById('bank-sender').value.trim();
   }
 
-  // Save order to admin dashboard
-  const orderId = 'ATL-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
+  // Save order to admin dashboard — get clean sequential ID first
+  // Falls back to timestamp-based if Firebase counter is offline (3s timeout)
+  if (typeof window.generateOrderId !== 'function') {
+    // Helper not loaded — use legacy format as last resort
+    var orderId = 'ATL-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
+    finishCheckout(orderId);
+  } else {
+    window.generateOrderId('ATL', function(genId) {
+      finishCheckout(genId);
+    });
+  }
+
+  function finishCheckout(orderId) {
   const customer = {
     name: document.getElementById('fname').value.trim() + ' ' + document.getElementById('lname').value.trim(),
     email: document.getElementById('email').value.trim(),
@@ -1054,6 +1066,7 @@ document.getElementById('place-order-btn').addEventListener('click', function() 
 
     window.location.href = 'orderConfirmation.html';
   });
+  } // end finishCheckout
   } catch(globalErr) {
     alert('Error placing order: ' + globalErr.message + '\nPlease try again or contact us.');
     var btn2 = document.getElementById('place-order-btn');

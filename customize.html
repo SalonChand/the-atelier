@@ -389,6 +389,7 @@ button:focus { outline: none; }
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="admin-notify.js?v=2"></script>
+<script src="order-id-helper.js?v=1"></script>
 <script src="firebase-sync.js?v=8"></script>
 </head>
 <body>
@@ -1140,8 +1141,14 @@ function placeCustomOrder() {
     return { name: item.name, dataUrl: item.dataUrl };
   });
 
+  // Generate clean sequential ID (CUS-2026-0001) — falls back to timestamp if Firebase down
+  var idGenerator = (typeof window.generateOrderId === 'function')
+    ? function(cb) { window.generateOrderId('CUS', cb); }
+    : function(cb) { cb('CUS-' + new Date().getFullYear() + '-' + String(Date.now() % 10000).padStart(4, '0')); };
+
+  idGenerator(function(orderId) {
   var order = {
-    id: 'CUS-' + Date.now(),
+    id: orderId,
     type: 'custom',
     date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }),
     time: new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }),
@@ -1180,6 +1187,7 @@ function placeCustomOrder() {
   // Show success
   document.getElementById('success-ref').textContent = 'Reference: ' + order.id;
   document.getElementById('success-overlay').classList.add('show');
+  });
 }
 
 // ════════════════════════════════════════════════════════════════

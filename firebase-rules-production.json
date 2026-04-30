@@ -17,6 +17,11 @@
       }
     },
 
+    "order_counter": {
+      ".read": true,
+      ".write": true
+    },
+
     "custom_orders": {
       ".read": "auth != null",
       ".write": true
