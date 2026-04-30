@@ -59,7 +59,9 @@
     '<div id="more-sheet-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.4);opacity:0;transition:opacity 0.3s;"></div>' +
     '<div id="more-sheet-content" style="position:absolute;bottom:0;left:0;right:0;background:var(--cream,#f4f1ec);border-radius:16px 16px 0 0;padding:1.5rem 1.5rem calc(1.5rem + 64px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);">' +
       '<div style="width:36px;height:4px;background:rgba(200,184,154,0.5);border-radius:2px;margin:0 auto 1.5rem;"></div>' +
-      '<p style="font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:#8a7f73;margin-bottom:1rem;">Explore</p>' +
+      '<p style="font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:#8a7f73;margin-bottom:1rem;">Account</p>' +
+      '<a href="customerLogin.html" class="customer-auth-link more-auth-link" data-signed-in-text="My Orders" data-signed-out-text="Sign In" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;font-weight:500;">Sign In</a>' +
+      '<p style="font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:#8a7f73;margin-bottom:1rem;margin-top:1.5rem;">Explore</p>' +
       '<a href="aboutUs.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Our Story</a>' +
       '<a href="sustainability.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Sustainability</a>' +
       '<a href="press.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Press</a>' +
