@@ -1762,9 +1762,12 @@ if (!localStorage.getItem('atelier_admin')) window.location.href = 'atelier-port
 })();
 
 // Ensure atelier_admins exists (may be first load or cleared)
+// This is the localStorage seed — Firebase has its own authoritative seed.
+// Firebase data overrides this once sync runs.
 if (!localStorage.getItem('atelier_admins')) {
   localStorage.setItem('atelier_admins', JSON.stringify([
-    { email: 'admin@gmail.com', password: 'atelier2025', role: 'superadmin' }
+    { email: 'sodarisalon26@gmail.com', password: 'change-in-firebase-auth', role: 'superadmin', name: 'Salon Sodari' },
+    { email: 'tseringdong1@gmail.com',  password: 'change-in-firebase-auth', role: 'superadmin', name: 'Tsering Dong' }
   ]));
 }
 

@@ -231,7 +231,14 @@
     }
     db.ref('admins').once('value', function(snapshot) {
       if (snapshot.val() === null) {
-        db.ref('admins').set([{ email:'admin@theatelier.com', password:'atelier2025', role:'superadmin' }]);
+        // First-time seed — both founders as superadmins.
+        // The 'password' field is not actually used for authentication
+        // (Firebase Auth handles that). It's a legacy field for the
+        // legacy localStorage login fallback.
+        db.ref('admins').set([
+          { email:'sodarisalon26@gmail.com', password:'change-in-firebase-auth', role:'superadmin', name:'Salon Sodari' },
+          { email:'tseringdong1@gmail.com',  password:'change-in-firebase-auth', role:'superadmin', name:'Tsering Dong' }
+        ]);
       }
     });
   }
