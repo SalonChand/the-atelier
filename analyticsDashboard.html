@@ -273,7 +273,7 @@
   </nav>
   <div class="sidebar-footer">
     <a href="index.html" target="_blank" style="margin-bottom:0.75rem;">← View Store</a>
-    <a href="adminLogin.html" onclick="try{if(firebase&&firebase.auth)firebase.auth().signOut();}catch(e){}localStorage.removeItem('atelier_admin');localStorage.removeItem('atelier_current_user');localStorage.removeItem('atelier_current_role');localStorage.removeItem('atelier_auth_legacy');">Sign Out</a>
+    <a href="atelier-portal.html" onclick="try{if(firebase&&firebase.auth)firebase.auth().signOut();}catch(e){}localStorage.removeItem('atelier_admin');localStorage.removeItem('atelier_current_user');localStorage.removeItem('atelier_current_role');localStorage.removeItem('atelier_auth_legacy');">Sign Out</a>
   </div>
 </aside>
 
@@ -1723,7 +1723,7 @@
 
 <script>
 // Gate 1: localStorage check (quick, prevents flash)
-if (!localStorage.getItem('atelier_admin')) window.location.href = 'adminLogin.html';
+if (!localStorage.getItem('atelier_admin')) window.location.href = 'atelier-portal.html';
 
 // Gate 2: Verify actual Firebase Authentication on load.
 // This is the REAL protection — the security rules on Firebase require
@@ -1749,7 +1749,7 @@ if (!localStorage.getItem('atelier_admin')) window.location.href = 'adminLogin.h
         warning.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fef3c7;color:#78350f;padding:0.6rem 1rem;text-align:center;font-size:0.72rem;border-bottom:1px solid #f59e0b;';
         warning.innerHTML =
           '⚠️ <strong>Not signed into Firebase</strong> — orders and customer data may not load. ' +
-          '<a href="adminLogin.html" onclick="try{firebase.auth().signOut()}catch(e){};localStorage.clear();" style="color:#92400e;text-decoration:underline;font-weight:600;">Sign in again</a> to fix.';
+          '<a href="atelier-portal.html" onclick="try{firebase.auth().signOut()}catch(e){};localStorage.clear();" style="color:#92400e;text-decoration:underline;font-weight:600;">Sign in again</a> to fix.';
         document.body.appendChild(warning);
       }, 2500);
     } else {

@@ -205,7 +205,7 @@
           var isAuthed = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
           console.error('[Firebase] Read FAILED on path "' + fbPath + '": ' + errMsg);
           if (!isAuthed) {
-            console.warn('[Firebase] You are not signed in. Go to adminLogin.html and sign in with Firebase credentials.');
+            console.warn('[Firebase] You are not signed in. Go to atelier-portal.html and sign in with Firebase credentials.');
           } else {
             console.warn('[Firebase] You ARE authenticated as ' + firebase.auth().currentUser.email + ' but the path "' + fbPath + '" is still denied. This likely means the Firebase security rule for this path is missing or wrong.');
           }
