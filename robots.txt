@@ -4,7 +4,7 @@ Allow: /
 # Don't index admin pages or private flows
 Disallow: /analyticsDashboard.html
 Disallow: /adminLogin.html
-Disallow: /atelier-ta-portal-x7k2m9.html
+Disallow: /atelier-portal.html
 Disallow: /checkout.html
 Disallow: /orderConfirmation.html
 Disallow: /trackOrder.html

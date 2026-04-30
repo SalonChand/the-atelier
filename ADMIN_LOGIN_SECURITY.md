@@ -9,7 +9,7 @@ This guide covers the new secret-URL + kill-switch system for admin login.
 **Bookmark this — it's your only way in:**
 
 ```
-https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html
+https://theatelier-ta.com/atelier-portal.html
 ```
 
 Save it on:
@@ -27,7 +27,7 @@ The old URL `/adminLogin.html` now shows a 404 page to public visitors. It's no 
 **Only use this if you accidentally lock yourself out:**
 
 ```
-https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html?recover=ATELIER_RECOVERY_2026
+https://theatelier-ta.com/atelier-portal.html?recover=ATELIER_RECOVERY_2026
 ```
 
 This URL **bypasses the kill switch**. After signing in via this URL, go to Security panel and re-enable login.
@@ -147,7 +147,7 @@ Even with valid auth, the database rules restrict what data can be accessed.
 If you ever suspect the URL has leaked, you can rotate it:
 
 1. Tell Claude: "Rotate admin login URL"
-2. Claude will rename `atelier-ta-portal-x7k2m9.html` to a new random slug
+2. Claude will rename `atelier-portal.html` to a new random slug
 3. Update the 404 stub at the old slug
 4. Update the Security panel display
 5. Bookmark the new URL

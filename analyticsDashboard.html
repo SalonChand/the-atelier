@@ -659,7 +659,7 @@
     <p style="font-size:0.78rem;color:#6b6258;line-height:1.7;margin-bottom:1rem;">This is your private login URL. Bookmark it. Don't share it. Don't post it anywhere public.</p>
     <div style="display:flex;align-items:center;gap:0.6rem;background:#0e0e0d;color:#f4f1ec;padding:1rem 1.25rem;font-family:'Courier New',monospace;font-size:0.78rem;border-radius:2px;flex-wrap:wrap;">
       <span style="opacity:0.5;">🔗</span>
-      <span style="word-break:break-all;flex:1;min-width:200px;" id="secret-url-display">https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html</span>
+      <span style="word-break:break-all;flex:1;min-width:200px;" id="secret-url-display">https://theatelier-ta.com/atelier-portal.html</span>
       <button class="btn-primary" style="padding:0.45rem 0.85rem;font-size:0.55rem;flex-shrink:0;" onclick="copySecretUrl()">Copy</button>
     </div>
     <p style="font-size:0.65rem;color:#a89e94;margin-top:0.85rem;line-height:1.7;">Old URL <code style="background:#fafaf8;padding:0.1rem 0.4rem;font-size:0.7rem;">/adminLogin.html</code> now shows a 404 to public visitors.</p>
@@ -671,7 +671,7 @@
     <p style="font-size:0.78rem;color:#6b6258;line-height:1.7;margin-bottom:1rem;">If you accidentally turn the kill switch OFF and lock yourself out, use this URL — it bypasses the kill switch. Memorize the recovery code or save it somewhere safe.</p>
     <div style="display:flex;align-items:center;gap:0.6rem;background:#fee2e2;color:#7f1d1d;padding:1rem 1.25rem;font-family:'Courier New',monospace;font-size:0.78rem;border-radius:2px;border:1px solid rgba(183,28,28,0.3);flex-wrap:wrap;">
       <span>🚨</span>
-      <span style="word-break:break-all;flex:1;min-width:200px;" id="recovery-url-display">https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html?recover=ATELIER_RECOVERY_2026</span>
+      <span style="word-break:break-all;flex:1;min-width:200px;" id="recovery-url-display">https://theatelier-ta.com/atelier-portal.html?recover=ATELIER_RECOVERY_2026</span>
       <button class="btn-primary" style="padding:0.45rem 0.85rem;font-size:0.55rem;flex-shrink:0;background:#7f1d1d;border-color:#7f1d1d;" onclick="copyRecoveryUrl()">Copy</button>
     </div>
   </div>
@@ -2690,12 +2690,12 @@ function toggleKillSwitch() {
 }
 
 function copySecretUrl() {
-  var url = 'https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html';
+  var url = 'https://theatelier-ta.com/atelier-portal.html';
   copyToClipboard(url, 'Login URL copied');
 }
 
 function copyRecoveryUrl() {
-  var url = 'https://theatelier-ta.com/atelier-ta-portal-x7k2m9.html?recover=ATELIER_RECOVERY_2026';
+  var url = 'https://theatelier-ta.com/atelier-portal.html?recover=ATELIER_RECOVERY_2026';
   copyToClipboard(url, 'Recovery URL copied');
 }
 
