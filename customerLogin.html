@@ -179,6 +179,10 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
     </details>
 
     <button class="resend" id="resend-btn" onclick="resendMagicLink()">Resend Email</button>
+
+    <p style="margin-top:1rem;">
+      <button onclick="goBackToLogin()" style="background:none;border:none;font-family:'Jost';font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:#a89e94;cursor:pointer;text-decoration:underline;padding:0.5rem;">← Use a different email</button>
+    </p>
   </div>
 
 </div>
@@ -360,6 +364,29 @@ function startResendCooldown() {
       btn.textContent = 'Resend in ' + _resendCooldownSec + 's';
     }
   }, 1000);
+}
+
+// Take user back to the login form (e.g., they typo'd their email)
+function goBackToLogin() {
+  document.getElementById('sent-screen').classList.remove('show');
+  document.getElementById('login-screen').style.display = 'block';
+  // Reset the submit button so they can try again
+  var btn = document.getElementById('submit-btn');
+  btn.disabled = false;
+  btn.textContent = 'Sign In';
+  // Clear the resend cooldown
+  if (_resendInterval) { clearInterval(_resendInterval); _resendInterval = null; }
+  _resendCooldownSec = 0;
+  // Hide all provider buttons
+  ['open-gmail-btn','open-outlook-btn','open-icloud-btn','open-yahoo-btn','open-mailapp-btn'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Focus email field for quick re-typing
+  setTimeout(function() {
+    var emailInput = document.getElementById('email');
+    if (emailInput) emailInput.focus();
+  }, 100);
 }
 
 // Press Enter in email field to submit
