@@ -122,7 +122,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
     <p class="page-sub">Sign in to view your orders, track deliveries, and revisit your wardrobe history.</p>
 
     <div class="info-box">
-      No password needed — we'll <strong>email you a magic link</strong>. Tap the link from your inbox to sign in.
+      No password needed — we'll <strong>email you a one-tap sign-in link</strong>. Should arrive in about 30 seconds.
     </div>
 
     <div class="error-msg" id="error-msg"></div>
@@ -132,7 +132,7 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
       <input type="email" id="email" placeholder="you@example.com" autocomplete="email" autocapitalize="off" autocorrect="off"/>
     </div>
 
-    <button class="submit-btn" id="submit-btn" onclick="sendMagicLink()">✦ Send Magic Link</button>
+    <button class="submit-btn" id="submit-btn" onclick="sendMagicLink()">✦ Sign In</button>
 
     <div class="divider">or</div>
 
@@ -145,10 +145,39 @@ nav { position: fixed; top: 0; width: 100%; z-index: 100; display: flex; justify
   <!-- SENT CONFIRMATION -->
   <div class="sent-screen" id="sent-screen">
     <div class="icon">✉</div>
-    <h2>Check Your Inbox</h2>
+    <h2>Check Your Email</h2>
     <p>We sent a sign-in link to<br/><span class="email-display" id="sent-email">—</span></p>
-    <p style="font-size:0.7rem;">Tap the link in that email to sign in. The link expires in <strong>1 hour</strong>.</p>
-    <p style="font-size:0.65rem;color:#a89e94;">Didn't get it? Check your spam folder or wait a moment.</p>
+    <p style="font-size:0.74rem;line-height:1.7;">Tap the link in that email to finish signing in.<br/><span style="color:#a89e94;font-size:0.68rem;">Should arrive in 30-60 seconds.</span></p>
+
+    <!-- Quick-launch buttons for popular email providers -->
+    <div id="email-provider-buttons" style="display:flex;flex-direction:column;gap:0.5rem;margin:1.5rem auto;max-width:280px;">
+      <a id="open-gmail-btn" href="https://mail.google.com/mail/u/0/#search/from%3Anoreply%40the-atelier-ce832.firebaseapp.com" target="_blank" rel="noopener" style="display:none;align-items:center;justify-content:center;gap:0.6rem;padding:0.85rem 1rem;background:white;border:1px solid rgba(200,184,154,0.4);text-decoration:none;color:var(--ink);font-size:0.75rem;letter-spacing:0.08em;transition:all 0.15s;">
+        <span style="font-size:1rem;">📧</span> Open Gmail
+      </a>
+      <a id="open-outlook-btn" href="https://outlook.live.com/mail/0/inbox" target="_blank" rel="noopener" style="display:none;align-items:center;justify-content:center;gap:0.6rem;padding:0.85rem 1rem;background:white;border:1px solid rgba(200,184,154,0.4);text-decoration:none;color:var(--ink);font-size:0.75rem;letter-spacing:0.08em;transition:all 0.15s;">
+        <span style="font-size:1rem;">📧</span> Open Outlook
+      </a>
+      <a id="open-icloud-btn" href="https://www.icloud.com/mail/" target="_blank" rel="noopener" style="display:none;align-items:center;justify-content:center;gap:0.6rem;padding:0.85rem 1rem;background:white;border:1px solid rgba(200,184,154,0.4);text-decoration:none;color:var(--ink);font-size:0.75rem;letter-spacing:0.08em;transition:all 0.15s;">
+        <span style="font-size:1rem;">📧</span> Open iCloud Mail
+      </a>
+      <a id="open-yahoo-btn" href="https://mail.yahoo.com/" target="_blank" rel="noopener" style="display:none;align-items:center;justify-content:center;gap:0.6rem;padding:0.85rem 1rem;background:white;border:1px solid rgba(200,184,154,0.4);text-decoration:none;color:var(--ink);font-size:0.75rem;letter-spacing:0.08em;transition:all 0.15s;">
+        <span style="font-size:1rem;">📧</span> Open Yahoo Mail
+      </a>
+      <a id="open-mailapp-btn" href="message://" style="display:none;align-items:center;justify-content:center;gap:0.6rem;padding:0.85rem 1rem;background:white;border:1px solid rgba(200,184,154,0.4);text-decoration:none;color:var(--ink);font-size:0.75rem;letter-spacing:0.08em;transition:all 0.15s;">
+        <span style="font-size:1rem;">📧</span> Open Mail App
+      </a>
+    </div>
+
+    <details style="margin-top:1.5rem;font-size:0.68rem;color:#8a7f73;text-align:left;max-width:380px;margin-left:auto;margin-right:auto;">
+      <summary style="cursor:pointer;text-align:center;padding:0.5rem;">Email not arrived?</summary>
+      <ul style="margin-top:0.85rem;padding-left:1.5rem;line-height:1.9;">
+        <li>Check your <strong>spam / junk folder</strong> — first-time emails often land there</li>
+        <li>Look for sender <code style="background:#fafaf8;padding:0.05rem 0.3rem;font-size:0.65rem;">noreply@the-atelier-ce832.firebaseapp.com</code></li>
+        <li>Wait up to 2 minutes — sometimes there's a delay</li>
+        <li>Make sure you typed your email correctly</li>
+      </ul>
+    </details>
+
     <button class="resend" id="resend-btn" onclick="resendMagicLink()">Resend Email</button>
   </div>
 
@@ -217,12 +246,13 @@ function sendMagicLink() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('sent-email').textContent = email;
       document.getElementById('sent-screen').classList.add('show');
+      showEmailProviderButton(email);
       startResendCooldown();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     })
     .catch(function(err) {
       btn.disabled = false;
-      btn.textContent = '✦ Send Magic Link';
+      btn.textContent = '✦ Sign In';
       console.error('Magic link error:', err);
       // Friendly error messages
       var msg = 'Could not send the link. Please try again.';
@@ -233,6 +263,69 @@ function sendMagicLink() {
       else if (err.message) msg = err.message;
       showError(msg);
     });
+}
+
+// Show only the relevant email-provider quick-launch button based on the
+// email's domain. Falls back to the device's default mail app for any
+// domain we don't recognize (works on iOS, opens default mail client).
+function showEmailProviderButton(email) {
+  // Detect mobile platform
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua);
+  var isAndroid = /Android/i.test(ua);
+  var isMobile = isIOS || isAndroid;
+
+  // Lowercase domain
+  var domain = '';
+  try { domain = (email.split('@')[1] || '').toLowerCase(); } catch(e) {}
+
+  // Show device "Open Mail App" button on mobile (uses message:// scheme on iOS,
+  // intent on Android). Shown ALWAYS on mobile in addition to web button below.
+  if (isMobile) {
+    var mailappBtn = document.getElementById('open-mailapp-btn');
+    mailappBtn.style.display = 'flex';
+    mailappBtn.querySelector('span').textContent = '📱';
+    if (mailappBtn.childNodes.length > 1) {
+      mailappBtn.lastChild.textContent = ' Open Mail App';
+    }
+  }
+
+  // Map domain → web mailbox URL
+  var providerMap = {
+    'gmail.com':       { btn: 'open-gmail-btn',   url: 'https://mail.google.com/mail/u/' + encodeURIComponent(email) + '/#search/from%3Anoreply%40the-atelier-ce832.firebaseapp.com' },
+    'googlemail.com':  { btn: 'open-gmail-btn',   url: 'https://mail.google.com/mail/u/0/#inbox' },
+    'outlook.com':     { btn: 'open-outlook-btn', url: 'https://outlook.live.com/mail/0/inbox' },
+    'hotmail.com':     { btn: 'open-outlook-btn', url: 'https://outlook.live.com/mail/0/inbox' },
+    'live.com':        { btn: 'open-outlook-btn', url: 'https://outlook.live.com/mail/0/inbox' },
+    'msn.com':         { btn: 'open-outlook-btn', url: 'https://outlook.live.com/mail/0/inbox' },
+    'icloud.com':      { btn: 'open-icloud-btn',  url: 'https://www.icloud.com/mail/' },
+    'me.com':          { btn: 'open-icloud-btn',  url: 'https://www.icloud.com/mail/' },
+    'mac.com':         { btn: 'open-icloud-btn',  url: 'https://www.icloud.com/mail/' },
+    'yahoo.com':       { btn: 'open-yahoo-btn',   url: 'https://mail.yahoo.com/' },
+    'ymail.com':       { btn: 'open-yahoo-btn',   url: 'https://mail.yahoo.com/' },
+    'yahoo.co.in':     { btn: 'open-yahoo-btn',   url: 'https://mail.yahoo.com/' },
+    'yahoo.co.uk':     { btn: 'open-yahoo-btn',   url: 'https://mail.yahoo.com/' }
+  };
+
+  var entry = providerMap[domain];
+  if (entry) {
+    var btn = document.getElementById(entry.btn);
+    if (btn) {
+      btn.href = entry.url;
+      btn.style.display = 'flex';
+    }
+  } else if (!isMobile) {
+    // Unknown provider on desktop — show generic Mail app button so they
+    // at least have a button to click
+    var fallbackBtn = document.getElementById('open-mailapp-btn');
+    if (fallbackBtn) {
+      fallbackBtn.style.display = 'flex';
+      fallbackBtn.querySelector('span').textContent = '✉';
+      if (fallbackBtn.childNodes.length > 1) {
+        fallbackBtn.lastChild.textContent = ' Open Email';
+      }
+    }
+  }
 }
 
 function resendMagicLink() {
