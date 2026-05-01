@@ -63,8 +63,6 @@
       '<a href="customerLogin.html" class="customer-auth-link more-auth-link" data-signed-in-text="My Orders" data-signed-out-text="Sign In" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;font-weight:500;">Sign In</a>' +
       '<p style="font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:#8a7f73;margin-bottom:1rem;margin-top:1.5rem;">Explore</p>' +
       '<a href="aboutUs.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Our Story</a>' +
-      '<a href="sustainability.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Sustainability</a>' +
-      '<a href="press.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Press</a>' +
       '<p style="font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:#8a7f73;margin-bottom:1rem;margin-top:1.5rem;">Support</p>' +
       '<a href="trackOrder.html" style="display:block;padding:0.9rem 0;border-bottom:1px solid rgba(200,184,154,0.2);font-size:0.8rem;color:#0e0e0d;text-decoration:none;letter-spacing:0.08em;">Track Your Order</a>' +
       
