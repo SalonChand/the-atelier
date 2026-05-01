@@ -1932,6 +1932,8 @@ updateCanvas();
         var mesh = new THREE.Mesh(decalGeom, mat);
         mesh.userData.isDecal = true;
         mesh.userData.designId = design.id;
+        mesh.userData.baselineScale = sliderVal;       // remember what scale this geometry was built at
+        mesh.userData.baselineCenter = surface.surfacePoint.clone();  // remember the anchor point
         mesh.renderOrder = 1;
         scene.add(mesh);
         design.decalMesh = mesh;
@@ -2224,41 +2226,66 @@ updateCanvas();
     _rebuildTimeout = setTimeout(function() { if (is3DActive) updateDecal(); }, 200);
   }
 
-  // Throttled scale update — saves the scale value but lets deferredRebuild
-  // do the actual geometry rebuild in the next animation frame.
-  // For DecalGeometry meshes, we CAN'T just set mesh.scale because the
-  // geometry vertices are baked in world space; setting mesh.scale would
-  // make the decal fly away from the model. So we always rebuild.
-  var _scaleRafPending = false;
+  // Throttled scale update — TWO-PHASE for smoothness:
+  //
+  // Phase 1 (during drag, fires every input event):
+  //   Compute a relative scale factor vs the geometry's baseline scale.
+  //   Apply it to mesh.matrix DIRECTLY (around the decal's anchor point)
+  //   so the decal visually scales in place without rebuilding geometry.
+  //   This is essentially free — pure transform math, no triangle clipping.
+  //
+  // Phase 2 (250ms after slider stops, via deferredRebuild):
+  //   Actually rebuild DecalGeometry at the new size for a perfect
+  //   surface-conforming projection.
+  //
+  // Why this looks fine: during the brief drag, the decal sticks slightly
+  // off the surface as it scales — but it stays anchored at the right
+  // point and visually scales smoothly. The moment user stops, it snaps
+  // to a perfect projection.
   function fastScaleUpdate() {
     if (!is3DActive) { deferredRebuild(); return; }
     var sliderEl = document.getElementById('design-scale');
     if (!sliderEl) return;
     var sliderVal = parseFloat(sliderEl.value);
 
-    // Find target design — text decal, or active uploaded design
+    // Find target mesh — text decal, or active design's mesh
+    var target = null;
     var design = null;
     if (state.designTab === 'text') {
-      // Text path: stash on a sentinel so the renderer reads it on next rebuild
+      target = textDecalMesh;
       _textScale = sliderVal;
     } else {
       design = getActiveDesign();
-      if (design) design.scale = sliderVal;
+      if (design) {
+        design.scale = sliderVal;
+        if (design.decalMesh) target = design.decalMesh;
+      }
     }
 
-    // Throttle to next animation frame to keep slider feel smooth
-    if (_scaleRafPending) return;
-    _scaleRafPending = true;
-    requestAnimationFrame(function() {
-      _scaleRafPending = false;
-      if (!is3DActive) return;
-      if (state.designTab === 'text') {
-        renderTextDecal();
-      } else {
-        var d = getActiveDesign();
-        if (d) renderDesign(d);
-      }
-    });
+    // No mesh yet (first time) — schedule a build instead
+    if (!target) { deferredRebuild(); return; }
+
+    // Visual-only preview scale: set mesh.matrix to scale around its anchor
+    var baseline = target.userData.baselineScale || 0.5;
+    var anchor = target.userData.baselineCenter;
+    if (anchor) {
+      // sliderVal/baseline = how much bigger/smaller than the built geometry
+      var ratio = (0.2 + sliderVal * 1.6) / (0.2 + baseline * 1.6);
+
+      // Build a matrix that translates to origin, scales, translates back
+      // (scale around the anchor point, not scene origin)
+      target.matrixAutoUpdate = false;
+      var m = new THREE.Matrix4();
+      m.makeTranslation(anchor.x, anchor.y, anchor.z);
+      var s = new THREE.Matrix4().makeScale(ratio, ratio, ratio);
+      var nt = new THREE.Matrix4().makeTranslation(-anchor.x, -anchor.y, -anchor.z);
+      m.multiply(s).multiply(nt);
+      target.matrix.copy(m);
+      target.matrixWorldNeedsUpdate = true;
+    }
+
+    // Schedule the proper rebuild after slider stops
+    deferredRebuild();
   }
   var _textScale = 0.6;
 
@@ -2401,28 +2428,23 @@ updateCanvas();
     knob.style.transform = 'translate(-50%, -50%)';
   }
 
-  // Smooth movement loop — translates a virtual cursor in screen space,
-  // then reprojects to nearest garment surface every few frames.
-  // Why not translate mesh.position? Because DecalGeometry vertices are
-  // baked in world space — translating mesh.position would make the decal
-  // float away from the model. We re-create the geometry at the new
-  // surface point each cycle.
-  var _virtualCursorWorld = new THREE.Vector3(); // virtual cursor in world space
-  var _cursorInitialized = false;
+  // Smooth movement loop — TWO-PHASE for performance:
+  //
+  // Phase 1 (during drag, every animation frame):
+  //   Just translate mesh.position. This is a "visual lie" — the decal
+  //   pretends to slide across the surface. Costs ~0ms per frame.
+  //
+  // Phase 2 (on release):
+  //   Compute where the cursor actually points on the garment surface,
+  //   rebuild DecalGeometry there for a perfect surface-conforming
+  //   projection. Costs ~50ms ONCE, but user has stopped moving.
+  //
+  // Result: 60fps drag, with the decal snapping to a perfect projection
+  // the moment user releases.
   var _camRight = new THREE.Vector3();
   var _camUp = new THREE.Vector3();
   var _translation = new THREE.Vector3();
-  var _reprojectFrame = 0;
-
-  function initVirtualCursor() {
-    // Set the virtual cursor to the active design's current world position
-    var design = getActiveDesign();
-    if (!design || !design.decalMesh) { _cursorInitialized = false; return; }
-    // Get center of the decal in world space
-    var box = new THREE.Box3().setFromObject(design.decalMesh);
-    box.getCenter(_virtualCursorWorld);
-    _cursorInitialized = true;
-  }
+  var _accumulatedTranslation = new THREE.Vector3();  // tracks total drag delta
 
   function animateJoystick() {
     if (!joystickActive) { joystickRAF = null; return; }
@@ -2432,18 +2454,10 @@ updateCanvas();
     }
 
     var design = (state.designTab === 'text') ? null : getActiveDesign();
-    var hasTarget = (state.designTab === 'text' && textDecalMesh) || (design && design.decalMesh);
-    if (!hasTarget) {
+    var targetMesh = (state.designTab === 'text') ? textDecalMesh : (design && design.decalMesh);
+    if (!targetMesh) {
       joystickRAF = requestAnimationFrame(animateJoystick);
       return;
-    }
-
-    if (!_cursorInitialized) {
-      // First frame after joystick start — initialize cursor at decal center
-      var targetMesh = (state.designTab === 'text') ? textDecalMesh : design.decalMesh;
-      var box = new THREE.Box3().setFromObject(targetMesh);
-      box.getCenter(_virtualCursorWorld);
-      _cursorInitialized = true;
     }
 
     var ox = currentOffset.x, oy = currentOffset.y;
@@ -2457,32 +2471,51 @@ updateCanvas();
       _camRight.setFromMatrixColumn(camera.matrixWorld, 0);
       _camUp.setFromMatrixColumn(camera.matrixWorld, 1);
 
-      // Translate the VIRTUAL CURSOR (not the mesh)
+      // Translate the MESH (visual preview). DecalGeometry vertices are
+      // world-space, but for a brief drag the visual lift-off is acceptable
+      // — much smoother than rebuilding geometry every frame.
       _translation.copy(_camRight).multiplyScalar(speedX);
       _translation.addScaledVector(_camUp, speedY);
-      _virtualCursorWorld.add(_translation);
-
-      // Every 2 frames, reproject onto the garment surface
-      _reprojectFrame++;
-      if (_reprojectFrame % 2 === 0) {
-        reprojectVirtualCursor();
-      }
+      _accumulatedTranslation.add(_translation);
+      targetMesh.position.copy(_accumulatedTranslation);
     }
 
     joystickRAF = requestAnimationFrame(animateJoystick);
   }
 
-  // Cast a ray from camera through the virtual cursor's screen position and
-  // find where it hits the garment. Then rebuild the active decal there.
-  function reprojectVirtualCursor() {
-    if (!is3DActive || !currentModel) return;
+  // On joystick release: figure out where the decal currently appears on
+  // screen, raycast to the actual garment surface, and rebuild it there.
+  // This snaps the decal back to a perfect surface projection.
+  function reprojectDecalToSurface() {
+    if (!_joystickHasMoved) {
+      _accumulatedTranslation.set(0, 0, 0);
+      return;
+    }
+    _joystickHasMoved = false;
+
+    if (!is3DActive || !currentModel) {
+      _accumulatedTranslation.set(0, 0, 0);
+      return;
+    }
 
     var design = (state.designTab === 'text') ? null : getActiveDesign();
-    var hasTarget = (state.designTab === 'text' && textDecalMesh) || (design && design.decalMesh);
-    if (!hasTarget) return;
+    var targetMesh = (state.designTab === 'text') ? textDecalMesh : (design && design.decalMesh);
+    if (!targetMesh) {
+      _accumulatedTranslation.set(0, 0, 0);
+      return;
+    }
 
-    // Cast a ray from camera through the virtual cursor world position
-    var rayDir = _virtualCursorWorld.clone().sub(camera.position).normalize();
+    if (typeof THREE.DecalGeometry === 'undefined') {
+      _accumulatedTranslation.set(0, 0, 0);
+      return;
+    }
+
+    // Find current visual center of the decal (geometry center + drag translation)
+    var box = new THREE.Box3().setFromObject(targetMesh);
+    var visualCenter = box.getCenter(new THREE.Vector3());
+
+    // Cast ray from camera through that point to find the surface
+    var rayDir = visualCenter.clone().sub(camera.position).normalize();
     raycaster.set(camera.position, rayDir);
     raycaster.far = 100;
     var meshes = [];
@@ -2490,28 +2523,22 @@ updateCanvas();
       if (c.isMesh && !c.userData.isDecal) meshes.push(c);
     });
     var hits = raycaster.intersectObjects(meshes, true);
-    if (hits.length === 0) return;
+    if (hits.length === 0) {
+      // Cursor went off the model — snap back to original position
+      targetMesh.position.set(0, 0, 0);
+      _accumulatedTranslation.set(0, 0, 0);
+      return;
+    }
 
     var hit = hits[0];
     var pt = hit.point.clone();
     var nm = hit.face.normal.clone();
     nm.transformDirection(hit.object.matrixWorld);
 
-    // Snap virtual cursor to actual surface so it doesn't drift
-    _virtualCursorWorld.copy(pt);
-
-    if (typeof THREE.DecalGeometry === 'undefined') return;
-
     var mBox = new THREE.Box3().setFromObject(currentModel);
     var mSize = mBox.getSize(new THREE.Vector3());
-
-    var sliderVal;
-    if (state.designTab === 'text') {
-      sliderVal = _textScale;
-    } else {
-      sliderVal = (design && design.scale != null) ? design.scale : 0.5;
-    }
-
+    var sliderVal = (state.designTab === 'text') ? _textScale
+                  : (design && design.scale != null) ? design.scale : 0.5;
     var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
     var decalSize = baseSize * (0.2 + sliderVal * 1.6);
 
@@ -2522,27 +2549,24 @@ updateCanvas();
     orientation.copy(lookHelper.rotation);
 
     var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
-    var targetMesh = (state.designTab === 'text') ? textDecalMesh : design.decalMesh;
 
     try {
       var oldGeom = targetMesh.geometry;
       targetMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
-      // DecalGeometry vertices are world-space; mesh transforms must stay neutral
+      // Reset transform — DecalGeometry vertices are world-space
+      targetMesh.matrixAutoUpdate = true;
       targetMesh.position.set(0, 0, 0);
       targetMesh.scale.set(1, 1, 1);
       targetMesh.rotation.set(0, 0, 0);
+      targetMesh.userData.baselineCenter = pt.clone();
+      targetMesh.userData.baselineScale = sliderVal;
       if (oldGeom) oldGeom.dispose();
     } catch (err) {
-      // Geometry creation failed (raycast on edge) — keep old geometry
+      // Geometry failed (raycast on edge) — at least reset position
+      targetMesh.position.set(0, 0, 0);
     }
-  }
 
-  // Kept for backward compatibility — older code still calls this on joystick release
-  function reprojectDecalToSurface() {
-    _cursorInitialized = false; // reset for next drag
-    if (!_joystickHasMoved) return;
-    _joystickHasMoved = false;
-    reprojectVirtualCursor();
+    _accumulatedTranslation.set(0, 0, 0);
   }
 
   // ── EVENT HANDLERS ────────────────────────────────────────
