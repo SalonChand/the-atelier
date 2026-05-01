@@ -976,6 +976,16 @@ function selectPlacement(p, btn) {
   state.placement = p;
   document.querySelectorAll('.place-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
+
+  // Set the placement on the ACTIVE design only — other designs keep their placements
+  if (window._atelier3D) {
+    var activeId = window._atelier3D.getActiveId();
+    if (activeId) {
+      var designs = window._atelier3D.getDesigns();
+      var active = designs.find(function(d) { return d.id === activeId; });
+      if (active) active.placement = p;
+    }
+  }
   updateCanvas();
 }
 function setView(v, btn) {
@@ -1027,9 +1037,19 @@ function handleMultiImageUpload(e) {
       reader.onload = function(ev) {
         var img = new Image();
         img.onload = function() {
-          uploadedImages.push({ img: img, dataUrl: ev.target.result, name: file.name });
+          // Register with 3D system → returns design id used for active/remove
+          var designId = null;
+          if (window._atelier3D) {
+            designId = window._atelier3D.addDesign(img, ev.target.result, file.name);
+          }
+          uploadedImages.push({ img: img, dataUrl: ev.target.result, name: file.name, designId: designId });
           // Set the first image as the active preview
           if (uploadedImages.length === 1) {
+            uploadedImg = img;
+            document.getElementById('preview-thumb').src = ev.target.result;
+            document.getElementById('preview-thumb').style.display = 'block';
+          } else {
+            // Make the newly uploaded image the active one
             uploadedImg = img;
             document.getElementById('preview-thumb').src = ev.target.result;
             document.getElementById('preview-thumb').style.display = 'block';
@@ -1051,11 +1071,13 @@ function renderImageGallery() {
   var countEl = document.getElementById('image-count');
   if (uploadedImages.length === 0) { gallery.style.display = 'none'; return; }
   gallery.style.display = 'block';
-  countEl.textContent = uploadedImages.length + ' design' + (uploadedImages.length > 1 ? 's' : '') + ' uploaded';
+  var activeId = window._atelier3D ? window._atelier3D.getActiveId() : null;
+  countEl.textContent = uploadedImages.length + ' design' + (uploadedImages.length > 1 ? 's' : '') + ' uploaded' + (uploadedImages.length > 1 ? ' — tap a thumbnail to edit that one' : '');
   thumbs.innerHTML = uploadedImages.map(function(item, idx) {
-    var isActive = (uploadedImg === item.img) ? 'border:2px solid var(--accent);' : 'border:2px solid rgba(200,184,154,0.3);';
+    var isActive = (item.designId && item.designId === activeId) || (!activeId && uploadedImg === item.img);
+    var border = isActive ? 'border:2px solid var(--accent);box-shadow:0 0 0 2px rgba(139,94,60,0.2);' : 'border:2px solid rgba(200,184,154,0.3);';
     return '<div style="position:relative;width:56px;height:56px;cursor:pointer;" onclick="selectDesignImage(' + idx + ')">' +
-      '<img src="' + item.dataUrl + '" style="width:56px;height:56px;object-fit:cover;' + isActive + '" title="' + item.name + '"/>' +
+      '<img src="' + item.dataUrl + '" style="width:56px;height:56px;object-fit:cover;' + border + '" title="' + item.name + '"/>' +
       '<button onclick="event.stopPropagation();removeDesignImage(' + idx + ')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--ink);color:var(--cream);border:none;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>' +
       '</div>';
   }).join('');
@@ -1063,22 +1085,43 @@ function renderImageGallery() {
 
 function selectDesignImage(idx) {
   if (idx >= 0 && idx < uploadedImages.length) {
-    uploadedImg = uploadedImages[idx].img;
-    document.getElementById('preview-thumb').src = uploadedImages[idx].dataUrl;
+    var item = uploadedImages[idx];
+    uploadedImg = item.img;
+    document.getElementById('preview-thumb').src = item.dataUrl;
     document.getElementById('preview-thumb').style.display = 'block';
+    if (window._atelier3D && item.designId) {
+      window._atelier3D.setActive(item.designId);
+      // Sync the placement buttons + state to reflect this design's placement
+      var allDesigns = window._atelier3D.getDesigns();
+      var d = allDesigns.find(function(x) { return x.id === item.designId; });
+      if (d && d.placement) {
+        state.placement = d.placement;
+        document.querySelectorAll('.place-btn').forEach(function(btn) {
+          btn.classList.toggle('active', btn.getAttribute('onclick').indexOf("'" + d.placement + "'") !== -1);
+        });
+      }
+    }
     renderImageGallery();
     updateCanvas();
   }
 }
 
 function removeDesignImage(idx) {
-  var wasActive = (uploadedImg === uploadedImages[idx].img);
+  var item = uploadedImages[idx];
+  var wasActive = (uploadedImg === item.img);
+  // Remove from 3D scene
+  if (window._atelier3D && item.designId) {
+    window._atelier3D.removeDesign(item.designId);
+  }
   uploadedImages.splice(idx, 1);
   if (uploadedImages.length === 0) {
     clearAllDesigns();
   } else if (wasActive) {
-    uploadedImg = uploadedImages[0].img;
-    document.getElementById('preview-thumb').src = uploadedImages[0].dataUrl;
+    uploadedImg = uploadedImages[uploadedImages.length - 1].img;
+    document.getElementById('preview-thumb').src = uploadedImages[uploadedImages.length - 1].dataUrl;
+    if (window._atelier3D && uploadedImages[uploadedImages.length - 1].designId) {
+      window._atelier3D.setActive(uploadedImages[uploadedImages.length - 1].designId);
+    }
   }
   renderImageGallery();
   updateCanvas();
@@ -1087,6 +1130,7 @@ function removeDesignImage(idx) {
 function clearAllDesigns() {
   uploadedImages = [];
   uploadedImg = null;
+  if (window._atelier3D) window._atelier3D.clearAll();
   document.getElementById('preview-thumb').src = '';
   document.getElementById('preview-thumb').style.display = 'none';
   document.getElementById('img-controls').style.display = 'none';
@@ -1493,11 +1537,91 @@ updateCanvas();
   var loadingEl = document.getElementById('loading-3d');
   var pluginsReady = false;
 
-  var decalMesh = null;
+  // ─── Multi-design state ──────────────────────────────────────────
+  // Array of { id, img, dataUrl, name, placement, scale, opacity, decalMesh }
+  // Each design renders as its own Three.js mesh. Active = currently being edited.
+  var designs = [];          // all designs the user has uploaded
+  var activeDesignId = null; // which one is being controlled by sliders/joystick
   var decalState = { side: 'front' };
   var isDragging = false;
   var raycaster = new THREE.Raycaster();
   var mouseVec = new THREE.Vector2();
+
+  // Helpers to find designs by id
+  function getDesignById(id) {
+    for (var i = 0; i < designs.length; i++) if (designs[i].id === id) return designs[i];
+    return null;
+  }
+  function getActiveDesign() { return getDesignById(activeDesignId); }
+  function getActiveMesh() {
+    var d = getActiveDesign();
+    return d && d.decalMesh ? d.decalMesh : null;
+  }
+
+  // Expose for outer scope access (uploads, save, etc.)
+  window._atelier3D = {
+    addDesign: function(img, dataUrl, name) {
+      var id = 'd_' + Math.random().toString(36).slice(2, 9);
+      var design = {
+        id: id,
+        img: img,
+        dataUrl: dataUrl,
+        name: name || 'design',
+        placement: state.placement || 'chest-center',
+        scale: parseFloat((document.getElementById('design-scale') || {}).value || 0.6),
+        opacity: parseFloat((document.getElementById('design-opacity') || {}).value || 1),
+        decalMesh: null
+      };
+      designs.push(design);
+      activeDesignId = id;
+      if (is3DActive) renderDesign(design);
+      return id;
+    },
+    removeDesign: function(id) {
+      var d = getDesignById(id);
+      if (!d) return;
+      disposeMesh(d.decalMesh);
+      d.decalMesh = null;
+      designs = designs.filter(function(x) { return x.id !== id; });
+      if (activeDesignId === id) {
+        activeDesignId = designs.length ? designs[designs.length - 1].id : null;
+      }
+    },
+    setActive: function(id) {
+      if (getDesignById(id)) {
+        activeDesignId = id;
+        // Update sliders to reflect active design's stored values
+        var d = getDesignById(id);
+        var ss = document.getElementById('design-scale');
+        var os = document.getElementById('design-opacity');
+        if (ss) ss.value = d.scale;
+        if (os) os.value = d.opacity;
+      }
+    },
+    getDesigns: function() { return designs.slice(); },
+    getActiveId: function() { return activeDesignId; },
+    clearAll: function() {
+      designs.forEach(function(d) { disposeMesh(d.decalMesh); });
+      designs = [];
+      activeDesignId = null;
+    },
+    rebuildAll: function() { rebuildAllDesigns(); }
+  };
+
+  function disposeMesh(mesh) {
+    if (!mesh) return;
+    if (mesh.parent) mesh.parent.remove(mesh);
+    if (mesh.material) {
+      if (mesh.material.map) mesh.material.map.dispose();
+      mesh.material.dispose();
+    }
+    if (mesh.geometry) mesh.geometry.dispose();
+  }
+
+  function rebuildAllDesigns() {
+    if (!is3DActive || !currentModel) return;
+    designs.forEach(function(d) { renderDesign(d); });
+  }
 
   var s1 = document.createElement('script');
   s1.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
@@ -1638,17 +1762,26 @@ updateCanvas();
     });
   }
 
-  function getDecalTexture() {
+  // Build a 1024x1024 canvas with a single image OR text drawn into it.
+  // For text mode, we still use the active text input; only image mode supports per-design.
+  function buildTextureFor(design) {
     var c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
     var cx = c.getContext('2d'); cx.clearRect(0, 0, 1024, 1024);
-    if (state.designTab === 'image' && uploadedImg) {
-      var op = parseFloat(document.getElementById('design-opacity') ? document.getElementById('design-opacity').value : 1);
-      var iw = uploadedImg.width, ih = uploadedImg.height, fitScale = Math.min(1024/iw, 1024/ih);
+    if (design && design.img) {
+      var op = (design.opacity != null) ? design.opacity : 1;
+      var iw = design.img.width, ih = design.img.height, fitScale = Math.min(1024/iw, 1024/ih);
       cx.globalAlpha = op;
       if (state.ctype === 'embroidery') cx.filter = 'saturate(0.7) contrast(1.1)';
-      cx.drawImage(uploadedImg, (1024-iw*fitScale)/2, (1024-ih*fitScale)/2, iw*fitScale, ih*fitScale);
+      cx.drawImage(design.img, (1024-iw*fitScale)/2, (1024-ih*fitScale)/2, iw*fitScale, ih*fitScale);
       return c;
     }
+    return null;
+  }
+
+  // Build texture for the current text input (used when no image, just text)
+  function buildTextTexture() {
+    var c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+    var cx = c.getContext('2d'); cx.clearRect(0, 0, 1024, 1024);
     if (state.designTab === 'text' && state.ctype !== 'none') {
       var txt = document.getElementById('design-text') ? document.getElementById('design-text').value : '';
       if (txt) {
@@ -1662,85 +1795,40 @@ updateCanvas();
     return null;
   }
 
-  function removeDecal() {
-    if (decalMesh) {
-      if (decalMesh.parent) decalMesh.parent.remove(decalMesh);
-      else if (scene) scene.remove(decalMesh);
-      if (decalMesh.material) {
-        if (decalMesh.material.map) decalMesh.material.map.dispose();
-        decalMesh.material.dispose();
-      }
-      if (decalMesh.geometry) decalMesh.geometry.dispose();
-      decalMesh = null;
-    }
-  }
-
-  function updateDecal() {
-    if (!is3DActive || !currentModel) return;
-    if (state.ctype === 'none') { removeDecal(); return; }
-    var texCanvas = getDecalTexture();
-    if (!texCanvas) { removeDecal(); return; }
-
+  // Compute the surface point on the model for a given placement.
+  // Returns { surfacePoint, surfaceNormal, targetMesh } or null if no hit.
+  function getSurfaceForPlacement(placement) {
+    if (!currentModel) return null;
     var mBox = new THREE.Box3().setFromObject(currentModel);
     var mSize = mBox.getSize(new THREE.Vector3()), mCenter = mBox.getCenter(new THREE.Vector3());
-    var sliderVal = parseFloat(document.getElementById('design-scale') ? document.getElementById('design-scale').value : 0.5);
-    var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
-    var decalSize = baseSize * (0.2 + sliderVal * 1.6);
 
-    // ── Per-placement raycast targeting ───────────────────────────
-    // Build a ray that originates OUTSIDE the model and points INTO the
-    // specific placement location (chest-left, chest-center, sleeve-right, etc.)
-    //
-    // Strategy: use the current CAMERA position to define what "front" means
-    // relative to what the user sees. This works regardless of the model's
-    // original GLB orientation — because it's always relative to the user's view.
-    //
-    //   - For front-facing placements (chest-*): use camera direction
-    //   - For back placement (back-center): use opposite of camera direction
-    //   - For sleeve placements (sleeve-*): perpendicular to camera direction
-    var placement = state.placement || 'chest-center';
-    var view = decalState.side || 'front';
-
-    // Camera's horizontal axes (ignoring Y / up)
     var camDir = new THREE.Vector3();
     camera.getWorldDirection(camDir);
-    camDir.y = 0;
-    camDir.normalize();
-    // Camera's right (in horizontal plane) = up × camDir
+    camDir.y = 0; camDir.normalize();
     var camRight = new THREE.Vector3(0, 1, 0).cross(camDir).normalize();
 
-    // Vertical offset for chest vs sleeve
     var chestY = mCenter.y + mSize.y * 0.18;
     var sleeveY = mCenter.y + mSize.y * 0.25;
-    var hipY = mCenter.y - mSize.y * 0.1;
-
-    // How far sideways to offset for left/right placements
     var halfWidth = mSize.x * 0.5;
-    var shoulderOffset = halfWidth * 0.45;   // for chest-left/right
-    var sleeveOffset = halfWidth * 0.75;     // for sleeve-left/right (further out)
-
-    // Ray origin (outside the model) and direction (pointing into it)
+    var shoulderOffset = halfWidth * 0.45;
+    var sleeveOffset = halfWidth * 0.75;
+    var dist = Math.max(mSize.x, mSize.y, mSize.z) * 3;
     var rayOrigin = new THREE.Vector3();
     var rayDir = new THREE.Vector3();
-    var dist = Math.max(mSize.x, mSize.y, mSize.z) * 3;
 
     switch (placement) {
       case 'chest-left':
-        // Left side of the user's chest (which is camera's right side, because user faces us)
-        // Shoot ray from in front of left-chest toward the model
-        rayDir.copy(camDir); // forward into the model
+        rayDir.copy(camDir);
         rayOrigin.copy(mCenter)
-          .add(camDir.clone().negate().multiplyScalar(dist))    // start in front (opposite of camDir)
-          .add(camRight.clone().multiplyScalar(-shoulderOffset)); // offset to user's-left = our right-negative
+          .add(camDir.clone().negate().multiplyScalar(dist))
+          .add(camRight.clone().multiplyScalar(-shoulderOffset));
         rayOrigin.y = chestY;
         break;
-
       case 'chest-center':
         rayDir.copy(camDir);
         rayOrigin.copy(mCenter).add(camDir.clone().negate().multiplyScalar(dist));
         rayOrigin.y = chestY;
         break;
-
       case 'chest-right':
         rayDir.copy(camDir);
         rayOrigin.copy(mCenter)
@@ -1748,28 +1836,21 @@ updateCanvas();
           .add(camRight.clone().multiplyScalar(shoulderOffset));
         rayOrigin.y = chestY;
         break;
-
       case 'back-center':
-        // Opposite of camera — shoot from behind the model into its back
         rayDir.copy(camDir).negate();
         rayOrigin.copy(mCenter).add(camDir.clone().multiplyScalar(dist));
         rayOrigin.y = chestY;
         break;
-
       case 'sleeve-left':
-        // Sleeve is off to the side — ray comes from user's-left side
-        rayDir.copy(camRight); // shoot from left-of-camera toward the model
-        rayOrigin.copy(mCenter)
-          .add(camRight.clone().negate().multiplyScalar(dist));
+        rayDir.copy(camRight);
+        rayOrigin.copy(mCenter).add(camRight.clone().negate().multiplyScalar(dist));
         rayOrigin.y = sleeveY;
         break;
-
       case 'sleeve-right':
         rayDir.copy(camRight).negate();
         rayOrigin.copy(mCenter).add(camRight.clone().multiplyScalar(dist));
         rayOrigin.y = sleeveY;
         break;
-
       default:
         rayDir.copy(camDir);
         rayOrigin.copy(mCenter).add(camDir.clone().negate().multiplyScalar(dist));
@@ -1778,123 +1859,177 @@ updateCanvas();
 
     raycaster.set(rayOrigin, rayDir.normalize());
     var meshes = [];
-    currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh && !c.userData.isDecal) meshes.push(c); });
+    currentModel.traverse(function(c) {
+      if (c.isMesh && !c.userData.isDecal) meshes.push(c);
+    });
     var hits = raycaster.intersectObjects(meshes, true);
-
-    var surfacePoint, surfaceNormal, targetMesh;
     if (hits.length > 0) {
-      surfacePoint = hits[0].point.clone();
-      surfaceNormal = hits[0].face.normal.clone();
-      surfaceNormal.transformDirection(hits[0].object.matrixWorld);
-      targetMesh = hits[0].object;
-    } else {
-      // Fallback: put decal at approx placement location using camera plane
-      surfacePoint = rayOrigin.clone().add(rayDir.clone().multiplyScalar(dist));
-      surfaceNormal = rayDir.clone().negate();
-      targetMesh = meshes[0];
+      var p = hits[0].point.clone();
+      var n = hits[0].face.normal.clone();
+      n.transformDirection(hits[0].object.matrixWorld);
+      return { surfacePoint: p, surfaceNormal: n, targetMesh: hits[0].object };
+    }
+    // No hit — return null so caller can decide what to do (don't render off-mesh)
+    return null;
+  }
+
+  // Render a single design at its placement. Disposes any previous mesh.
+  function renderDesign(design) {
+    if (!is3DActive || !currentModel || !design) return;
+    if (state.ctype === 'none') { disposeMesh(design.decalMesh); design.decalMesh = null; return; }
+
+    var texCanvas = buildTextureFor(design);
+    if (!texCanvas) { disposeMesh(design.decalMesh); design.decalMesh = null; return; }
+
+    var surface = getSurfaceForPlacement(design.placement || 'chest-center');
+    if (!surface) {
+      // No surface found — keep existing mesh if there is one (don't make it disappear)
+      // Only happens during very awkward camera angles. Returning quietly is safer.
+      return;
     }
 
+    var mBox = new THREE.Box3().setFromObject(currentModel);
+    var mSize = mBox.getSize(new THREE.Vector3());
+    var sliderVal = (design.scale != null) ? design.scale : 0.5;
+    var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
+    var decalSize = baseSize * (0.2 + sliderVal * 1.6);
+
+    var orientation = new THREE.Euler();
+    var lookHelper = new THREE.Object3D();
+    lookHelper.position.copy(surface.surfacePoint);
+    lookHelper.lookAt(surface.surfacePoint.clone().add(surface.surfaceNormal));
+    orientation.copy(lookHelper.rotation);
+
+    var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
     var texture = new THREE.CanvasTexture(texCanvas);
     texture.encoding = THREE.sRGBEncoding;
     texture.needsUpdate = true;
 
-    // ── REAL PRINT ─────────────────────────────────────────────
-    // Use THREE.DecalGeometry to project the design onto the actual
-    // garment surface — so it follows every curve, wrinkle, and fold
-    // exactly like a printed/embroidered design would.
-    if (typeof THREE.DecalGeometry !== 'undefined' && targetMesh) {
-      // Remove old decal before creating new
-      removeDecal();
-
-      // Orientation: align with surface normal (so the decal "faces" outward)
-      var orientation = new THREE.Euler();
-      var lookHelper = new THREE.Object3D();
-      lookHelper.position.copy(surfacePoint);
-      lookHelper.lookAt(surfacePoint.clone().add(surfaceNormal));
-      orientation.copy(lookHelper.rotation);
-
-      // Size: X width, Y height, Z depth (projection depth into the mesh)
-      var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
-
+    if (typeof THREE.DecalGeometry !== 'undefined') {
       try {
-        var decalGeom = new THREE.DecalGeometry(targetMesh, surfacePoint, orientation, size);
-
-        // Read current opacity slider
-        var opacityEl = document.getElementById('design-opacity');
-        var currentOpacity = opacityEl ? parseFloat(opacityEl.value) : 1;
-
-        // MATERIAL — make it look "printed on" by responding to garment lighting
-        // Print: slightly matte | Embroidery: slightly glossy with raised look
+        var decalGeom = new THREE.DecalGeometry(surface.targetMesh, surface.surfacePoint, orientation, size);
+        var currentOpacity = (design.opacity != null) ? design.opacity : 1;
         var mat;
         if (state.ctype === 'embroidery') {
           mat = new THREE.MeshStandardMaterial({
-            map: texture,
-            transparent: true,
-            opacity: currentOpacity,
-            depthTest: true,
-            depthWrite: false,
-            polygonOffset: true,
-            polygonOffsetFactor: -4,
-            roughness: 0.45,
-            metalness: 0.08,
-            // Slightly raised look
-            bumpMap: texture,
-            bumpScale: 0.02
+            map: texture, transparent: true, opacity: currentOpacity,
+            depthTest: true, depthWrite: false,
+            polygonOffset: true, polygonOffsetFactor: -4,
+            roughness: 0.45, metalness: 0.08,
+            bumpMap: texture, bumpScale: 0.02
           });
         } else {
-          // Printed: flat, matte, conforms to fabric
           mat = new THREE.MeshStandardMaterial({
-            map: texture,
-            transparent: true,
-            opacity: currentOpacity,
-            depthTest: true,
-            depthWrite: false,
-            polygonOffset: true,
-            polygonOffsetFactor: -4,
-            roughness: 0.85,
-            metalness: 0
+            map: texture, transparent: true, opacity: currentOpacity,
+            depthTest: true, depthWrite: false,
+            polygonOffset: true, polygonOffsetFactor: -4,
+            roughness: 0.85, metalness: 0
           });
         }
 
-        decalMesh = new THREE.Mesh(decalGeom, mat);
-        decalMesh.userData.isDecal = true;
-        decalMesh.renderOrder = 1; // render after the garment
-        scene.add(decalMesh);
+        // Dispose old mesh if exists, then create new
+        disposeMesh(design.decalMesh);
+        var mesh = new THREE.Mesh(decalGeom, mat);
+        mesh.userData.isDecal = true;
+        mesh.userData.designId = design.id;
+        mesh.renderOrder = 1;
+        scene.add(mesh);
+        design.decalMesh = mesh;
         return;
       } catch (err) {
-        console.warn('[Decal] DecalGeometry failed, falling back to plane:', err);
-        // Fall through to plane fallback
+        console.warn('[Decal] DecalGeometry failed:', err);
       }
     }
+  }
 
-    // Fallback: floating plane (older behavior) if DecalGeometry not available
-    var offset = surfaceNormal.clone().multiplyScalar(0.015);
-    var localPos = currentModel.worldToLocal(surfacePoint.clone().add(offset));
-    var lookTarget = currentModel.worldToLocal(surfacePoint.clone().add(surfaceNormal));
+  // Re-renders all designs OR re-renders the active one if state.ctype/text changed.
+  // Also handles text-mode (single text decal that auto-updates).
+  var _textDesignId = '_text_'; // pseudo-id for text decal
+  function updateDecal() {
+    if (!is3DActive || !currentModel) return;
 
-    if (decalMesh && !decalMesh.userData.isDecalGeom) {
-      if (decalMesh.material.map) decalMesh.material.map.dispose();
-      decalMesh.material.map = texture; decalMesh.material.needsUpdate = true;
-      decalMesh.scale.set(decalSize, decalSize, 1);
-      decalMesh.position.copy(localPos); decalMesh.lookAt(lookTarget);
-    } else {
-      removeDecal();
-      var opacityEl2 = document.getElementById('design-opacity');
-      var currentOpacity2 = opacityEl2 ? parseFloat(opacityEl2.value) : 1;
-      var geom = new THREE.PlaneGeometry(1,1);
-      var mat2 = new THREE.MeshStandardMaterial({
-        map: texture, transparent: true, opacity: currentOpacity2, depthWrite: false, side: THREE.DoubleSide,
-        polygonOffset: true, polygonOffsetFactor: -1,
-        roughness: state.ctype === 'embroidery' ? 0.4 : 0.85,
-        metalness: 0
-      });
-      decalMesh = new THREE.Mesh(geom, mat2);
-      decalMesh.userData.isDecal = true;
-      decalMesh.renderOrder = 999;
-      decalMesh.scale.set(decalSize, decalSize, 1);
-      decalMesh.position.copy(localPos); decalMesh.lookAt(lookTarget);
-      currentModel.add(decalMesh);
+    if (state.ctype === 'none') {
+      designs.forEach(function(d) { disposeMesh(d.decalMesh); d.decalMesh = null; });
+      // Also remove text decal if any
+      removeTextDecal();
+      return;
     }
+
+    if (state.designTab === 'text') {
+      // Text mode: render only the text decal at active placement; hide image decals
+      designs.forEach(function(d) { disposeMesh(d.decalMesh); d.decalMesh = null; });
+      renderTextDecal();
+    } else {
+      // Image mode: hide text decal, render all designs
+      removeTextDecal();
+      // If no designs, nothing to render
+      if (!designs.length) return;
+      designs.forEach(function(d) { renderDesign(d); });
+    }
+  }
+
+  // Text decal — a single mesh that renders the typed text
+  var textDecalMesh = null;
+  function removeTextDecal() {
+    if (textDecalMesh) { disposeMesh(textDecalMesh); textDecalMesh = null; }
+  }
+  function renderTextDecal() {
+    if (!is3DActive || !currentModel) return;
+    var texCanvas = buildTextTexture();
+    if (!texCanvas) { removeTextDecal(); return; }
+    var surface = getSurfaceForPlacement(state.placement || 'chest-center');
+    if (!surface) return;
+
+    var mBox = new THREE.Box3().setFromObject(currentModel);
+    var mSize = mBox.getSize(new THREE.Vector3());
+    var sliderVal = parseFloat((document.getElementById('design-scale') || {}).value || 0.5);
+    var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
+    var decalSize = baseSize * (0.2 + sliderVal * 1.6);
+
+    var orientation = new THREE.Euler();
+    var lookHelper = new THREE.Object3D();
+    lookHelper.position.copy(surface.surfacePoint);
+    lookHelper.lookAt(surface.surfacePoint.clone().add(surface.surfaceNormal));
+    orientation.copy(lookHelper.rotation);
+
+    var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
+    var texture = new THREE.CanvasTexture(texCanvas);
+    texture.encoding = THREE.sRGBEncoding;
+    texture.needsUpdate = true;
+
+    if (typeof THREE.DecalGeometry !== 'undefined') {
+      try {
+        var decalGeom = new THREE.DecalGeometry(surface.targetMesh, surface.surfacePoint, orientation, size);
+        var op = parseFloat((document.getElementById('design-opacity') || {}).value || 1);
+        var mat = new THREE.MeshStandardMaterial({
+          map: texture, transparent: true, opacity: op,
+          depthTest: true, depthWrite: false,
+          polygonOffset: true, polygonOffsetFactor: -4,
+          roughness: state.ctype === 'embroidery' ? 0.45 : 0.85, metalness: 0
+        });
+        removeTextDecal();
+        textDecalMesh = new THREE.Mesh(decalGeom, mat);
+        textDecalMesh.userData.isDecal = true;
+        textDecalMesh.renderOrder = 1;
+        scene.add(textDecalMesh);
+      } catch (err) {
+        console.warn('[Text decal] failed:', err);
+      }
+    }
+  }
+
+  // Legacy stub — some old call sites may still call removeDecal()
+  function removeDecal() {
+    designs.forEach(function(d) { disposeMesh(d.decalMesh); d.decalMesh = null; });
+    removeTextDecal();
+  }
+
+  // Legacy: getDecalTexture() — kept for any external callers, returns
+  // active design's texture or text texture
+  function getDecalTexture() {
+    if (state.designTab === 'text') return buildTextTexture();
+    var d = getActiveDesign();
+    return d ? buildTextureFor(d) : null;
   }
 
   function setupInteraction() {
@@ -1905,22 +2040,36 @@ updateCanvas();
       mouseVec.x = ((e.clientX-rect.left)/rect.width)*2-1; mouseVec.y = -((e.clientY-rect.top)/rect.height)*2+1;
       raycaster.setFromCamera(mouseVec, camera);
       var meshes = [];
-      currentModel.traverse(function(c) { if (c.isMesh && c !== decalMesh && !c.userData.isDecal) meshes.push(c); });
+      currentModel.traverse(function(c) {
+        // Don't include decal meshes in the hit test
+        if (c.isMesh && !c.userData.isDecal) meshes.push(c);
+      });
       return raycaster.intersectObjects(meshes, true)[0] || null;
     }
-    function moveDecalTo(hit) {
+
+    // Move the active design (or text decal) to the hit point.
+    // If hit is null/off-mesh, do nothing — never make the decal disappear or float in space.
+    function moveActiveDecalTo(hit) {
       if (!hit || !currentModel) return;
       var pt = hit.point.clone(), nm = hit.face.normal.clone();
       nm.transformDirection(hit.object.matrixWorld);
 
-      // If we have a true DecalGeometry decal (attached to scene), rebuild it at the new position
-      // This keeps the decal CONFORMING to the new surface instead of just floating flat
-      if (typeof THREE.DecalGeometry !== 'undefined' && decalMesh && decalMesh.parent === scene) {
-        var texCanvas = getDecalTexture();
-        if (!texCanvas) return;
+      var targetMesh = null;
+      var design = null;
+
+      if (state.designTab === 'text' && textDecalMesh) {
+        targetMesh = textDecalMesh;
+      } else {
+        design = getActiveDesign();
+        if (design && design.decalMesh) targetMesh = design.decalMesh;
+      }
+      if (!targetMesh) return;
+
+      if (typeof THREE.DecalGeometry !== 'undefined') {
+        // Keep same material, rebuild geometry at new point — no flicker
+        var sliderVal = design ? design.scale : parseFloat((document.getElementById('design-scale') || {}).value || 0.5);
         var mBox = new THREE.Box3().setFromObject(currentModel);
         var mSize = mBox.getSize(new THREE.Vector3());
-        var sliderVal = parseFloat(document.getElementById('design-scale') ? document.getElementById('design-scale').value : 0.5);
         var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
         var decalSize = baseSize * (0.2 + sliderVal * 1.6);
 
@@ -1933,40 +2082,82 @@ updateCanvas();
         var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
 
         try {
-          // Keep same material, just rebuild geometry at new point
-          var oldMat = decalMesh.material;
-          var oldGeom = decalMesh.geometry;
-          decalMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
+          var oldGeom = targetMesh.geometry;
+          targetMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
           if (oldGeom) oldGeom.dispose();
-          // Material stays the same — no need to rebuild texture
-          decalMesh.material = oldMat;
         } catch (err) {
-          console.warn('[Decal] Rebuild failed:', err);
+          // If rebuild fails (e.g. raycast on edge), keep old geometry — don't break visual
+          console.warn('[Decal] Rebuild on drag failed:', err);
+        }
+      }
+    }
+
+    // Hit-test if the pointer is currently on the ACTIVE decal (for drag init)
+    function hitTestActiveDecal(e) {
+      var rect = el.getBoundingClientRect();
+      mouseVec.x = ((e.clientX-rect.left)/rect.width)*2-1; mouseVec.y = -((e.clientY-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(mouseVec, camera);
+      var targets = [];
+      if (state.designTab === 'text' && textDecalMesh) targets.push(textDecalMesh);
+      else {
+        var d = getActiveDesign();
+        if (d && d.decalMesh) targets.push(d.decalMesh);
+      }
+      return raycaster.intersectObjects(targets, false)[0] || null;
+    }
+
+    el.addEventListener('pointerdown', function(e) {
+      if (!is3DActive || !currentModel) return;
+      var hasActiveMesh = (state.designTab === 'text' && textDecalMesh) || (getActiveDesign() && getActiveMesh());
+      if (!hasActiveMesh) return;
+
+      // Two ways to drag the decal:
+      //   1. Shift+drag (desktop) — original behavior
+      //   2. Tap-and-hold directly on the decal itself (mobile-friendly)
+      var canDrag = e.shiftKey || hitTestActiveDecal(e);
+      if (!canDrag) return;
+
+      if (rayHit(e)) {
+        isDragging = true;
+        controls.enabled = false;
+        el.style.cursor = 'grabbing';
+        e.preventDefault();
+      }
+    });
+
+    el.addEventListener('pointermove', function(e) {
+      if (!isDragging) {
+        // Update cursor style for hover-grab indication
+        if (is3DActive && (state.designTab === 'text' ? textDecalMesh : (getActiveDesign() && getActiveMesh()))) {
+          var canDrag = e.shiftKey || hitTestActiveDecal(e);
+          el.style.cursor = (canDrag && rayHit(e)) ? 'grab' : '';
+        } else {
+          el.style.cursor = '';
         }
         return;
       }
+      var hit = rayHit(e);
+      if (hit) moveActiveDecalTo(hit);
+      // If hit is null (drag went off mesh), do nothing — prevents disappearing
+    });
 
-      // Plane fallback: just reposition
-      if (decalMesh) {
-        var off = nm.clone().multiplyScalar(0.015);
-        decalMesh.position.copy(currentModel.worldToLocal(pt.clone().add(off)));
-        decalMesh.lookAt(currentModel.worldToLocal(pt.clone().add(nm)));
+    function endDrag() {
+      if (isDragging) {
+        isDragging = false;
+        controls.enabled = true;
+        el.style.cursor = '';
       }
     }
-    el.addEventListener('pointerdown', function(e) {
-      if (!is3DActive || !currentModel || !e.shiftKey || !decalMesh) return;
-      if (rayHit(e)) { isDragging = true; controls.enabled = false; el.style.cursor = 'grabbing'; e.preventDefault(); }
-    });
-    el.addEventListener('pointermove', function(e) {
-      if (!isDragging) { el.style.cursor = (e.shiftKey && is3DActive && decalMesh && rayHit(e)) ? 'grab' : ''; return; }
-      var hit = rayHit(e); if (hit) moveDecalTo(hit);
-    });
-    function endDrag() { if (isDragging) { isDragging = false; controls.enabled = true; el.style.cursor = ''; } }
-    el.addEventListener('pointerup', endDrag); el.addEventListener('pointerleave', endDrag);
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointerleave', endDrag);
+
     el.addEventListener('dblclick', function(e) {
-      if (!is3DActive || !currentModel || state.ctype === 'none' || !decalMesh) return;
-      var hasDesign = (state.designTab === 'image' && uploadedImg) || (state.designTab === 'text' && document.getElementById('design-text') && document.getElementById('design-text').value);
-      if (!hasDesign) return; var hit = rayHit(e); if (hit) moveDecalTo(hit);
+      if (!is3DActive || !currentModel || state.ctype === 'none') return;
+      var hasDesign = (state.designTab === 'image' && getActiveDesign()) ||
+        (state.designTab === 'text' && document.getElementById('design-text') && document.getElementById('design-text').value);
+      if (!hasDesign) return;
+      var hit = rayHit(e);
+      if (hit) moveActiveDecalTo(hit);
     });
   }
 
@@ -2033,27 +2224,61 @@ updateCanvas();
     _rebuildTimeout = setTimeout(function() { if (is3DActive) updateDecal(); }, 200);
   }
 
+  // Throttled scale update — saves the scale value but lets deferredRebuild
+  // do the actual geometry rebuild in the next animation frame.
+  // For DecalGeometry meshes, we CAN'T just set mesh.scale because the
+  // geometry vertices are baked in world space; setting mesh.scale would
+  // make the decal fly away from the model. So we always rebuild.
+  var _scaleRafPending = false;
   function fastScaleUpdate() {
-    if (!is3DActive || !decalMesh) { deferredRebuild(); return; }
+    if (!is3DActive) { deferredRebuild(); return; }
     var sliderEl = document.getElementById('design-scale');
     if (!sliderEl) return;
     var sliderVal = parseFloat(sliderEl.value);
-    // Just set scale on the existing mesh — instantly smooth
-    // Normalize so base decal (0.5 slider) = 1.0x
-    var scale = (0.2 + sliderVal * 1.6) / (0.2 + 0.5 * 1.6);
-    decalMesh.scale.set(scale, scale, scale);
-    // After dragging stops, rebuild with correct geometry for sharper texture
-    deferredRebuild();
+
+    // Find target design — text decal, or active uploaded design
+    var design = null;
+    if (state.designTab === 'text') {
+      // Text path: stash on a sentinel so the renderer reads it on next rebuild
+      _textScale = sliderVal;
+    } else {
+      design = getActiveDesign();
+      if (design) design.scale = sliderVal;
+    }
+
+    // Throttle to next animation frame to keep slider feel smooth
+    if (_scaleRafPending) return;
+    _scaleRafPending = true;
+    requestAnimationFrame(function() {
+      _scaleRafPending = false;
+      if (!is3DActive) return;
+      if (state.designTab === 'text') {
+        renderTextDecal();
+      } else {
+        var d = getActiveDesign();
+        if (d) renderDesign(d);
+      }
+    });
   }
+  var _textScale = 0.6;
 
   function fastOpacityUpdate() {
-    if (!is3DActive || !decalMesh || !decalMesh.material) return;
+    if (!is3DActive) return;
     var opacityEl = document.getElementById('design-opacity');
     if (!opacityEl) return;
     var opacity = parseFloat(opacityEl.value);
-    decalMesh.material.opacity = opacity;
-    decalMesh.material.transparent = true;
-    decalMesh.material.needsUpdate = true;
+
+    var target = null;
+    var design = null;
+    if (state.designTab === 'text' && textDecalMesh) target = textDecalMesh;
+    else { design = getActiveDesign(); if (design && design.decalMesh) target = design.decalMesh; }
+
+    if (!target || !target.material) return;
+
+    if (design) design.opacity = opacity;
+    target.material.opacity = opacity;
+    target.material.transparent = true;
+    target.material.needsUpdate = true;
   }
 
   // Text updates still need a rebuild (texture changes), but throttle with rAF
@@ -2134,9 +2359,9 @@ updateCanvas();
 
   function showJoystickIfMobile() {
     var isMobile = window.innerWidth <= 900;
-    var hasDesign = !!decalMesh || (uploadedImg && state.ctype !== 'none') ||
-                    (state.designTab === 'text' && document.getElementById('design-text') && document.getElementById('design-text').value);
-    var shouldShow = isMobile && is3DActive && hasDesign && state.ctype !== 'none';
+    var hasAnyDesign = (designs && designs.length > 0) ||
+                       (state.designTab === 'text' && document.getElementById('design-text') && document.getElementById('design-text').value);
+    var shouldShow = isMobile && is3DActive && hasAnyDesign && state.ctype !== 'none';
     joystick.style.display = shouldShow ? 'block' : 'none';
     joystickLabel.style.display = shouldShow ? 'block' : 'none';
   }
@@ -2176,17 +2401,49 @@ updateCanvas();
     knob.style.transform = 'translate(-50%, -50%)';
   }
 
-  // Smooth movement loop — translates mesh.position with reused vectors
-  // (avoids per-frame allocation that causes GC stutter on mobile)
+  // Smooth movement loop — translates a virtual cursor in screen space,
+  // then reprojects to nearest garment surface every few frames.
+  // Why not translate mesh.position? Because DecalGeometry vertices are
+  // baked in world space — translating mesh.position would make the decal
+  // float away from the model. We re-create the geometry at the new
+  // surface point each cycle.
+  var _virtualCursorWorld = new THREE.Vector3(); // virtual cursor in world space
+  var _cursorInitialized = false;
   var _camRight = new THREE.Vector3();
   var _camUp = new THREE.Vector3();
   var _translation = new THREE.Vector3();
+  var _reprojectFrame = 0;
+
+  function initVirtualCursor() {
+    // Set the virtual cursor to the active design's current world position
+    var design = getActiveDesign();
+    if (!design || !design.decalMesh) { _cursorInitialized = false; return; }
+    // Get center of the decal in world space
+    var box = new THREE.Box3().setFromObject(design.decalMesh);
+    box.getCenter(_virtualCursorWorld);
+    _cursorInitialized = true;
+  }
 
   function animateJoystick() {
     if (!joystickActive) { joystickRAF = null; return; }
-    if (!is3DActive || !currentModel || !decalMesh) {
+    if (!is3DActive || !currentModel) {
       joystickRAF = requestAnimationFrame(animateJoystick);
       return;
+    }
+
+    var design = (state.designTab === 'text') ? null : getActiveDesign();
+    var hasTarget = (state.designTab === 'text' && textDecalMesh) || (design && design.decalMesh);
+    if (!hasTarget) {
+      joystickRAF = requestAnimationFrame(animateJoystick);
+      return;
+    }
+
+    if (!_cursorInitialized) {
+      // First frame after joystick start — initialize cursor at decal center
+      var targetMesh = (state.designTab === 'text') ? textDecalMesh : design.decalMesh;
+      var box = new THREE.Box3().setFromObject(targetMesh);
+      box.getCenter(_virtualCursorWorld);
+      _cursorInitialized = true;
     }
 
     var ox = currentOffset.x, oy = currentOffset.y;
@@ -2200,70 +2457,92 @@ updateCanvas();
       _camRight.setFromMatrixColumn(camera.matrixWorld, 0);
       _camUp.setFromMatrixColumn(camera.matrixWorld, 1);
 
-      // Translate decal in camera's view plane
+      // Translate the VIRTUAL CURSOR (not the mesh)
       _translation.copy(_camRight).multiplyScalar(speedX);
       _translation.addScaledVector(_camUp, speedY);
-      decalMesh.position.add(_translation);
+      _virtualCursorWorld.add(_translation);
+
+      // Every 2 frames, reproject onto the garment surface
+      _reprojectFrame++;
+      if (_reprojectFrame % 2 === 0) {
+        reprojectVirtualCursor();
+      }
     }
 
     joystickRAF = requestAnimationFrame(animateJoystick);
   }
 
-  // On release: reproject decal onto actual garment surface
-  function reprojectDecalToSurface() {
-    if (!_joystickHasMoved || !is3DActive || !currentModel || !decalMesh) { _joystickHasMoved = false; return; }
-    _joystickHasMoved = false;
+  // Cast a ray from camera through the virtual cursor's screen position and
+  // find where it hits the garment. Then rebuild the active decal there.
+  function reprojectVirtualCursor() {
+    if (!is3DActive || !currentModel) return;
 
-    var worldPos;
-    if (decalMesh.parent === scene) {
-      worldPos = decalMesh.position.clone();
-    } else {
-      worldPos = decalMesh.getWorldPosition(new THREE.Vector3());
-    }
+    var design = (state.designTab === 'text') ? null : getActiveDesign();
+    var hasTarget = (state.designTab === 'text' && textDecalMesh) || (design && design.decalMesh);
+    if (!hasTarget) return;
 
-    // Cast ray from camera through decal center to find nearest surface
-    var rayDir = worldPos.clone().sub(camera.position).normalize();
+    // Cast a ray from camera through the virtual cursor world position
+    var rayDir = _virtualCursorWorld.clone().sub(camera.position).normalize();
     raycaster.set(camera.position, rayDir);
+    raycaster.far = 100;
     var meshes = [];
     currentModel.traverse(function(c) {
-      if (c.isMesh && c !== decalMesh && !c.userData.isDecal) meshes.push(c);
+      if (c.isMesh && !c.userData.isDecal) meshes.push(c);
     });
     var hits = raycaster.intersectObjects(meshes, true);
     if (hits.length === 0) return;
 
-    // Rebuild decal at new hit point
     var hit = hits[0];
     var pt = hit.point.clone();
     var nm = hit.face.normal.clone();
     nm.transformDirection(hit.object.matrixWorld);
 
-    if (typeof THREE.DecalGeometry !== 'undefined' && decalMesh.parent === scene) {
-      var mBox = new THREE.Box3().setFromObject(currentModel);
-      var mSize = mBox.getSize(new THREE.Vector3());
-      var sliderVal = parseFloat(document.getElementById('design-scale') ? document.getElementById('design-scale').value : 0.5);
-      var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
-      var decalSize = baseSize * (0.2 + sliderVal * 1.6);
+    // Snap virtual cursor to actual surface so it doesn't drift
+    _virtualCursorWorld.copy(pt);
 
-      var orientation = new THREE.Euler();
-      var lookHelper = new THREE.Object3D();
-      lookHelper.position.copy(pt);
-      lookHelper.lookAt(pt.clone().add(nm));
-      orientation.copy(lookHelper.rotation);
+    if (typeof THREE.DecalGeometry === 'undefined') return;
 
-      var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
+    var mBox = new THREE.Box3().setFromObject(currentModel);
+    var mSize = mBox.getSize(new THREE.Vector3());
 
-      try {
-        var oldGeom = decalMesh.geometry;
-        decalMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
-        decalMesh.position.set(0,0,0); // DecalGeometry has vertices in world space
-        decalMesh.scale.set(1,1,1);
-        if (oldGeom) oldGeom.dispose();
-      } catch (err) { console.warn('[Joystick] Reproject failed:', err); }
-    } else if (decalMesh) {
-      var off = nm.clone().multiplyScalar(0.015);
-      decalMesh.position.copy(currentModel.worldToLocal(pt.clone().add(off)));
-      decalMesh.lookAt(currentModel.worldToLocal(pt.clone().add(nm)));
+    var sliderVal;
+    if (state.designTab === 'text') {
+      sliderVal = _textScale;
+    } else {
+      sliderVal = (design && design.scale != null) ? design.scale : 0.5;
     }
+
+    var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
+    var decalSize = baseSize * (0.2 + sliderVal * 1.6);
+
+    var orientation = new THREE.Euler();
+    var lookHelper = new THREE.Object3D();
+    lookHelper.position.copy(pt);
+    lookHelper.lookAt(pt.clone().add(nm));
+    orientation.copy(lookHelper.rotation);
+
+    var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
+    var targetMesh = (state.designTab === 'text') ? textDecalMesh : design.decalMesh;
+
+    try {
+      var oldGeom = targetMesh.geometry;
+      targetMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
+      // DecalGeometry vertices are world-space; mesh transforms must stay neutral
+      targetMesh.position.set(0, 0, 0);
+      targetMesh.scale.set(1, 1, 1);
+      targetMesh.rotation.set(0, 0, 0);
+      if (oldGeom) oldGeom.dispose();
+    } catch (err) {
+      // Geometry creation failed (raycast on edge) — keep old geometry
+    }
+  }
+
+  // Kept for backward compatibility — older code still calls this on joystick release
+  function reprojectDecalToSurface() {
+    _cursorInitialized = false; // reset for next drag
+    if (!_joystickHasMoved) return;
+    _joystickHasMoved = false;
+    reprojectVirtualCursor();
   }
 
   // ── EVENT HANDLERS ────────────────────────────────────────
