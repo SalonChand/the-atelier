@@ -983,7 +983,13 @@ function selectPlacement(p, btn) {
     if (activeId) {
       var designs = window._atelier3D.getDesigns();
       var active = designs.find(function(d) { return d.id === activeId; });
-      if (active) active.placement = p;
+      if (active) {
+        active.placement = p;
+        // Clear any custom drag-anchor — user has explicitly chosen a new placement,
+        // so we should respect that over their previous drag position.
+        active.customAnchor = null;
+        active.customNormal = null;
+      }
     }
   }
   updateCanvas();
@@ -1570,6 +1576,8 @@ updateCanvas();
         placement: state.placement || 'chest-center',
         scale: parseFloat((document.getElementById('design-scale') || {}).value || 0.6),
         opacity: parseFloat((document.getElementById('design-opacity') || {}).value || 1),
+        customAnchor: null,        // {x,y,z} world-space — set when user drags this design
+        customNormal: null,        // {x,y,z} surface normal at customAnchor
         decalMesh: null
       };
       designs.push(design);
@@ -1874,6 +1882,10 @@ updateCanvas();
   }
 
   // Render a single design at its placement. Disposes any previous mesh.
+  // If the user has dragged this design with the joystick (customAnchor
+  // is set), use that anchor instead of the placement region center —
+  // so the design stays where the user put it, even when other designs
+  // are added/removed/re-rendered.
   function renderDesign(design) {
     if (!is3DActive || !currentModel || !design) return;
     if (state.ctype === 'none') { disposeMesh(design.decalMesh); design.decalMesh = null; return; }
@@ -1881,12 +1893,36 @@ updateCanvas();
     var texCanvas = buildTextureFor(design);
     if (!texCanvas) { disposeMesh(design.decalMesh); design.decalMesh = null; return; }
 
-    var surface = getSurfaceForPlacement(design.placement || 'chest-center');
-    if (!surface) {
-      // No surface found — keep existing mesh if there is one (don't make it disappear)
-      // Only happens during very awkward camera angles. Returning quietly is safer.
-      return;
+    // Determine surface point + normal
+    var surfacePoint, surfaceNormal, targetMesh;
+    if (design.customAnchor && design.customNormal) {
+      // User has dragged this design — use saved anchor
+      surfacePoint = new THREE.Vector3(design.customAnchor.x, design.customAnchor.y, design.customAnchor.z);
+      surfaceNormal = new THREE.Vector3(design.customNormal.x, design.customNormal.y, design.customNormal.z);
+      // Find a target mesh — raycast from camera through the anchor
+      var rayDir = surfacePoint.clone().sub(camera.position).normalize();
+      raycaster.set(camera.position, rayDir);
+      var meshList = [];
+      currentModel.traverse(function(c) { if (c.isMesh && !c.userData.isDecal) meshList.push(c); });
+      var hits = raycaster.intersectObjects(meshList, true);
+      if (hits.length > 0) {
+        targetMesh = hits[0].object;
+      } else {
+        // Fallback: just pick the first mesh
+        targetMesh = meshList[0];
+      }
+    } else {
+      var surface = getSurfaceForPlacement(design.placement || 'chest-center');
+      if (!surface) {
+        // No surface found — keep existing mesh if there is one (don't make it disappear)
+        return;
+      }
+      surfacePoint = surface.surfacePoint;
+      surfaceNormal = surface.surfaceNormal;
+      targetMesh = surface.targetMesh;
     }
+
+    if (!targetMesh) return;
 
     var mBox = new THREE.Box3().setFromObject(currentModel);
     var mSize = mBox.getSize(new THREE.Vector3());
@@ -1896,8 +1932,8 @@ updateCanvas();
 
     var orientation = new THREE.Euler();
     var lookHelper = new THREE.Object3D();
-    lookHelper.position.copy(surface.surfacePoint);
-    lookHelper.lookAt(surface.surfacePoint.clone().add(surface.surfaceNormal));
+    lookHelper.position.copy(surfacePoint);
+    lookHelper.lookAt(surfacePoint.clone().add(surfaceNormal));
     orientation.copy(lookHelper.rotation);
 
     var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
@@ -1907,7 +1943,7 @@ updateCanvas();
 
     if (typeof THREE.DecalGeometry !== 'undefined') {
       try {
-        var decalGeom = new THREE.DecalGeometry(surface.targetMesh, surface.surfacePoint, orientation, size);
+        var decalGeom = new THREE.DecalGeometry(targetMesh, surfacePoint, orientation, size);
         var currentOpacity = (design.opacity != null) ? design.opacity : 1;
         var mat;
         if (state.ctype === 'embroidery') {
@@ -1933,7 +1969,7 @@ updateCanvas();
         mesh.userData.isDecal = true;
         mesh.userData.designId = design.id;
         mesh.userData.baselineScale = sliderVal;       // remember what scale this geometry was built at
-        mesh.userData.baselineCenter = surface.surfacePoint.clone();  // remember the anchor point
+        mesh.userData.baselineCenter = surfacePoint.clone();  // remember the anchor point
         mesh.renderOrder = 1;
         scene.add(mesh);
         design.decalMesh = mesh;
@@ -2220,10 +2256,55 @@ updateCanvas();
   // - Scale slider: just scale the existing decal mesh (no rebuild!)
   // - Opacity slider: just change material.opacity (no rebuild!)
   // - Only rebuild when user STOPS dragging (on 'change' event)
+  // Defers a rebuild of the ACTIVE design's decal — used after scale slider
+  // stops moving. Instead of replacing the mesh outright (which causes
+  // a visible snap), this cross-fades from the matrix-scaled visual to a
+  // freshly-built DecalGeometry at the new size. The fade hides the snap.
   var _rebuildTimeout = null;
   function deferredRebuild() {
     clearTimeout(_rebuildTimeout);
-    _rebuildTimeout = setTimeout(function() { if (is3DActive) updateDecal(); }, 200);
+    _rebuildTimeout = setTimeout(function() {
+      if (!is3DActive || !currentModel) return;
+
+      var design = (state.designTab === 'text') ? null : getActiveDesign();
+      var oldMesh = (state.designTab === 'text') ? textDecalMesh : (design && design.decalMesh);
+
+      if (!oldMesh || typeof THREE.DecalGeometry === 'undefined') {
+        // No active mesh — fall back to full rebuild
+        updateDecal();
+        return;
+      }
+
+      // Find the surface point this design is anchored at:
+      // - If user dragged it: use customAnchor
+      // - Otherwise: use the placement region's center
+      var anchorPt, anchorNm, hitObject;
+      if (design && design.customAnchor && design.customNormal) {
+        anchorPt = new THREE.Vector3(design.customAnchor.x, design.customAnchor.y, design.customAnchor.z);
+        anchorNm = new THREE.Vector3(design.customNormal.x, design.customNormal.y, design.customNormal.z);
+        // Find a target mesh by raycasting from camera
+        var rayDir = anchorPt.clone().sub(camera.position).normalize();
+        raycaster.set(camera.position, rayDir);
+        var meshList = [];
+        currentModel.traverse(function(c) { if (c.isMesh && !c.userData.isDecal) meshList.push(c); });
+        var hits = raycaster.intersectObjects(meshList, true);
+        hitObject = hits.length > 0 ? hits[0].object : meshList[0];
+      } else {
+        var surface = getSurfaceForPlacement((design && design.placement) || state.placement || 'chest-center');
+        if (!surface) return;
+        anchorPt = surface.surfacePoint;
+        anchorNm = surface.surfaceNormal;
+        hitObject = surface.targetMesh;
+      }
+
+      var sliderVal = (state.designTab === 'text') ? _textScale
+                    : (design && design.scale != null) ? design.scale : 0.5;
+
+      var newMesh = buildDecalMeshAt(design, hitObject, anchorPt, anchorNm, sliderVal);
+      if (!newMesh) return;
+
+      crossFadeDecals(oldMesh, newMesh, design);
+    }, 250);
   }
 
   // Throttled scale update — TWO-PHASE for smoothness:
@@ -2484,8 +2565,9 @@ updateCanvas();
   }
 
   // On joystick release: figure out where the decal currently appears on
-  // screen, raycast to the actual garment surface, and rebuild it there.
-  // This snaps the decal back to a perfect surface projection.
+  // screen, find the actual garment surface point, and CROSS-FADE the
+  // decal from its dragged position to a perfect surface projection.
+  // The cross-fade hides the visual snap that would otherwise occur.
   function reprojectDecalToSurface() {
     if (!_joystickHasMoved) {
       _accumulatedTranslation.set(0, 0, 0);
@@ -2499,19 +2581,14 @@ updateCanvas();
     }
 
     var design = (state.designTab === 'text') ? null : getActiveDesign();
-    var targetMesh = (state.designTab === 'text') ? textDecalMesh : (design && design.decalMesh);
-    if (!targetMesh) {
+    var oldMesh = (state.designTab === 'text') ? textDecalMesh : (design && design.decalMesh);
+    if (!oldMesh || typeof THREE.DecalGeometry === 'undefined') {
       _accumulatedTranslation.set(0, 0, 0);
       return;
     }
 
-    if (typeof THREE.DecalGeometry === 'undefined') {
-      _accumulatedTranslation.set(0, 0, 0);
-      return;
-    }
-
-    // Find current visual center of the decal (geometry center + drag translation)
-    var box = new THREE.Box3().setFromObject(targetMesh);
+    // Find current visual center of the dragged decal (mesh.position + geometry center)
+    var box = new THREE.Box3().setFromObject(oldMesh);
     var visualCenter = box.getCenter(new THREE.Vector3());
 
     // Cast ray from camera through that point to find the surface
@@ -2524,8 +2601,8 @@ updateCanvas();
     });
     var hits = raycaster.intersectObjects(meshes, true);
     if (hits.length === 0) {
-      // Cursor went off the model — snap back to original position
-      targetMesh.position.set(0, 0, 0);
+      // Cursor went off the model — animate decal smoothly back to origin
+      animateMeshToOrigin(oldMesh);
       _accumulatedTranslation.set(0, 0, 0);
       return;
     }
@@ -2535,10 +2612,38 @@ updateCanvas();
     var nm = hit.face.normal.clone();
     nm.transformDirection(hit.object.matrixWorld);
 
-    var mBox = new THREE.Box3().setFromObject(currentModel);
-    var mSize = mBox.getSize(new THREE.Vector3());
     var sliderVal = (state.designTab === 'text') ? _textScale
                   : (design && design.scale != null) ? design.scale : 0.5;
+
+    // SAVE the new anchor on the design so it persists when other designs are added/rendered.
+    // This is the key fix for "1st design moves when adding 2nd design" — we now remember
+    // exactly where the user dragged this design to, and renderDesign() uses it next time.
+    if (design) {
+      design.customAnchor = { x: pt.x, y: pt.y, z: pt.z };
+      design.customNormal = { x: nm.x, y: nm.y, z: nm.z };
+    }
+
+    // Build the NEW perfect-projection mesh at full opacity so we can cross-fade
+    var newMesh = buildDecalMeshAt(design, hit.object, pt, nm, sliderVal);
+    if (!newMesh) {
+      _accumulatedTranslation.set(0, 0, 0);
+      return;
+    }
+
+    // Cross-fade: new mesh fades IN, old mesh fades OUT. After 200ms,
+    // dispose the old mesh and update the design pointer.
+    crossFadeDecals(oldMesh, newMesh, design);
+
+    _accumulatedTranslation.set(0, 0, 0);
+  }
+
+  // Build a fresh DecalGeometry mesh at the given world point. Returns null on error.
+  // This is used by both joystick release (cross-fade in) and scale release.
+  function buildDecalMeshAt(design, hitObject, pt, nm, sliderVal) {
+    if (typeof THREE.DecalGeometry === 'undefined') return null;
+
+    var mBox = new THREE.Box3().setFromObject(currentModel);
+    var mSize = mBox.getSize(new THREE.Vector3());
     var baseSize = Math.min(mSize.x, mSize.y) * 0.9;
     var decalSize = baseSize * (0.2 + sliderVal * 1.6);
 
@@ -2551,22 +2656,114 @@ updateCanvas();
     var size = new THREE.Vector3(decalSize, decalSize, decalSize * 0.5);
 
     try {
-      var oldGeom = targetMesh.geometry;
-      targetMesh.geometry = new THREE.DecalGeometry(hit.object, pt, orientation, size);
-      // Reset transform — DecalGeometry vertices are world-space
-      targetMesh.matrixAutoUpdate = true;
-      targetMesh.position.set(0, 0, 0);
-      targetMesh.scale.set(1, 1, 1);
-      targetMesh.rotation.set(0, 0, 0);
-      targetMesh.userData.baselineCenter = pt.clone();
-      targetMesh.userData.baselineScale = sliderVal;
-      if (oldGeom) oldGeom.dispose();
+      var geom = new THREE.DecalGeometry(hitObject, pt, orientation, size);
+
+      // Build texture from design (or text)
+      var texCanvas = (design ? buildTextureFor(design) : buildTextTexture());
+      if (!texCanvas) return null;
+      var texture = new THREE.CanvasTexture(texCanvas);
+      texture.encoding = THREE.sRGBEncoding;
+      texture.needsUpdate = true;
+
+      var currentOpacity = (design && design.opacity != null) ? design.opacity : 1;
+      var mat;
+      if (state.ctype === 'embroidery') {
+        mat = new THREE.MeshStandardMaterial({
+          map: texture, transparent: true, opacity: 0,  // start at 0 for fade-in
+          depthTest: true, depthWrite: false,
+          polygonOffset: true, polygonOffsetFactor: -4,
+          roughness: 0.45, metalness: 0.08,
+          bumpMap: texture, bumpScale: 0.02
+        });
+      } else {
+        mat = new THREE.MeshStandardMaterial({
+          map: texture, transparent: true, opacity: 0,  // start at 0 for fade-in
+          depthTest: true, depthWrite: false,
+          polygonOffset: true, polygonOffsetFactor: -4,
+          roughness: 0.85, metalness: 0
+        });
+      }
+
+      var mesh = new THREE.Mesh(geom, mat);
+      mesh.userData.isDecal = true;
+      mesh.userData.designId = design ? design.id : '_text_';
+      mesh.userData.baselineScale = sliderVal;
+      mesh.userData.baselineCenter = pt.clone();
+      mesh.userData.targetOpacity = currentOpacity;
+      mesh.renderOrder = 1;
+      scene.add(mesh);
+      return mesh;
     } catch (err) {
-      // Geometry failed (raycast on edge) — at least reset position
-      targetMesh.position.set(0, 0, 0);
+      return null;
+    }
+  }
+
+  // Smoothly fade between two decal meshes. The new mesh fades in to its
+  // target opacity while the old fades out to 0, over a fixed duration.
+  // After the fade, the old mesh is disposed and the design's mesh pointer
+  // is updated to the new mesh.
+  function crossFadeDecals(oldMesh, newMesh, design) {
+    var FADE_MS = 200;
+    var startTs = performance.now();
+    var oldStartOpacity = oldMesh.material ? oldMesh.material.opacity : 1;
+    var newTargetOpacity = newMesh.userData.targetOpacity || 1;
+
+    function step() {
+      var t = (performance.now() - startTs) / FADE_MS;
+      if (t >= 1) t = 1;
+      // Smoothstep-like easing
+      var eased = t * t * (3 - 2 * t);
+
+      if (oldMesh && oldMesh.material) {
+        oldMesh.material.opacity = oldStartOpacity * (1 - eased);
+        oldMesh.material.needsUpdate = true;
+      }
+      if (newMesh && newMesh.material) {
+        newMesh.material.opacity = newTargetOpacity * eased;
+        newMesh.material.needsUpdate = true;
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        // Fade complete — dispose old mesh, swap pointer
+        if (oldMesh && oldMesh !== newMesh) {
+          if (oldMesh.parent) oldMesh.parent.remove(oldMesh);
+          if (oldMesh.geometry) oldMesh.geometry.dispose();
+          if (oldMesh.material) {
+            if (oldMesh.material.map) oldMesh.material.map.dispose();
+            oldMesh.material.dispose();
+          }
+        }
+        if (design) {
+          design.decalMesh = newMesh;
+        } else {
+          // Text decal — update the global pointer
+          textDecalMesh = newMesh;
+        }
+      }
     }
 
-    _accumulatedTranslation.set(0, 0, 0);
+    requestAnimationFrame(step);
+  }
+
+  // Smoothly slide a mesh back to position (0,0,0) over 200ms. Used when
+  // the joystick drag goes off the model and we need to recover gracefully.
+  function animateMeshToOrigin(mesh) {
+    if (!mesh) return;
+    var FADE_MS = 200;
+    var startTs = performance.now();
+    var startPos = mesh.position.clone();
+    function step() {
+      var t = (performance.now() - startTs) / FADE_MS;
+      if (t >= 1) t = 1;
+      var eased = t * t * (3 - 2 * t);
+      mesh.position.x = startPos.x * (1 - eased);
+      mesh.position.y = startPos.y * (1 - eased);
+      mesh.position.z = startPos.z * (1 - eased);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
   }
 
   // ── EVENT HANDLERS ────────────────────────────────────────
